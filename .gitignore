@@ -53,3 +53,5 @@ prisma/dev.db-journal
 *~
 .tmp
 .temp
+
+/generated/prisma
