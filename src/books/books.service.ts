@@ -9,7 +9,7 @@ import { Book } from '@prisma/client';
 export class BooksService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(searchDto?: SearchBooksDto): Promise<{ books: Book[]; total: number; page: number; limit: number }> {
+  async findAll(searchDto?: SearchBooksDto): Promise<{ books: Book[]; total: number; page: number; limit: number; message?: string; }> {
     const { title, author, isbn, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = searchDto || {};
 
     const where: any = {};
@@ -38,12 +38,21 @@ export class BooksService {
       this.prisma.book.count({ where }),
     ]);
 
+    if (total === 0) {
     return {
-      books,
+      message: 'No books found matching your search',
+      books: [],
       total,
       page,
       limit,
     };
+  }
+  return {
+  books,
+  total,
+  page,
+  limit,
+};
   }
 
   async findOne(id: string): Promise<Book> {
