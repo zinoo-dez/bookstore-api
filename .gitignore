@@ -13,6 +13,7 @@ yarn-error.log*
 lerna-debug.log*
 
 # OS
+
 .DS_Store
 
 # Tests
@@ -55,3 +56,5 @@ prisma/dev.db-journal
 .temp
 
 /generated/prisma
+tasks.md
+requirements.md

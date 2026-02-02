@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -14,6 +15,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -25,7 +27,8 @@ export class AuthService {
       throw new BadRequestException('Email already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
+    const hashedPassword = await bcrypt.hash(dto.password, bcryptRounds);
 
     return this.prisma.user.create({
       data: {
@@ -46,7 +49,14 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
+      select: {
+        id: true,
+        email: true,
+        password: true, 
+        role: true,     
+      },
     });
+
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');

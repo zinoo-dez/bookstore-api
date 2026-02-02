@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as fc from 'fast-check';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
@@ -10,6 +11,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let prismaService: PrismaService;
   let jwtService: JwtService;
+  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,12 +32,26 @@ describe('AuthService', () => {
             signAsync: jest.fn(),
           },
         },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+              const config: { [key: string]: any } = {
+                BCRYPT_ROUNDS: 10,
+                JWT_SECRET: 'test-secret',
+                JWT_EXPIRES_IN: '24h',
+              };
+              return config[key] || defaultValue;
+            }),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     prismaService = module.get<PrismaService>(PrismaService);
     jwtService = module.get<JwtService>(JwtService);
+    configService = module.get<ConfigService>(ConfigService);
 
     // Reset mocks before each test
     jest.clearAllMocks();

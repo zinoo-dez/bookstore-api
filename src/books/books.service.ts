@@ -4,12 +4,51 @@ import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { SearchBooksDto } from './dto/search-books.dto';
 import { Book } from '@prisma/client';
+import { BookWithStockStatus, BookStockStatus } from './types/book-with-stock-status.type';
 
 @Injectable()
 export class BooksService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(searchDto?: SearchBooksDto): Promise<{ books: Book[]; total: number; page: number; limit: number; message?: string; }> {
+  /**
+   * Calculate stock status for a book
+   */
+  private calculateStockStatus(stock: number): BookStockStatus {
+    if (stock === 0) {
+      return 'OUT_OF_STOCK';
+    } else if (stock <= 5) {
+      return 'LOW_STOCK';
+    } else {
+      return 'IN_STOCK';
+    }
+  }
+
+  /**
+   * Enhance a book with stock status information
+   */
+  private enhanceBookWithStockStatus(book: Book): BookWithStockStatus {
+    const stockStatus = this.calculateStockStatus(book.stock);
+    return {
+      ...book,
+      inStock: book.stock > 0,
+      stockStatus,
+    };
+  }
+
+  /**
+   * Enhance multiple books with stock status information
+   */
+  private enhanceBooksWithStockStatus(books: Book[]): BookWithStockStatus[] {
+    return books.map(book => this.enhanceBookWithStockStatus(book));
+  }
+
+  async findAll(searchDto?: SearchBooksDto): Promise<{ 
+    books: BookWithStockStatus[]; 
+    total: number; 
+    page: number; 
+    limit: number; 
+    message?: string; 
+  }> {
     const { title, author, isbn, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = searchDto || {};
 
     const where: any = {};
@@ -39,23 +78,24 @@ export class BooksService {
     ]);
 
     if (total === 0) {
+      return {
+        message: 'No books found matching your search',
+        books: [],
+        total,
+        page,
+        limit,
+      };
+    }
+
     return {
-      message: 'No books found matching your search',
-      books: [],
+      books: this.enhanceBooksWithStockStatus(books),
       total,
       page,
       limit,
     };
   }
-  return {
-  books,
-  total,
-  page,
-  limit,
-};
-  }
 
-  async findOne(id: string): Promise<Book> {
+  async findOne(id: string): Promise<BookWithStockStatus> {
     const book = await this.prisma.book.findUnique({
       where: { id },
     });
@@ -64,29 +104,80 @@ export class BooksService {
       throw new NotFoundException('Book not found');
     }
 
-    return book;
+    return this.enhanceBookWithStockStatus(book);
   }
 
-  async create(dto: CreateBookDto): Promise<Book> {
-    return await this.prisma.book.create({
+  async create(dto: CreateBookDto): Promise<BookWithStockStatus> {
+    const book = await this.prisma.book.create({
       data: dto,
     });
+
+    return this.enhanceBookWithStockStatus(book);
   }
 
-  async update(id: string, dto: UpdateBookDto): Promise<Book> {
-    const book = await this.findOne(id); 
+  async update(id: string, dto: UpdateBookDto): Promise<BookWithStockStatus> {
+    const existingBook = await this.findOne(id); 
     
-    return await this.prisma.book.update({
+    const book = await this.prisma.book.update({
       where: { id },
       data: dto,
     });
+
+    return this.enhanceBookWithStockStatus(book);
   }
 
-  async remove(id: string): Promise<Book> {
-    const book = await this.findOne(id);
+  async remove(id: string): Promise<BookWithStockStatus> {
+    const existingBook = await this.findOne(id);
     
-    return await this.prisma.book.delete({
+    const book = await this.prisma.book.delete({
       where: { id },
     });
+
+    return this.enhanceBookWithStockStatus(book);
+  }
+
+  /**
+   * Check if a book is available for purchase with the requested quantity
+   */
+  async checkStockAvailability(bookId: string, requestedQuantity: number): Promise<boolean> {
+    const book = await this.prisma.book.findUnique({
+      where: { id: bookId },
+      select: { stock: true },
+    });
+
+    if (!book) {
+      return false;
+    }
+
+    return book.stock >= requestedQuantity;
+  }
+
+  /**
+   * Get books that are out of stock
+   */
+  async getOutOfStockBooks(): Promise<BookWithStockStatus[]> {
+    const books = await this.prisma.book.findMany({
+      where: { stock: 0 },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    return this.enhanceBooksWithStockStatus(books);
+  }
+
+  /**
+   * Get books with low stock (stock <= 5)
+   */
+  async getLowStockBooks(): Promise<BookWithStockStatus[]> {
+    const books = await this.prisma.book.findMany({
+      where: { 
+        stock: { 
+          gt: 0,
+          lte: 5 
+        } 
+      },
+      orderBy: { stock: 'asc' },
+    });
+
+    return this.enhanceBooksWithStockStatus(books);
   }
 }
