@@ -1,207 +1,177 @@
-# Bookstore API
+# Bookstore Application
 
-A comprehensive bookstore API built with NestJS, featuring authentication, book management, shopping cart functionality, and order processing.
+A full-stack bookstore application with NestJS backend and React frontend.
 
-## Features
+## Project Structure
 
-- 🔐 **Authentication & Authorization**: JWT-based authentication with role-based access control
-- 📚 **Book Management**: CRUD operations for books with search, pagination, and sorting
-- 🛒 **Shopping Cart**: Add, update, and remove items from cart with stock validation
-- 📦 **Order Processing**: Complete order workflow with stock management and transaction safety
-- 📊 **Inventory Management**: Stock status tracking with low stock and out-of-stock alerts
-- 📖 **API Documentation**: Comprehensive Swagger/OpenAPI documentation
-- 🛡️ **Error Handling**: Global exception handling with consistent error responses
-- ✅ **Testing**: Comprehensive unit tests and property-based testing
+```
+bookstore-api/
+├── backend/          # NestJS API server
+│   ├── src/         # Source code
+│   ├── prisma/      # Database schema and migrations
+│   ├── test/        # E2E tests
+│   └── ...          # Configuration files
+├── frontend/        # React frontend application
+│   ├── src/         # Source code
+│   └── ...          # Configuration files
+├── README.md        # This file
+└── .gitignore       # Git ignore rules
+```
 
-## Technology Stack
+## Quick Start
 
-- **Framework**: NestJS
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT with Passport
-- **Documentation**: Swagger/OpenAPI
-- **Testing**: Jest with fast-check for property-based testing
-- **Validation**: class-validator and class-transformer
-
-## Prerequisites
-
-- Node.js (v18 or higher)
+### Prerequisites
+- Node.js 18+
 - PostgreSQL database
 - npm or yarn
 
-## Installation
+### Backend Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd bookstore-api
-   ```
+1. Navigate to backend directory:
+```bash
+cd backend
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+2. Install dependencies:
+```bash
+npm install
+```
 
-3. **Environment Configuration**
-   
-   Copy the example environment file and configure your settings:
-   ```bash
-   cp .env.example .env
-   ```
+3. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your database credentials
+```
 
-   Update the `.env` file with your configuration:
-   ```env
-   # Database Configuration
-   DATABASE_URL="postgresql://username:password@localhost:5432/bookstore"
-   
-   # JWT Configuration
-   JWT_SECRET="your-super-secret-jwt-key-here"
-   JWT_EXPIRES_IN="24h"
-   
-   # Server Configuration
-   PORT=3000
-   NODE_ENV="development"
-   ```
+4. Run database migrations:
+```bash
+npx prisma migrate dev
+```
 
-4. **Database Setup**
-   ```bash
-   # Generate Prisma client
-   npx prisma generate
-   
-   # Run database migrations
-   npx prisma migrate deploy
-   
-   # Seed the database with sample data
-   npm run db:seed
-   ```
+5. Seed the database:
+```bash
+npm run db:seed
+```
+
+6. Start the backend server:
+```bash
+npm run start:dev
+```
+
+Backend will be available at http://localhost:3000
+
+### Frontend Setup
+
+1. Navigate to frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the frontend development server:
+```bash
+npm run dev
+```
+
+Frontend will be available at http://localhost:3001
+
+## Features
+
+### Backend (NestJS)
+- 🔐 JWT Authentication with role-based access
+- 📚 Book CRUD operations with search and pagination
+- 🛒 Shopping cart management
+- 📦 Order processing with transactions
+- 👨‍💼 Admin panel for inventory management
+- 📊 Comprehensive testing (unit + e2e)
+- 📖 Swagger API documentation
+- 🗄️ PostgreSQL with Prisma ORM
+
+### Frontend (React)
+- ⚛️ React 18 with TypeScript
+- 🎨 TailwindCSS for styling
+- 🔄 TanStack Query for server state
+- 🏪 Zustand for client state
+- ✨ Framer Motion animations
+- 📱 Responsive design
+- 🔐 JWT authentication
+- 🛒 Shopping cart functionality
+
+## API Documentation
+
+Once the backend is running, visit:
+- Swagger UI: http://localhost:3000/api/docs
+
+## Development
+
+### Running Tests
+
+Backend tests:
+```bash
+cd backend
+npm run test        # Unit tests
+npm run test:e2e    # E2E tests
+```
+
+### Database Management
+
+```bash
+cd backend
+npx prisma studio   # Database GUI
+npx prisma migrate dev  # Run migrations
+npm run db:seed     # Seed database
+npm run db:reset    # Reset and seed
+```
 
 ## Environment Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | - | ✅ |
-| `JWT_SECRET` | JWT signing secret (min 32 chars) | - | ✅ |
-| `JWT_EXPIRES_IN` | JWT token expiration time | `24h` | ❌ |
-| `PORT` | Server port number | `3000` | ❌ |
-| `NODE_ENV` | Environment mode | `development` | ❌ |
-| `CORS_ORIGIN` | CORS allowed origin | - | ❌ |
-| `BCRYPT_ROUNDS` | Bcrypt hash rounds (8-15) | `10` | ❌ |
-| `SWAGGER_TITLE` | API documentation title | `Bookstore API` | ❌ |
-| `SWAGGER_DESCRIPTION` | API documentation description | - | ❌ |
-| `SWAGGER_VERSION` | API version | `1.0` | ❌ |
-| `SWAGGER_PATH` | Swagger UI path | `api/docs` | ❌ |
-
-## Running the Application
-
-```bash
-# Development mode
-npm run start:dev
-
-# Production mode
-npm run start:prod
-
-# Debug mode
-npm run start:debug
+### Backend (.env)
+```
+DATABASE_URL="postgresql://username:password@localhost:5432/bookstore"
+JWT_SECRET="your-super-secret-jwt-key-at-least-32-characters"
+BCRYPT_ROUNDS=10
+PORT=3000
+NODE_ENV=development
 ```
 
-The application will be available at:
-- **API**: http://localhost:3000
-- **Swagger Documentation**: http://localhost:3000/api/docs
-
-## Database Management
-
-```bash
-# Reset database and reseed
-npm run db:reset
-
-# Seed database with sample data
-npm run db:seed
-
-# Generate Prisma client after schema changes
-npx prisma generate
-
-# Create and apply new migration
-npx prisma migrate dev --name migration_name
+### Frontend (.env)
+```
+VITE_API_URL=http://localhost:3000
 ```
 
-## Testing
+## Tech Stack
 
-```bash
-# Run all tests
-npm run test
+### Backend
+- NestJS
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- JWT Authentication
+- Jest Testing
+- Swagger/OpenAPI
 
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:cov
-
-# Run E2E tests
-npm run test:e2e
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - User login
-
-### Books
-- `GET /books` - Get all books (with search, pagination, sorting)
-- `GET /books/:id` - Get book by ID
-- `GET /books/:id/stock-availability` - Check stock availability
-- `GET /books/inventory/out-of-stock` - Get out-of-stock books (Admin)
-- `GET /books/inventory/low-stock` - Get low-stock books (Admin)
-- `POST /books` - Create book (Admin)
-- `PATCH /books/:id` - Update book (Admin)
-- `DELETE /books/:id` - Delete book (Admin)
-
-### Cart
-- `GET /cart` - Get user's cart
-- `POST /cart` - Add item to cart
-- `PATCH /cart/:bookId` - Update cart item quantity
-- `DELETE /cart/:bookId` - Remove item from cart
-
-### Orders
-- `GET /orders` - Get user's order history
-- `GET /orders/:id` - Get specific order
-- `POST /orders` - Create order (checkout)
-
-## Sample Data
-
-The seed script creates:
-- **1 Admin user**: `admin@bookstore.com` / `admin123`
-- **3 Regular users**: `john.doe@example.com` / `user123` (and others)
-- **15 Books**: Various categories with different stock levels
-- **Sample cart items** and **orders** for testing
-
-## Stock Management
-
-The system includes intelligent stock management:
-- **IN_STOCK**: Stock > 5
-- **LOW_STOCK**: Stock 1-5
-- **OUT_OF_STOCK**: Stock = 0
-
-## Error Handling
-
-The API provides consistent error responses:
-```json
-{
-  "statusCode": 400,
-  "message": "Validation failed",
-  "error": "Bad Request",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "path": "/api/endpoint"
-}
-```
+### Frontend
+- React 18
+- TypeScript
+- TailwindCSS
+- TanStack Query
+- Zustand
+- Framer Motion
+- React Hook Form
+- Zod Validation
+- Vite
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+4. Add tests if applicable
+5. Submit a pull request
 
 ## License
 
