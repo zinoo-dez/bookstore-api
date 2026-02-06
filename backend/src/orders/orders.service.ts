@@ -125,4 +125,29 @@ export class OrdersService {
 
     return order;
   }
+
+  async updateStatus(
+    orderId: string,
+    status: 'PENDING' | 'COMPLETED' | 'CANCELLED',
+  ): Promise<Order> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status },
+      include: {
+        orderItems: {
+          include: {
+            book: true,
+          },
+        },
+      },
+    });
+  }
 }

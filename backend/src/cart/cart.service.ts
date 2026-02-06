@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -9,6 +9,15 @@ export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
   async addItem(userId: string, dto: AddToCartDto): Promise<CartItem> {
+    // Verify user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid user session. Please login again.');
+    }
+
     // Check if book exists and has sufficient stock
     const book = await this.prisma.book.findUnique({
       where: { id: dto.bookId },

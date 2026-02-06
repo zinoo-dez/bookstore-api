@@ -18,9 +18,10 @@ export const bookSchema = z.object({
   title: z.string(),
   author: z.string(),
   isbn: z.string(),
-  price: z.number(),
+  price: z.coerce.number(),
   stock: z.number(),
   description: z.string().nullable(),
+  coverImage: z.string().nullable(),
   inStock: z.boolean(),
   stockStatus: z.enum(['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK']),
   createdAt: z.string(),
@@ -34,6 +35,7 @@ export const createBookSchema = z.object({
   price: z.number().min(0.01, 'Price must be greater than 0'),
   stock: z.number().min(0, 'Stock cannot be negative').optional(),
   description: z.string().max(500).optional(),
+  coverImage: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 })
 
 export const searchBooksSchema = z.object({
@@ -67,7 +69,8 @@ export const booksResponseSchema = z.object({
   total: z.number(),
   page: z.number(),
   limit: z.number(),
-  totalPages: z.number(),
+  totalPages: z.number().optional(), // FIX
+  message: z.string().optional(), // Added
 })
 
 export const authResponseSchema = z.object({

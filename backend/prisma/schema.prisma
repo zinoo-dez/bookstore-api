@@ -48,6 +48,7 @@ model Book {
   description String?
   price       Decimal     @db.Decimal(10, 2)
   stock       Int         @default(0)
+  coverImage  String?     // URL to book cover image
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 

@@ -1,15 +1,14 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, type LoginData } from '@/lib/schemas'
 import { useLogin } from '@/services/auth'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
 
 const LoginPage = () => {
-  const navigate = useNavigate()
   const loginMutation = useLogin()
-  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
@@ -20,11 +19,8 @@ const LoginPage = () => {
   })
 
   const onSubmit = (data: LoginData) => {
-    loginMutation.mutate(data, {
-      onSuccess: () => {
-        navigate('/')
-      },
-    })
+    loginMutation.mutate(data)
+    // Navigation is handled by useLogin hook based on user role
   }
 
   return (
@@ -52,67 +48,48 @@ const LoginPage = () => {
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                {...register('email')}
-                type="email"
-                autoComplete="email"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your email"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+            <Input
+              {...register('email')}
+              type="email"
+              label="Email address"
+              placeholder="Enter your email"
+              error={errors.email?.message}
+              autoComplete="email"
+            />
             
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  {...register('password')}
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <span className="text-gray-400 hover:text-gray-600">
-                    {showPassword ? '🙈' : '👁️'}
-                  </span>
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-            </div>
+            <Input
+              {...register('password')}
+              type="password"
+              label="Password"
+              placeholder="Enter your password"
+              error={errors.password?.message}
+              autoComplete="current-password"
+            />
           </div>
 
           {loginMutation.error && (
-            <div className="text-red-600 text-sm text-center">
-              {loginMutation.error.response?.data?.message || 'Login failed'}
+            <div className="rounded-md bg-red-50 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <span className="text-red-400">⚠️</span>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Login Failed</h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    {loginMutation.error.message}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          <div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={loginMutation.isPending}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loginMutation.isPending ? 'Signing in...' : 'Sign in'}
-            </motion.button>
-          </div>
+          <Button
+            type="submit"
+            isLoading={loginMutation.isPending}
+            className="w-full"
+          >
+            Sign in
+          </Button>
         </form>
       </motion.div>
     </div>

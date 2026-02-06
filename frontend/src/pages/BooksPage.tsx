@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useBooks } from '@/services/books'
-import { useCartStore } from '@/store/cart'
-import { useAuthStore } from '@/store/auth'
+import { useAddToCart } from '@/services/cart'
+import { useAuthStore } from '@/store/auth.store'
+import BookCover from '@/components/ui/BookCover'
 
 const BooksPage = () => {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useState({
     page: 1,
     limit: 12,
@@ -16,7 +18,7 @@ const BooksPage = () => {
   })
 
   const { data: booksData, isLoading } = useBooks(searchParams)
-  const { addItem } = useCartStore()
+  const addToCart = useAddToCart()
   const { isAuthenticated } = useAuthStore()
 
   const handleSearch = (e: React.FormEvent) => {
@@ -24,15 +26,20 @@ const BooksPage = () => {
     setSearchParams(prev => ({ ...prev, page: 1 }))
   }
 
-  const handleAddToCart = (book: any) => {
-    addItem({
-      bookId: book.id,
-      title: book.title,
-      author: book.author,
-      price: book.price,
-      quantity: 1,
-      stock: book.stock,
-    })
+  const handleAddToCart = async (book: any) => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+    
+    try {
+      await addToCart.mutateAsync({
+        bookId: book.id,
+        quantity: 1,
+      })
+    } catch (error) {
+      console.error('Failed to add to cart:', error)
+    }
   }
 
   return (
@@ -120,9 +127,11 @@ const BooksPage = () => {
                   transition={{ delay: index * 0.05, duration: 0.5 }}
                   className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6"
                 >
-                  <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 rounded mb-4 flex items-center justify-center">
-                    <span className="text-4xl">📖</span>
-                  </div>
+                  <BookCover
+                    src={book.coverImage}
+                    alt={book.title}
+                    className="h-48 rounded mb-4"
+                  />
                   
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                     {book.title}
@@ -168,7 +177,7 @@ const BooksPage = () => {
             </div>
 
             {/* Pagination */}
-            {booksData && booksData.totalPages > 1 && (
+            {booksData && booksData.totalPages !== undefined && booksData.totalPages > 1 && (
               <div className="flex justify-center mt-8 space-x-2">
                 {[...Array(booksData.totalPages)].map((_, i) => (
                   <button

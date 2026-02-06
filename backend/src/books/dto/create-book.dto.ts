@@ -54,4 +54,13 @@ export class CreateBookDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({
+    description: 'Book cover image URL',
+    example: 'https://example.com/covers/great-gatsby.jpg',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  coverImage?: string;
 }

@@ -2,13 +2,17 @@ import {
   Controller, 
   Post, 
   Get, 
-  Param, 
+  Patch,
+  Param,
+  Body,
   UseGuards, 
   Request 
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -143,5 +147,29 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   findOne(@Request() req: any, @Param('id') id: string) {
     return this.ordersService.findOne(req.user.sub, id);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Update order status (Admin only)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['PENDING', 'COMPLETED', 'CANCELLED'] },
+      },
+      required: ['status'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Order status updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: 'PENDING' | 'COMPLETED' | 'CANCELLED',
+  ) {
+    return this.ordersService.updateStatus(id, status);
   }
 }

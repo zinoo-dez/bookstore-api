@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -68,6 +69,7 @@ async function main() {
         price: 12.99,
         stock: 25,
         description: 'A classic American novel set in the Jazz Age, exploring themes of wealth, love, and the American Dream.',
+        coverImage: 'https://covers.openlibrary.org/b/isbn/9780743273565-L.jpg',
       },
     }),
     prisma.book.create({
@@ -78,6 +80,7 @@ async function main() {
         price: 14.99,
         stock: 18,
         description: 'A gripping tale of racial injustice and childhood innocence in the American South.',
+        coverImage: 'https://covers.openlibrary.org/b/isbn/9780061120084-L.jpg',
       },
     }),
     prisma.book.create({
@@ -88,6 +91,7 @@ async function main() {
         price: 13.99,
         stock: 30,
         description: 'A dystopian social science fiction novel about totalitarian control and surveillance.',
+        coverImage: 'https://covers.openlibrary.org/b/isbn/9780452284234-L.jpg',
       },
     }),
     
@@ -220,6 +224,222 @@ async function main() {
         description: 'A deep dive into the core mechanisms of the JavaScript language.',
       },
     }),
+    
+    // More Fiction
+    prisma.book.create({
+      data: {
+        title: 'Harry Potter and the Philosopher\'s Stone',
+        author: 'J.K. Rowling',
+        isbn: '978-0-439-70818-8',
+        price: 19.99,
+        stock: 35,
+        description: 'The first book in the Harry Potter series about a young wizard discovering his magical heritage.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'The Hobbit',
+        author: 'J.R.R. Tolkien',
+        isbn: '978-0-547-92822-7',
+        price: 16.99,
+        stock: 28,
+        description: 'A fantasy adventure about Bilbo Baggins and his unexpected journey.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'The Da Vinci Code',
+        author: 'Dan Brown',
+        isbn: '978-0-307-47492-1',
+        price: 15.99,
+        stock: 22,
+        description: 'A mystery thriller involving secret societies and religious history.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'The Alchemist',
+        author: 'Paulo Coelho',
+        isbn: '978-0-06-112241-5',
+        price: 14.99,
+        stock: 30,
+        description: 'A philosophical novel about following your dreams and finding your destiny.',
+      },
+    }),
+    
+    // Science & Technology
+    prisma.book.create({
+      data: {
+        title: 'Sapiens: A Brief History of Humankind',
+        author: 'Yuval Noah Harari',
+        isbn: '978-0-06-231609-7',
+        price: 18.99,
+        stock: 20,
+        description: 'An exploration of human history from the Stone Age to the modern age.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'A Brief History of Time',
+        author: 'Stephen Hawking',
+        isbn: '978-0-553-38016-3',
+        price: 17.99,
+        stock: 15,
+        description: 'A landmark volume in science writing exploring cosmology and the universe.',
+      },
+    }),
+    
+    // More Programming
+    prisma.book.create({
+      data: {
+        title: 'Eloquent JavaScript',
+        author: 'Marijn Haverbeke',
+        isbn: '978-1-59327-950-9',
+        price: 32.99,
+        stock: 18,
+        description: 'A modern introduction to programming with JavaScript.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'Python Crash Course',
+        author: 'Eric Matthes',
+        isbn: '978-1-59327-928-8',
+        price: 39.99,
+        stock: 16,
+        description: 'A hands-on, project-based introduction to programming with Python.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'The Art of Computer Programming',
+        author: 'Donald Knuth',
+        isbn: '978-0-201-89683-1',
+        price: 89.99,
+        stock: 5,
+        description: 'A comprehensive monograph on computer programming algorithms.',
+      },
+    }),
+    
+    // Mystery & Thriller
+    prisma.book.create({
+      data: {
+        title: 'Gone Girl',
+        author: 'Gillian Flynn',
+        isbn: '978-0-307-58836-4',
+        price: 15.99,
+        stock: 24,
+        description: 'A psychological thriller about a marriage gone terribly wrong.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'The Girl with the Dragon Tattoo',
+        author: 'Stieg Larsson',
+        isbn: '978-0-307-45454-1',
+        price: 16.99,
+        stock: 19,
+        description: 'A gripping mystery thriller set in Sweden.',
+      },
+    }),
+    
+    // Self-Help & Business
+    prisma.book.create({
+      data: {
+        title: 'Atomic Habits',
+        author: 'James Clear',
+        isbn: '978-0-7352-1129-2',
+        price: 16.99,
+        stock: 40,
+        description: 'An easy and proven way to build good habits and break bad ones.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'The Lean Startup',
+        author: 'Eric Ries',
+        isbn: '978-0-307-88791-7',
+        price: 26.99,
+        stock: 14,
+        description: 'How today\'s entrepreneurs use continuous innovation to create radically successful businesses.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'Thinking, Fast and Slow',
+        author: 'Daniel Kahneman',
+        isbn: '978-0-374-53355-7',
+        price: 18.99,
+        stock: 17,
+        description: 'A groundbreaking tour of the mind explaining the two systems that drive the way we think.',
+      },
+    }),
+    
+    // Fantasy
+    prisma.book.create({
+      data: {
+        title: 'A Game of Thrones',
+        author: 'George R.R. Martin',
+        isbn: '978-0-553-10354-0',
+        price: 19.99,
+        stock: 26,
+        description: 'The first book in A Song of Ice and Fire series, an epic fantasy saga.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'The Name of the Wind',
+        author: 'Patrick Rothfuss',
+        isbn: '978-0-7564-0407-9',
+        price: 17.99,
+        stock: 21,
+        description: 'The first book in The Kingkiller Chronicle, a fantasy adventure.',
+      },
+    }),
+    
+    // More Classics
+    prisma.book.create({
+      data: {
+        title: 'Crime and Punishment',
+        author: 'Fyodor Dostoevsky',
+        isbn: '978-0-14-310575-5',
+        price: 14.99,
+        stock: 11,
+        description: 'A psychological drama about morality, guilt, and redemption.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'Wuthering Heights',
+        author: 'Emily Brontë',
+        isbn: '978-0-14-143955-6',
+        price: 12.99,
+        stock: 13,
+        description: 'A tale of passion and revenge on the Yorkshire moors.',
+      },
+    }),
+    
+    // Low stock items
+    prisma.book.create({
+      data: {
+        title: 'The Road',
+        author: 'Cormac McCarthy',
+        isbn: '978-0-307-38789-9',
+        price: 15.99,
+        stock: 4,
+        description: 'A post-apocalyptic novel about a father and son\'s journey.',
+      },
+    }),
+    prisma.book.create({
+      data: {
+        title: 'Life of Pi',
+        author: 'Yann Martel',
+        isbn: '978-0-15-602732-2',
+        price: 14.99,
+        stock: 3,
+        description: 'A philosophical adventure novel about survival and faith.',
+      },
+    }),
   ]);
 
   // Create some sample cart items for users
@@ -305,9 +525,15 @@ async function main() {
   console.log(`📊 Created:`);
   console.log(`   - 1 admin user (admin@bookstore.com / admin123)`);
   console.log(`   - 3 regular users (password: user123)`);
-  console.log(`   - 15 books (various stock levels)`);
+  console.log(`   - 35 books (various genres and stock levels)`);
   console.log(`   - 4 cart items`);
   console.log(`   - 2 orders with 3 order items`);
+  console.log(`\n📚 Book Categories:`);
+  console.log(`   - Fiction & Classics`);
+  console.log(`   - Science Fiction & Fantasy`);
+  console.log(`   - Programming & Technology`);
+  console.log(`   - Mystery & Thriller`);
+  console.log(`   - Self-Help & Business`);
   console.log(`\n🔑 Login credentials:`);
   console.log(`   Admin: admin@bookstore.com / admin123`);
   console.log(`   Users: john.doe@example.com / user123`);
