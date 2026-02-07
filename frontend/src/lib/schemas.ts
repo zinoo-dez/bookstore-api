@@ -22,6 +22,8 @@ export const bookSchema = z.object({
   stock: z.number(),
   description: z.string().nullable(),
   coverImage: z.string().nullable(),
+  categories: z.array(z.string()).nullable(),
+  rating: z.number().nullable(),
   inStock: z.boolean(),
   stockStatus: z.enum(['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK']),
   createdAt: z.string(),
@@ -36,6 +38,7 @@ export const createBookSchema = z.object({
   stock: z.number().min(0, 'Stock cannot be negative').optional(),
   description: z.string().max(500).optional(),
   coverImage: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  categories: z.array(z.string()).optional(),
 })
 
 export const searchBooksSchema = z.object({
@@ -45,6 +48,10 @@ export const searchBooksSchema = z.object({
   author: z.string().optional(),
   category: z.string().optional(),
   isbn: z.string().optional(),
+  minPrice: z.number().min(0).optional(),
+  maxPrice: z.number().min(0).optional(),
+  minRating: z.number().min(0).max(5).optional(),
+  inStock: z.boolean().optional(),
   sortBy: z.enum(['title', 'author', 'price', 'createdAt']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
 })
@@ -69,8 +76,7 @@ export const booksResponseSchema = z.object({
   total: z.number(),
   page: z.number(),
   limit: z.number(),
-  totalPages: z.number().optional(), // FIX
-  message: z.string().optional(), // Added
+  message: z.string().optional(),
 })
 
 export const authResponseSchema = z.object({
@@ -82,6 +88,10 @@ export const userSchema = z.object({
   email: z.string(),
   name: z.string(),
   role: z.enum(['USER', 'ADMIN']),
+  avatarType: z.enum(['emoji', 'upload']).optional().default('emoji'),
+  avatarValue: z.string().nullable().optional(),
+  // avatar: z.string().optional(), // Deprecated
+  backgroundColor: z.string().nullable().optional(),
   createdAt: z.string(),
 })
 

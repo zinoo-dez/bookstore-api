@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, Max, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -26,6 +26,57 @@ export class SearchBooksDto {
   @IsOptional()
   @IsString()
   isbn?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter books by category',
+    example: 'Fiction',
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum price filter',
+    example: 10,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minPrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum price filter',
+    example: 50,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxPrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum rating filter (0-5)',
+    example: 4,
+    minimum: 0,
+    maximum: 5,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  minRating?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter for in-stock books only',
+    example: true,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  inStock?: boolean;
 
   @ApiPropertyOptional({
     description: 'Page number for pagination',

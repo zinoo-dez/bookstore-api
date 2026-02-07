@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CartService } from '../cart/cart.service';
 import { Order, OrderItem } from '@prisma/client';
@@ -8,7 +12,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cartService: CartService,
-  ) {}
+  ) { }
 
   async create(userId: string): Promise<Order & { orderItems: OrderItem[] }> {
     // Get user's cart
@@ -79,14 +83,8 @@ export class OrdersService {
         where: { userId },
       });
 
-      // Update order status to COMPLETED
-      const completedOrder = await tx.order.update({
-        where: { id: order.id },
-        data: { status: 'COMPLETED' },
-        include: { orderItems: true },
-      });
-
-      return completedOrder;
+      // Return the order with items
+      return { ...order, orderItems };
     });
   }
 
@@ -103,7 +101,22 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
     });
   }
-
+  // ADMIN: get all orders
+  async findAllForAdmin(): Promise<Order[]> {
+    return this.prisma.order.findMany({
+      include: {
+        user: true, // so admin sees who placed the order
+        orderItems: {
+          include: {
+            book: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
   async findOne(userId: string, orderId: string): Promise<Order> {
     const order = await this.prisma.order.findFirst({
       where: {
@@ -141,6 +154,35 @@ export class OrdersService {
     return await this.prisma.order.update({
       where: { id: orderId },
       data: { status },
+      include: {
+        orderItems: {
+          include: {
+            book: true,
+          },
+        },
+      },
+    });
+  }
+
+  async cancelOrder(userId: string, orderId: string): Promise<Order> {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId, // Ensure user can only cancel their own orders
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== 'PENDING') {
+      throw new BadRequestException('Only pending orders can be cancelled');
+    }
+
+    return await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'CANCELLED' },
       include: {
         orderItems: {
           include: {

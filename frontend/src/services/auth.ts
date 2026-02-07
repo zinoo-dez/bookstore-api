@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api, getErrorMessage } from '@/lib/api'
-import { 
-  LoginData, 
-  RegisterData, 
-  authResponseSchema, 
+import {
+  LoginData,
+  RegisterData,
+  authResponseSchema,
   userSchema,
   type AuthResponse,
-  type User 
+  type User
 } from '@/lib/schemas'
 import { useAuthStore } from '@/store/auth.store'
 import { useCartStore } from '@/store/cart.store'
@@ -17,6 +17,9 @@ interface JwtPayload {
   sub: string
   email: string
   role: 'USER' | 'ADMIN'
+  avatarType?: 'emoji' | 'upload'
+  avatarValue?: string
+  backgroundColor?: string
   iat: number
   exp: number
 }
@@ -43,11 +46,14 @@ export const useLogin = () => {
           email: decoded.email,
           name: decoded.email.split('@')[0],
           role: decoded.role,
+          avatarType: decoded.avatarType || 'emoji',
+          avatarValue: decoded.avatarValue,
+          backgroundColor: decoded.backgroundColor,
           createdAt: new Date().toISOString(),
         }
         login(user, data.access_token)
         queryClient.invalidateQueries({ queryKey: ['user'] })
-        
+
         // Redirect admin to dashboard, regular users to home
         if (decoded.role === 'ADMIN') {
           navigate('/admin')
@@ -89,6 +95,53 @@ export const useLogout = () => {
       clearCart()
       queryClient.clear()
       navigate('/login')
+    },
+  })
+}
+
+export type UpdateProfileData = {
+  name?: string
+  avatarType?: 'emoji' | 'upload'
+  avatarValue?: string
+  backgroundColor?: string
+}
+
+export const useUploadAvatar = () => {
+  return useMutation({
+    mutationFn: async (file: File): Promise<{ url: string }> => {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      try {
+        const response = await api.post('/users/upload-avatar', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+        return response.data;
+      } catch (error) {
+        throw new Error(getErrorMessage(error))
+      }
+    },
+  })
+}
+
+export const useUpdateProfile = () => {
+  const queryClient = useQueryClient()
+  const { updateUser } = useAuthStore()
+
+  return useMutation({
+    mutationFn: async (data: UpdateProfileData): Promise<User> => {
+      try {
+        const response = await api.patch('/auth/profile', data)
+        return userSchema.parse(response.data)
+      } catch (error) {
+        throw new Error(getErrorMessage(error))
+      }
+    },
+    onSuccess: (updatedUser) => {
+      updateUser(updatedUser)
+      queryClient.setQueryData(['user'], updatedUser)
     },
   })
 }

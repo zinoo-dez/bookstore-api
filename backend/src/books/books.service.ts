@@ -4,11 +4,14 @@ import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { SearchBooksDto } from './dto/search-books.dto';
 import { Book } from '@prisma/client';
-import { BookWithStockStatus, BookStockStatus } from './types/book-with-stock-status.type';
+import {
+  BookWithStockStatus,
+  BookStockStatus,
+} from './types/book-with-stock-status.type';
 
 @Injectable()
 export class BooksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Calculate stock status for a book
@@ -39,34 +42,72 @@ export class BooksService {
    * Enhance multiple books with stock status information
    */
   private enhanceBooksWithStockStatus(books: Book[]): BookWithStockStatus[] {
-    return books.map(book => this.enhanceBookWithStockStatus(book));
+    return books.map((book) => this.enhanceBookWithStockStatus(book));
   }
 
-  async findAll(searchDto?: SearchBooksDto): Promise<{ 
-    books: BookWithStockStatus[]; 
-    total: number; 
-    page: number; 
-    limit: number; 
-    message?: string; 
+  async findAll(searchDto?: SearchBooksDto): Promise<{
+    books: BookWithStockStatus[];
+    total: number;
+    page: number;
+    limit: number;
+    message?: string;
   }> {
-    const { title, author, isbn, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = searchDto || {};
+    const {
+      title,
+      author,
+      isbn,
+      category,
+      minPrice,
+      maxPrice,
+      minRating,
+      inStock,
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = searchDto || {};
 
     const where: any = {};
-    
+
     if (title) {
       where.title = { contains: title, mode: 'insensitive' };
     }
-    
+
     if (author) {
       where.author = { contains: author, mode: 'insensitive' };
     }
-    
+
     if (isbn) {
       where.isbn = { contains: isbn, mode: 'insensitive' };
     }
 
+    if (category) {
+      where.categories = { hasSome: [category] };
+    }
+
+    // Price range filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      where.price = {};
+      if (minPrice !== undefined) {
+        where.price.gte = minPrice;
+      }
+      if (maxPrice !== undefined) {
+        where.price.lte = maxPrice;
+      }
+    }
+
+    // Rating filter
+    if (minRating !== undefined) {
+      where.rating = { gte: minRating };
+    }
+
+    // Stock availability filter
+    if (inStock === true) {
+      where.stock = { gt: 0 };
+    }
+
     const skip = (page - 1) * limit;
-    
+
     const [books, total] = await Promise.all([
       this.prisma.book.findMany({
         where,
@@ -116,8 +157,8 @@ export class BooksService {
   }
 
   async update(id: string, dto: UpdateBookDto): Promise<BookWithStockStatus> {
-    const existingBook = await this.findOne(id); 
-    
+    const existingBook = await this.findOne(id);
+
     const book = await this.prisma.book.update({
       where: { id },
       data: dto,
@@ -128,7 +169,7 @@ export class BooksService {
 
   async remove(id: string): Promise<BookWithStockStatus> {
     const existingBook = await this.findOne(id);
-    
+
     const book = await this.prisma.book.delete({
       where: { id },
     });
@@ -139,7 +180,10 @@ export class BooksService {
   /**
    * Check if a book is available for purchase with the requested quantity
    */
-  async checkStockAvailability(bookId: string, requestedQuantity: number): Promise<boolean> {
+  async checkStockAvailability(
+    bookId: string,
+    requestedQuantity: number,
+  ): Promise<boolean> {
     const book = await this.prisma.book.findUnique({
       where: { id: bookId },
       select: { stock: true },
@@ -169,11 +213,11 @@ export class BooksService {
    */
   async getLowStockBooks(): Promise<BookWithStockStatus[]> {
     const books = await this.prisma.book.findMany({
-      where: { 
-        stock: { 
+      where: {
+        stock: {
           gt: 0,
-          lte: 5 
-        } 
+          lte: 5,
+        },
       },
       orderBy: { stock: 'asc' },
     });

@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -41,6 +42,9 @@ export class AuthService {
         email: true,
         name: true,
         role: true,
+        avatarType: true,
+        avatarValue: true,
+        backgroundColor: true,
         createdAt: true,
       },
     });
@@ -52,13 +56,19 @@ export class AuthService {
       select: {
         id: true,
         email: true,
-        password: true, 
-        role: true,     
+        password: true,
+        name: true,
+        role: true,
+        avatarType: true,
+        avatarValue: true,
+        backgroundColor: true,
       },
     });
 
     if (!user) {
-      throw new UnauthorizedException('No account found with this email address');
+      throw new UnauthorizedException(
+        'No account found with this email address',
+      );
     }
 
     const passwordMatch = await bcrypt.compare(dto.password, user.password);
@@ -71,10 +81,37 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      name: user.name,
+      avatarType: user.avatarType,
+      avatarValue: user.avatarValue,
+      backgroundColor: user.backgroundColor,
     };
 
     return {
       access_token: await this.jwtService.signAsync(payload),
     };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    console.log('UPDATE PROFILE userId:', userId)
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.name && { name: dto.name }),
+        ...(dto.avatarType && { avatarType: dto.avatarType }),
+        ...(dto.avatarValue && { avatarValue: dto.avatarValue }),
+        ...(dto.backgroundColor && { backgroundColor: dto.backgroundColor }),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatarType: true,
+        avatarValue: true,
+        backgroundColor: true,
+        createdAt: true,
+      },
+    });
   }
 }

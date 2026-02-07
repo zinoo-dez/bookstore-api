@@ -1,5 +1,13 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsPositive, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  Min,
+  IsArray,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateBookDto {
   @ApiProperty({
@@ -9,6 +17,16 @@ export class CreateBookDto {
   @IsString()
   @IsNotEmpty()
   title!: string;
+
+  @ApiPropertyOptional({
+    description: 'Book categories/genres',
+    example: ['Fiction', 'Mystery'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  categories?: string[];
 
   @ApiProperty({
     description: 'Book author',

@@ -94,7 +94,10 @@ describe('AllExceptionsFilter', () => {
 
     it('should handle validation errors with array messages', () => {
       const exception = new HttpException(
-        { message: ['field1 is required', 'field2 must be a string'], error: 'Bad Request' },
+        {
+          message: ['field1 is required', 'field2 must be a string'],
+          error: 'Bad Request',
+        },
         HttpStatus.BAD_REQUEST,
       );
 
@@ -115,7 +118,10 @@ describe('AllExceptionsFilter', () => {
       mockRequest.url = '/api/books/123';
       mockRequest.method = 'POST';
 
-      const exception = new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      const exception = new HttpException(
+        'Unauthorized',
+        HttpStatus.UNAUTHORIZED,
+      );
 
       filter.catch(exception, mockArgumentsHost);
 

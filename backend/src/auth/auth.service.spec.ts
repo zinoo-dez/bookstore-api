@@ -35,14 +35,16 @@ describe('AuthService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
-              const config: { [key: string]: any } = {
-                BCRYPT_ROUNDS: 10,
-                JWT_SECRET: 'test-secret',
-                JWT_EXPIRES_IN: '24h',
-              };
-              return config[key] || defaultValue;
-            }),
+            get: jest
+              .fn()
+              .mockImplementation((key: string, defaultValue?: any) => {
+                const config: { [key: string]: any } = {
+                  BCRYPT_ROUNDS: 10,
+                  JWT_SECRET: 'test-secret',
+                  JWT_EXPIRES_IN: '24h',
+                };
+                return config[key] || defaultValue;
+              }),
           },
         },
       ],
@@ -84,8 +86,12 @@ describe('AuthService', () => {
               createdAt: new Date(),
             };
 
-            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-            (prismaService.user.create as jest.Mock).mockResolvedValue(mockUser);
+            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+              null,
+            );
+            (prismaService.user.create as jest.Mock).mockResolvedValue(
+              mockUser,
+            );
 
             // Act: Register user
             const result = await service.register(userData);
@@ -142,7 +148,9 @@ describe('AuthService', () => {
 
             const mockToken = 'mock-jwt-token';
 
-            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+              mockUser,
+            );
             (jwtService.signAsync as jest.Mock).mockResolvedValue(mockToken);
 
             // Mock bcrypt.compare to return true for valid password
@@ -156,7 +164,10 @@ describe('AuthService', () => {
             expect(prismaService.user.findUnique).toHaveBeenCalledWith({
               where: { email: loginData.email },
             });
-            expect(bcrypt.compare).toHaveBeenCalledWith(loginData.password, hashedPassword);
+            expect(bcrypt.compare).toHaveBeenCalledWith(
+              loginData.password,
+              hashedPassword,
+            );
             expect(jwtService.signAsync).toHaveBeenCalledWith({
               sub: mockUser.id,
               email: mockUser.email,
@@ -195,19 +206,26 @@ describe('AuthService', () => {
               updatedAt: new Date(),
             };
 
-            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+              mockUser,
+            );
 
             // Mock bcrypt.compare to return false for invalid password
             const bcrypt = require('bcrypt');
             jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
 
             // Act & Assert: Login should be rejected
-            await expect(service.login(loginData)).rejects.toThrow('Invalid credentials');
+            await expect(service.login(loginData)).rejects.toThrow(
+              'Invalid credentials',
+            );
 
             expect(prismaService.user.findUnique).toHaveBeenCalledWith({
               where: { email: loginData.email },
             });
-            expect(bcrypt.compare).toHaveBeenCalledWith(loginData.password, hashedPassword);
+            expect(bcrypt.compare).toHaveBeenCalledWith(
+              loginData.password,
+              hashedPassword,
+            );
             expect(jwtService.signAsync).not.toHaveBeenCalled();
           },
         ),
@@ -237,12 +255,18 @@ describe('AuthService', () => {
               createdAt: new Date(),
             };
 
-            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-            (prismaService.user.create as jest.Mock).mockResolvedValue(mockUser);
+            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+              null,
+            );
+            (prismaService.user.create as jest.Mock).mockResolvedValue(
+              mockUser,
+            );
 
             // Spy on bcrypt.hash to verify it's called
             const bcrypt = require('bcrypt');
-            const hashSpy = jest.spyOn(bcrypt, 'hash').mockResolvedValue('$2b$10$hashedPassword');
+            const hashSpy = jest
+              .spyOn(bcrypt, 'hash')
+              .mockResolvedValue('$2b$10$hashedPassword');
 
             // Act: Register user
             await service.register(userData);
@@ -265,7 +289,8 @@ describe('AuthService', () => {
             });
 
             // Verify the password passed to create is not the original password
-            const createCall = (prismaService.user.create as jest.Mock).mock.calls[0][0];
+            const createCall = (prismaService.user.create as jest.Mock).mock
+              .calls[0][0];
             expect(createCall.data.password).not.toBe(userData.password);
             expect(createCall.data.password).toMatch(/^\$2b\$10\$/); // bcrypt hash format
           },
@@ -298,10 +323,14 @@ describe('AuthService', () => {
               updatedAt: new Date(),
             };
 
-            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(existingUser);
+            (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+              existingUser,
+            );
 
             // Act & Assert: Registration should be rejected
-            await expect(service.register(userData)).rejects.toThrow('Email already registered');
+            await expect(service.register(userData)).rejects.toThrow(
+              'Email already registered',
+            );
 
             expect(prismaService.user.findUnique).toHaveBeenCalledWith({
               where: { email: userData.email },
@@ -377,10 +406,14 @@ describe('AuthService', () => {
           updatedAt: new Date(),
         };
 
-        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(existingUser);
+        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+          existingUser,
+        );
 
         // Act & Assert
-        await expect(service.register(registerDto)).rejects.toThrow('Email already registered');
+        await expect(service.register(registerDto)).rejects.toThrow(
+          'Email already registered',
+        );
         expect(prismaService.user.create).not.toHaveBeenCalled();
       });
     });
@@ -405,7 +438,9 @@ describe('AuthService', () => {
 
         const mockToken = 'mock-jwt-token';
 
-        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+          mockUser,
+        );
         (jwtService.signAsync as jest.Mock).mockResolvedValue(mockToken);
 
         const bcrypt = require('bcrypt');
@@ -436,7 +471,9 @@ describe('AuthService', () => {
         (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
 
         // Act & Assert
-        await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
+        await expect(service.login(loginDto)).rejects.toThrow(
+          'Invalid credentials',
+        );
         expect(jwtService.signAsync).not.toHaveBeenCalled();
       });
 
@@ -457,13 +494,17 @@ describe('AuthService', () => {
           updatedAt: new Date(),
         };
 
-        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+          mockUser,
+        );
 
         const bcrypt = require('bcrypt');
         jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
 
         // Act & Assert
-        await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
+        await expect(service.login(loginDto)).rejects.toThrow(
+          'Invalid credentials',
+        );
         expect(jwtService.signAsync).not.toHaveBeenCalled();
       });
     });

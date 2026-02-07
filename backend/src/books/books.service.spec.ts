@@ -52,9 +52,14 @@ describe('BooksService', () => {
             title: fc.string({ minLength: 1, maxLength: 100 }),
             author: fc.string({ minLength: 1, maxLength: 100 }),
             isbn: fc.string({ minLength: 10, maxLength: 17 }),
-            price: fc.float({ min: Math.fround(0.01), max: Math.fround(999.99) }),
+            price: fc.float({
+              min: Math.fround(0.01),
+              max: Math.fround(999.99),
+            }),
             stock: fc.integer({ min: 0, max: 1000 }),
-            description: fc.option(fc.string({ maxLength: 500 }), { nil: undefined }),
+            description: fc.option(fc.string({ maxLength: 500 }), {
+              nil: undefined,
+            }),
           }),
           async (bookData: CreateBookDto) => {
             // Arrange: Mock successful book creation
@@ -65,7 +70,9 @@ describe('BooksService', () => {
               updatedAt: new Date(),
             };
 
-            (prismaService.book.create as jest.Mock).mockResolvedValue(mockBook);
+            (prismaService.book.create as jest.Mock).mockResolvedValue(
+              mockBook,
+            );
 
             // Act: Create book
             const result = await service.create(bookData);
@@ -77,7 +84,12 @@ describe('BooksService', () => {
             expect(result).toMatchObject({
               ...mockBook,
               inStock: bookData.stock! > 0,
-              stockStatus: bookData.stock === 0 ? 'OUT_OF_STOCK' : bookData.stock! <= 5 ? 'LOW_STOCK' : 'IN_STOCK',
+              stockStatus:
+                bookData.stock === 0
+                  ? 'OUT_OF_STOCK'
+                  : bookData.stock! <= 5
+                    ? 'LOW_STOCK'
+                    : 'IN_STOCK',
             });
             expect(result.id).toBeDefined();
             expect(result.title).toBe(bookData.title);
@@ -99,14 +111,23 @@ describe('BooksService', () => {
         fc.asyncProperty(
           fc.record({
             id: fc.uuid(),
-            title: fc.option(fc.string({ minLength: 1, maxLength: 100 }), { nil: undefined }),
-            author: fc.option(fc.string({ minLength: 1, maxLength: 100 }), { nil: undefined }),
-            price: fc.option(fc.float({ min: Math.fround(0.01), max: Math.fround(999.99) }), { nil: undefined }),
-            stock: fc.option(fc.integer({ min: 0, max: 1000 }), { nil: undefined }),
+            title: fc.option(fc.string({ minLength: 1, maxLength: 100 }), {
+              nil: undefined,
+            }),
+            author: fc.option(fc.string({ minLength: 1, maxLength: 100 }), {
+              nil: undefined,
+            }),
+            price: fc.option(
+              fc.float({ min: Math.fround(0.01), max: Math.fround(999.99) }),
+              { nil: undefined },
+            ),
+            stock: fc.option(fc.integer({ min: 0, max: 1000 }), {
+              nil: undefined,
+            }),
           }),
           async (updateData) => {
             const { id, ...updateDto } = updateData;
-            
+
             // Arrange: Mock existing book and successful update
             const existingBook = {
               id,
@@ -120,22 +141,26 @@ describe('BooksService', () => {
               updatedAt: new Date(),
             };
 
-            const updatedBook = { 
-              ...existingBook, 
-              ...updateDto, 
+            const updatedBook = {
+              ...existingBook,
+              ...updateDto,
               updatedAt: new Date(),
               // Ensure stock is never undefined - use existing stock if not provided
               stock: updateDto.stock ?? existingBook.stock,
             };
 
-            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(existingBook);
-            (prismaService.book.update as jest.Mock).mockResolvedValue(updatedBook);
+            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+              existingBook,
+            );
+            (prismaService.book.update as jest.Mock).mockResolvedValue(
+              updatedBook,
+            );
 
             // Act: Update book
             const result = await service.update(id, updateDto as UpdateBookDto);
 
             const finalStock = updatedBook.stock;
-            
+
             // Assert: Book is updated successfully
             expect(prismaService.book.findUnique).toHaveBeenCalledWith({
               where: { id },
@@ -147,8 +172,12 @@ describe('BooksService', () => {
             expect(result).toMatchObject({
               ...updatedBook,
               inStock: finalStock > 0,
-              stockStatus: finalStock === 0 ? 'OUT_OF_STOCK' : 
-                          finalStock <= 5 ? 'LOW_STOCK' : 'IN_STOCK',
+              stockStatus:
+                finalStock === 0
+                  ? 'OUT_OF_STOCK'
+                  : finalStock <= 5
+                    ? 'LOW_STOCK'
+                    : 'IN_STOCK',
             });
           },
         ),
@@ -162,43 +191,48 @@ describe('BooksService', () => {
      */
     it('Property 9: Admin can delete books', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.uuid(),
-          async (bookId) => {
-            // Arrange: Mock existing book and successful deletion
-            const existingBook = {
-              id: bookId,
-              title: 'Book to Delete',
-              author: 'Test Author',
-              isbn: '1234567890',
-              price: 29.99,
-              stock: 5,
-              description: 'Test description',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            };
+        fc.asyncProperty(fc.uuid(), async (bookId) => {
+          // Arrange: Mock existing book and successful deletion
+          const existingBook = {
+            id: bookId,
+            title: 'Book to Delete',
+            author: 'Test Author',
+            isbn: '1234567890',
+            price: 29.99,
+            stock: 5,
+            description: 'Test description',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
 
-            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(existingBook);
-            (prismaService.book.delete as jest.Mock).mockResolvedValue(existingBook);
+          (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+            existingBook,
+          );
+          (prismaService.book.delete as jest.Mock).mockResolvedValue(
+            existingBook,
+          );
 
-            // Act: Delete book
-            const result = await service.remove(bookId);
+          // Act: Delete book
+          const result = await service.remove(bookId);
 
-            // Assert: Book is deleted successfully
-            expect(prismaService.book.findUnique).toHaveBeenCalledWith({
-              where: { id: bookId },
-            });
-            expect(prismaService.book.delete).toHaveBeenCalledWith({
-              where: { id: bookId },
-            });
-            expect(result).toMatchObject({
-              ...existingBook,
-              inStock: existingBook.stock > 0,
-              stockStatus: existingBook.stock === 0 ? 'OUT_OF_STOCK' : 
-                          existingBook.stock <= 5 ? 'LOW_STOCK' : 'IN_STOCK',
-            });
-          },
-        ),
+          // Assert: Book is deleted successfully
+          expect(prismaService.book.findUnique).toHaveBeenCalledWith({
+            where: { id: bookId },
+          });
+          expect(prismaService.book.delete).toHaveBeenCalledWith({
+            where: { id: bookId },
+          });
+          expect(result).toMatchObject({
+            ...existingBook,
+            inStock: existingBook.stock > 0,
+            stockStatus:
+              existingBook.stock === 0
+                ? 'OUT_OF_STOCK'
+                : existingBook.stock <= 5
+                  ? 'LOW_STOCK'
+                  : 'IN_STOCK',
+          });
+        }),
         { numRuns: 20 },
       );
     }, 10000);
@@ -209,40 +243,43 @@ describe('BooksService', () => {
      */
     it('Property 10: Book retrieval round-trip', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.uuid(),
-          async (bookId) => {
-            // Arrange: Mock existing book
-            const mockBook = {
-              id: bookId,
-              title: 'Test Book',
-              author: 'Test Author',
-              isbn: '1234567890',
-              price: 19.99,
-              stock: 10,
-              description: 'Test description',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            };
+        fc.asyncProperty(fc.uuid(), async (bookId) => {
+          // Arrange: Mock existing book
+          const mockBook = {
+            id: bookId,
+            title: 'Test Book',
+            author: 'Test Author',
+            isbn: '1234567890',
+            price: 19.99,
+            stock: 10,
+            description: 'Test description',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
 
-            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
+          (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+            mockBook,
+          );
 
-            // Act: Retrieve book
-            const result = await service.findOne(bookId);
+          // Act: Retrieve book
+          const result = await service.findOne(bookId);
 
-            // Assert: Book is retrieved correctly
-            expect(prismaService.book.findUnique).toHaveBeenCalledWith({
-              where: { id: bookId },
-            });
-            expect(result).toMatchObject({
-              ...mockBook,
-              inStock: mockBook.stock > 0,
-              stockStatus: mockBook.stock === 0 ? 'OUT_OF_STOCK' : 
-                          mockBook.stock <= 5 ? 'LOW_STOCK' : 'IN_STOCK',
-            });
-            expect(result.id).toBe(bookId);
-          },
-        ),
+          // Assert: Book is retrieved correctly
+          expect(prismaService.book.findUnique).toHaveBeenCalledWith({
+            where: { id: bookId },
+          });
+          expect(result).toMatchObject({
+            ...mockBook,
+            inStock: mockBook.stock > 0,
+            stockStatus:
+              mockBook.stock === 0
+                ? 'OUT_OF_STOCK'
+                : mockBook.stock <= 5
+                  ? 'LOW_STOCK'
+                  : 'IN_STOCK',
+          });
+          expect(result.id).toBe(bookId);
+        }),
         { numRuns: 20 },
       );
     }, 10000);
@@ -255,8 +292,12 @@ describe('BooksService', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            title: fc.option(fc.string({ minLength: 1, maxLength: 50 }), { nil: undefined }),
-            author: fc.option(fc.string({ minLength: 1, maxLength: 50 }), { nil: undefined }),
+            title: fc.option(fc.string({ minLength: 1, maxLength: 50 }), {
+              nil: undefined,
+            }),
+            author: fc.option(fc.string({ minLength: 1, maxLength: 50 }), {
+              nil: undefined,
+            }),
             page: fc.integer({ min: 1, max: 10 }),
             limit: fc.integer({ min: 1, max: 20 }),
           }),
@@ -278,8 +319,12 @@ describe('BooksService', () => {
 
             const totalCount = 1;
 
-            (prismaService.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
-            (prismaService.book.count as jest.Mock).mockResolvedValue(totalCount);
+            (prismaService.book.findMany as jest.Mock).mockResolvedValue(
+              mockBooks,
+            );
+            (prismaService.book.count as jest.Mock).mockResolvedValue(
+              totalCount,
+            );
 
             // Act: Search books
             const result = await service.findAll(searchParams);
@@ -293,8 +338,12 @@ describe('BooksService', () => {
             expect(result.books[0]).toMatchObject({
               ...mockBooks[0],
               inStock: mockBooks[0].stock > 0,
-              stockStatus: mockBooks[0].stock === 0 ? 'OUT_OF_STOCK' : 
-                          mockBooks[0].stock <= 5 ? 'LOW_STOCK' : 'IN_STOCK',
+              stockStatus:
+                mockBooks[0].stock === 0
+                  ? 'OUT_OF_STOCK'
+                  : mockBooks[0].stock <= 5
+                    ? 'LOW_STOCK'
+                    : 'IN_STOCK',
             });
             expect(result.total).toBe(totalCount);
             expect(result.page).toBe(searchParams.page);
@@ -322,22 +371,29 @@ describe('BooksService', () => {
           }),
           async (paginationParams) => {
             // Arrange: Mock paginated results
-            const mockBooks = Array.from({ length: paginationParams.limit }, (_, i) => ({
-              id: `book-${i + 1}`,
-              title: `Book ${i + 1}`,
-              author: 'Test Author',
-              isbn: `111111111${i}`,
-              price: 19.99,
-              stock: 5,
-              description: `Description ${i + 1}`,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            }));
+            const mockBooks = Array.from(
+              { length: paginationParams.limit },
+              (_, i) => ({
+                id: `book-${i + 1}`,
+                title: `Book ${i + 1}`,
+                author: 'Test Author',
+                isbn: `111111111${i}`,
+                price: 19.99,
+                stock: 5,
+                description: `Description ${i + 1}`,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }),
+            );
 
             const totalCount = 50; // Simulate total books in database
 
-            (prismaService.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
-            (prismaService.book.count as jest.Mock).mockResolvedValue(totalCount);
+            (prismaService.book.findMany as jest.Mock).mockResolvedValue(
+              mockBooks,
+            );
+            (prismaService.book.count as jest.Mock).mockResolvedValue(
+              totalCount,
+            );
 
             // Act: Get paginated results
             const result = await service.findAll(paginationParams);
@@ -349,7 +405,8 @@ describe('BooksService', () => {
             expect(result.total).toBe(totalCount);
 
             // Verify correct skip calculation
-            const expectedSkip = (paginationParams.page - 1) * paginationParams.limit;
+            const expectedSkip =
+              (paginationParams.page - 1) * paginationParams.limit;
             expect(prismaService.book.findMany).toHaveBeenCalledWith(
               expect.objectContaining({
                 skip: expectedSkip,
@@ -400,7 +457,9 @@ describe('BooksService', () => {
               },
             ];
 
-            (prismaService.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
+            (prismaService.book.findMany as jest.Mock).mockResolvedValue(
+              mockBooks,
+            );
             (prismaService.book.count as jest.Mock).mockResolvedValue(2);
 
             // Act: Get sorted results
@@ -441,18 +500,23 @@ describe('BooksService', () => {
             title: fc.string({ minLength: 1, maxLength: 100 }),
             author: fc.string({ minLength: 1, maxLength: 100 }),
             isbn: fc.string({ minLength: 10, maxLength: 17 }),
-            price: fc.float({ min: Math.fround(0.01), max: Math.fround(999.99) }),
+            price: fc.float({
+              min: Math.fround(0.01),
+              max: Math.fround(999.99),
+            }),
             stock: fc.integer({ min: -100, max: -1 }), // Negative stock values
-            description: fc.option(fc.string({ maxLength: 500 }), { nil: undefined }),
+            description: fc.option(fc.string({ maxLength: 500 }), {
+              nil: undefined,
+            }),
           }),
           async (bookData) => {
             // This test validates the concept that negative stock should be rejected
             // In a real scenario, this would be handled by DTO validation
             // For this test, we simulate the service rejecting negative stock
-            
+
             // Assert: Negative stock values should not be allowed
             expect(bookData.stock).toBeLessThan(0);
-            
+
             // In a real implementation, the validation would happen at the DTO level
             // and would throw a validation error before reaching the service
             // This test documents the requirement that negative stock is not allowed
@@ -473,9 +537,14 @@ describe('BooksService', () => {
             title: fc.string({ minLength: 1, maxLength: 100 }),
             author: fc.string({ minLength: 1, maxLength: 100 }),
             isbn: fc.string({ minLength: 10, maxLength: 17 }),
-            price: fc.float({ min: Math.fround(0.01), max: Math.fround(999.99) }),
+            price: fc.float({
+              min: Math.fround(0.01),
+              max: Math.fround(999.99),
+            }),
             stock: fc.constantFrom(0), // Zero stock
-            description: fc.option(fc.string({ maxLength: 500 }), { nil: undefined }),
+            description: fc.option(fc.string({ maxLength: 500 }), {
+              nil: undefined,
+            }),
           }),
           async (bookData) => {
             // Arrange: Mock book with zero stock
@@ -486,7 +555,9 @@ describe('BooksService', () => {
               updatedAt: new Date(),
             };
 
-            (prismaService.book.create as jest.Mock).mockResolvedValue(mockBook);
+            (prismaService.book.create as jest.Mock).mockResolvedValue(
+              mockBook,
+            );
 
             // Act: Create book with zero stock
             const result = await service.create(bookData);
@@ -495,7 +566,7 @@ describe('BooksService', () => {
             expect(result.stock).toBe(0);
             expect(result.inStock).toBe(false);
             expect(result.stockStatus).toBe('OUT_OF_STOCK');
-            
+
             // Verify the book is correctly identified as unavailable
             expect(result.inStock).toBeFalsy();
           },
@@ -558,7 +629,9 @@ describe('BooksService', () => {
           updatedAt: new Date(),
         };
 
-        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
+        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+          mockBook,
+        );
 
         // Act
         const result = await service.findOne(bookId);
@@ -580,7 +653,9 @@ describe('BooksService', () => {
         (prismaService.book.findUnique as jest.Mock).mockResolvedValue(null);
 
         // Act & Assert
-        await expect(service.findOne(bookId)).rejects.toThrow(NotFoundException);
+        await expect(service.findOne(bookId)).rejects.toThrow(
+          NotFoundException,
+        );
         expect(prismaService.book.findUnique).toHaveBeenCalledWith({
           where: { id: bookId },
         });
@@ -610,7 +685,9 @@ describe('BooksService', () => {
 
         const updatedBook = { ...existingBook, ...updateDto };
 
-        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(existingBook);
+        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+          existingBook,
+        );
         (prismaService.book.update as jest.Mock).mockResolvedValue(updatedBook);
 
         // Act
@@ -636,7 +713,9 @@ describe('BooksService', () => {
         (prismaService.book.findUnique as jest.Mock).mockResolvedValue(null);
 
         // Act & Assert
-        await expect(service.update(bookId, updateDto)).rejects.toThrow(NotFoundException);
+        await expect(service.update(bookId, updateDto)).rejects.toThrow(
+          NotFoundException,
+        );
         expect(prismaService.book.update).not.toHaveBeenCalled();
       });
     });
@@ -657,8 +736,12 @@ describe('BooksService', () => {
           updatedAt: new Date(),
         };
 
-        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(existingBook);
-        (prismaService.book.delete as jest.Mock).mockResolvedValue(existingBook);
+        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+          existingBook,
+        );
+        (prismaService.book.delete as jest.Mock).mockResolvedValue(
+          existingBook,
+        );
 
         // Act
         const result = await service.remove(bookId);
@@ -753,10 +836,15 @@ describe('BooksService', () => {
           const requestedQuantity = 3;
           const mockBook = { stock: 10 };
 
-          (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
+          (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+            mockBook,
+          );
 
           // Act
-          const result = await service.checkStockAvailability(bookId, requestedQuantity);
+          const result = await service.checkStockAvailability(
+            bookId,
+            requestedQuantity,
+          );
 
           // Assert
           expect(result).toBe(true);
@@ -772,10 +860,15 @@ describe('BooksService', () => {
           const requestedQuantity = 15;
           const mockBook = { stock: 10 };
 
-          (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
+          (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+            mockBook,
+          );
 
           // Act
-          const result = await service.checkStockAvailability(bookId, requestedQuantity);
+          const result = await service.checkStockAvailability(
+            bookId,
+            requestedQuantity,
+          );
 
           // Assert
           expect(result).toBe(false);
@@ -789,7 +882,10 @@ describe('BooksService', () => {
           (prismaService.book.findUnique as jest.Mock).mockResolvedValue(null);
 
           // Act
-          const result = await service.checkStockAvailability(bookId, requestedQuantity);
+          const result = await service.checkStockAvailability(
+            bookId,
+            requestedQuantity,
+          );
 
           // Assert
           expect(result).toBe(false);
@@ -813,7 +909,9 @@ describe('BooksService', () => {
             },
           ];
 
-          (prismaService.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
+          (prismaService.book.findMany as jest.Mock).mockResolvedValue(
+            mockBooks,
+          );
 
           // Act
           const result = await service.getOutOfStockBooks();
@@ -847,7 +945,9 @@ describe('BooksService', () => {
             },
           ];
 
-          (prismaService.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
+          (prismaService.book.findMany as jest.Mock).mockResolvedValue(
+            mockBooks,
+          );
 
           // Act
           const result = await service.getLowStockBooks();
@@ -858,11 +958,11 @@ describe('BooksService', () => {
           expect(result[0].inStock).toBe(true);
           expect(result[0].stockStatus).toBe('LOW_STOCK');
           expect(prismaService.book.findMany).toHaveBeenCalledWith({
-            where: { 
-              stock: { 
+            where: {
+              stock: {
                 gt: 0,
-                lte: 5 
-              } 
+                lte: 5,
+              },
             },
             orderBy: { stock: 'asc' },
           });

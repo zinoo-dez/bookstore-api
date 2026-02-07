@@ -52,14 +52,24 @@ const HomePage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {booksData?.books.map((book, index) => (
+            {booksData?.books?.map((book, index: number) => (
               <motion.div
                 key={book.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6"
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 relative"
               >
+                {/* Rating Badge */}
+                {book.rating !== null && book.rating > 0 && (
+                  <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-2 py-1 shadow-md flex items-center gap-1 z-10">
+                    <span className="text-yellow-400 text-sm">★</span>
+                    <span className="text-xs font-semibold text-gray-900">
+                      {book.rating.toFixed(1)}
+                    </span>
+                  </div>
+                )}
+
                 <BookCover
                   src={book.coverImage}
                   alt={book.title}
@@ -69,12 +79,24 @@ const HomePage = () => {
                   {book.title}
                 </h3>
                 <p className="text-gray-600 mb-2">by {book.author}</p>
-                <p className="text-primary-600 font-bold text-xl">
-                  ${book.price.toFixed(2)}
+
+                {/* Categories */}
+                {book.categories && book.categories.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {book.categories.slice(0, 2).map((cat: string, idx: number) => (
+                      <span key={idx} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-primary-600 font-bold text-xl mb-4">
+                  ${Number(book.price).toFixed(2)}
                 </p>
                 <Link
                   to={`/books/${book.id}`}
-                  className="mt-4 block w-full bg-primary-600 text-white text-center py-2 rounded hover:bg-primary-700 transition-colors"
+                  className="block w-full bg-primary-600 text-white text-center py-2 rounded hover:bg-primary-700 transition-colors"
                 >
                   View Details
                 </Link>

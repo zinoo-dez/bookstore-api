@@ -70,6 +70,8 @@ async function main() {
         stock: 25,
         description: 'A classic American novel set in the Jazz Age, exploring themes of wealth, love, and the American Dream.',
         coverImage: 'https://covers.openlibrary.org/b/isbn/9780743273565-L.jpg',
+        rating: 4.4,
+        categories: ['Fiction', 'Classic'],
       },
     }),
     prisma.book.create({
@@ -81,6 +83,8 @@ async function main() {
         stock: 18,
         description: 'A gripping tale of racial injustice and childhood innocence in the American South.',
         coverImage: 'https://covers.openlibrary.org/b/isbn/9780061120084-L.jpg',
+        rating: 4.8,
+        categories: ['Fiction', 'Classic'],
       },
     }),
     prisma.book.create({
@@ -92,6 +96,8 @@ async function main() {
         stock: 30,
         description: 'A dystopian social science fiction novel about totalitarian control and surveillance.',
         coverImage: 'https://covers.openlibrary.org/b/isbn/9780452284234-L.jpg',
+        rating: 4.6,
+        categories: ['Fiction', 'Dystopian', 'Classic'],
       },
     }),
     

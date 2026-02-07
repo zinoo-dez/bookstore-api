@@ -60,7 +60,10 @@ export class AppConfigService {
   }
 
   get swaggerDescription(): string {
-    return this.configService.get<string>('SWAGGER_DESCRIPTION', 'A comprehensive bookstore API');
+    return this.configService.get<string>(
+      'SWAGGER_DESCRIPTION',
+      'A comprehensive bookstore API',
+    );
   }
 
   get swaggerVersion(): string {

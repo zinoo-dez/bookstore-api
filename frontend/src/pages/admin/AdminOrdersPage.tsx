@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useOrders, useUpdateOrderStatus, type Order } from '@/services/orders'
+import { useAdminOrders, useUpdateOrderStatus, type Order } from '@/services/orders'
 import Loader from '@/components/ui/Loader'
 import OrderStatusModal from '@/components/admin/OrderStatusModal'
 import { getErrorMessage } from '@/lib/api'
@@ -11,11 +11,11 @@ const AdminOrdersPage = () => {
   const [updatingOrder, setUpdatingOrder] = useState<Order | null>(null)
   const [error, setError] = useState('')
 
-  const { data: orders, isLoading } = useOrders()
+  const { data: orders, isLoading } = useAdminOrders()
   const updateOrderStatus = useUpdateOrderStatus()
 
   const allOrders = orders || []
-  
+
   // Filter orders
   const filteredOrders = allOrders.filter(order => {
     const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -34,7 +34,7 @@ const AdminOrdersPage = () => {
   const totalRevenue = allOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
   const pendingOrders = allOrders.filter(o => o.status === 'PENDING').length
   const completedOrders = allOrders.filter(o => o.status === 'COMPLETED').length
-  const cancelledOrders = allOrders.filter(o => o.status === 'CANCELLED').length
+
 
   const handleUpdateStatus = async (status: 'PENDING' | 'COMPLETED' | 'CANCELLED') => {
     if (!updatingOrder) return
@@ -76,7 +76,7 @@ const AdminOrdersPage = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -180,20 +180,19 @@ const AdminOrdersPage = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'COMPLETED'
-                          ? 'bg-green-100 text-green-800'
-                          : order.status === 'PENDING'
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${order.status === 'COMPLETED'
+                        ? 'bg-green-100 text-green-800'
+                        : order.status === 'PENDING'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
-                      }`}
+                        }`}
                     >
                       {order.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-center gap-2">
-                      <button 
+                      <button
                         onClick={() => setUpdatingOrder(order)}
                         className="text-blue-600 hover:text-blue-900"
                         title="Update Status"

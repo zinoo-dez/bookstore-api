@@ -13,7 +13,7 @@ describe('Error Handling (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Apply the same global configuration as main.ts
     app.useGlobalFilters(new AllExceptionsFilter());
     app.useGlobalPipes(
@@ -123,7 +123,7 @@ describe('Error Handling (e2e)', () => {
     it('should return 403 for non-admin trying to create books', async () => {
       // First register and login as regular user
       const uniqueEmail = `user${Date.now()}@example.com`;
-      
+
       await request(app.getHttpServer())
         .post('/auth/register')
         .send({
@@ -170,7 +170,7 @@ describe('Error Handling (e2e)', () => {
           expect(res.body).toHaveProperty('method');
           expect(res.body).toHaveProperty('error');
           expect(res.body).toHaveProperty('message');
-          
+
           expect(typeof res.body.statusCode).toBe('number');
           expect(typeof res.body.timestamp).toBe('string');
           expect(typeof res.body.path).toBe('string');

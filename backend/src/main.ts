@@ -8,7 +8,7 @@ import { AppConfigService } from './config/config.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Get configuration service
   const configService = app.get(AppConfigService);
 
@@ -65,8 +65,12 @@ async function bootstrap() {
     },
   });
 
-  console.log(`🚀 Application is running on: http://localhost:${configService.port}`);
-  console.log(`📚 Swagger documentation: http://localhost:${configService.port}/${configService.swaggerPath}`);
+  console.log(
+    `🚀 Application is running on: http://localhost:${configService.port}`,
+  );
+  console.log(
+    `📚 Swagger documentation: http://localhost:${configService.port}/${configService.swaggerPath}`,
+  );
   console.log(`🌍 Environment: ${configService.nodeEnv}`);
 
   await app.listen(configService.port);

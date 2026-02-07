@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth.store'
 import { useCart } from '@/services/cart'
 import { useLogout } from '@/services/auth'
+import Avatar from '@/components/user/Avatar'
 
 const Navbar = () => {
   const { user, isAuthenticated } = useAuthStore()
@@ -36,15 +37,15 @@ const Navbar = () => {
             {/* Only show user navigation if not admin */}
             {user?.role !== 'ADMIN' && (
               <>
-                <Link 
-                  to="/books" 
+                <Link
+                  to="/books"
                   className="text-gray-700 hover:text-primary-600 transition-colors font-medium"
                 >
                   Books
                 </Link>
                 {isAuthenticated && (
-                  <Link 
-                    to="/orders" 
+                  <Link
+                    to="/orders"
                     className="text-gray-700 hover:text-primary-600 transition-colors font-medium"
                   >
                     Orders
@@ -52,11 +53,11 @@ const Navbar = () => {
                 )}
               </>
             )}
-            
+
             {/* Show Admin link for admins */}
             {user?.role === 'ADMIN' && (
-              <Link 
-                to="/admin" 
+              <Link
+                to="/admin"
                 className="text-gray-700 hover:text-primary-600 transition-colors font-medium"
               >
                 Admin Dashboard
@@ -92,14 +93,15 @@ const Navbar = () => {
 
                 {/* User menu */}
                 <div className="flex items-center space-x-3">
-                  <div className="text-sm">
-                    <p className="text-gray-900 font-medium">
-                      {user?.name}
-                    </p>
-                    <p className="text-gray-500 text-xs">
-                      {user?.role}
-                    </p>
-                  </div>
+                  <Link to="/profile">
+                    <Avatar
+                      avatarType={user?.avatarType}
+                      avatarValue={user?.avatarValue}
+                      backgroundColor={user?.backgroundColor}
+                      size="md"
+                      className="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 transition-all"
+                    />
+                  </Link>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -112,13 +114,13 @@ const Navbar = () => {
               </>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link 
+                <Link
                   to="/login"
                   className="text-gray-700 hover:text-primary-600 transition-colors font-medium"
                 >
                   Login
                 </Link>
-                <Link 
+                <Link
                   to="/register"
                   className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors font-medium"
                 >

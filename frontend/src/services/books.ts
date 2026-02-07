@@ -12,7 +12,7 @@ import {
 
 export const useBooks = (params: SearchBooksData = {}) => {
   return useQuery({
-    queryKey: ['books', params],
+    queryKey: ['books',params],
     queryFn: async (): Promise<BooksResponse> => {
       const response = await api.get('/books', { params })
       return booksResponseSchema.parse(response.data)

@@ -6,6 +6,10 @@ export interface User {
   email: string
   name: string
   role: 'USER' | 'ADMIN'
+  avatar?: string
+  avatarType?: 'emoji' | 'upload'
+  avatarValue?: string
+  backgroundColor?: string
 }
 
 interface AuthState {

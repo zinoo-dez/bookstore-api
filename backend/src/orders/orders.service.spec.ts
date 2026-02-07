@@ -92,7 +92,12 @@ describe('OrdersService', () => {
       prismaService.$transaction.mockImplementation(async (callback: any) => {
         return callback({
           order: {
-            create: jest.fn().mockResolvedValue({ id: 'order1', userId, totalPrice: 21.98, status: 'PENDING' }),
+            create: jest.fn().mockResolvedValue({
+              id: 'order1',
+              userId,
+              totalPrice: 21.98,
+              status: 'PENDING',
+            }),
             update: jest.fn().mockResolvedValue(mockOrder),
           },
           orderItem: {
@@ -121,7 +126,10 @@ describe('OrdersService', () => {
 
     it('should throw BadRequestException for empty cart', async () => {
       const userId = 'user1';
-      cartService.getCart.mockResolvedValue({ items: [], totalPrice: 0 } as any);
+      cartService.getCart.mockResolvedValue({
+        items: [],
+        totalPrice: 0,
+      } as any);
 
       await expect(service.create(userId)).rejects.toThrow(BadRequestException);
       expect(cartService.getCart).toHaveBeenCalledWith(userId);
@@ -137,7 +145,7 @@ describe('OrdersService', () => {
             book: { id: 'book1', title: 'Test Book', price: 10.99 },
           },
         ],
-        totalPrice: 109.90,
+        totalPrice: 109.9,
       };
 
       cartService.getCart.mockResolvedValue(mockCart as any);
@@ -244,7 +252,9 @@ describe('OrdersService', () => {
 
       prismaService.order.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne(userId, orderId)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(userId, orderId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -262,14 +272,20 @@ describe('OrdersService', () => {
                 book: fc.record({
                   id: fc.string({ minLength: 1 }),
                   title: fc.string({ minLength: 1 }),
-                  price: fc.float({ min: Math.fround(0.01), max: Math.fround(100) }),
+                  price: fc.float({
+                    min: Math.fround(0.01),
+                    max: Math.fround(100),
+                  }),
                   stock: fc.integer({ min: 10, max: 100 }),
                 }),
               }),
-              { minLength: 1, maxLength: 5 }
+              { minLength: 1, maxLength: 5 },
             ),
             async (userId, cartItems) => {
-              const totalPrice = cartItems.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
+              const totalPrice = cartItems.reduce(
+                (sum, item) => sum + item.book.price * item.quantity,
+                0,
+              );
               const mockCart = { items: cartItems, totalPrice };
               const mockOrder = {
                 id: 'order1',
@@ -286,7 +302,7 @@ describe('OrdersService', () => {
               };
 
               cartService.getCart.mockResolvedValue(mockCart as any);
-              
+
               // Mock book stock validation
               for (const item of cartItems) {
                 prismaService.book.findUnique.mockResolvedValueOnce({
@@ -296,30 +312,37 @@ describe('OrdersService', () => {
                 } as any);
               }
 
-              prismaService.$transaction.mockImplementation(async (callback: any) => {
-                return callback({
-                  order: {
-                    create: jest.fn().mockResolvedValue({ id: 'order1', userId, totalPrice, status: 'PENDING' }),
-                    update: jest.fn().mockResolvedValue(mockOrder),
-                  },
-                  orderItem: {
-                    create: jest.fn().mockImplementation((data) => ({
-                      id: `item${Math.random()}`,
-                      ...data.data,
-                    })),
-                  },
-                  book: { update: jest.fn() },
-                  cartItem: { deleteMany: jest.fn() },
-                } as any);
-              });
+              prismaService.$transaction.mockImplementation(
+                async (callback: any) => {
+                  return callback({
+                    order: {
+                      create: jest.fn().mockResolvedValue({
+                        id: 'order1',
+                        userId,
+                        totalPrice,
+                        status: 'PENDING',
+                      }),
+                      update: jest.fn().mockResolvedValue(mockOrder),
+                    },
+                    orderItem: {
+                      create: jest.fn().mockImplementation((data) => ({
+                        id: `item${Math.random()}`,
+                        ...data.data,
+                      })),
+                    },
+                    book: { update: jest.fn() },
+                    cartItem: { deleteMany: jest.fn() },
+                  } as any);
+                },
+              );
 
               const result = await service.create(userId);
               expect(result.userId).toBe(userId);
               expect(result.status).toBe('COMPLETED');
               expect(result.totalPrice).toBe(totalPrice);
-            }
+            },
           ),
-          { numRuns: 20 }
+          { numRuns: 20 },
         );
       });
     });
@@ -332,23 +355,32 @@ describe('OrdersService', () => {
             fc.array(
               fc.record({
                 id: fc.string({ minLength: 1 }),
-                totalPrice: fc.float({ min: Math.fround(0.01), max: Math.fround(1000) }),
+                totalPrice: fc.float({
+                  min: Math.fround(0.01),
+                  max: Math.fround(1000),
+                }),
                 status: fc.constantFrom('PENDING', 'COMPLETED', 'CANCELLED'),
                 createdAt: fc.date(),
               }),
-              { maxLength: 10 }
+              { maxLength: 10 },
             ),
             async (userId, orders) => {
-              const userOrders = orders.map(order => ({ ...order, userId, orderItems: [] }));
+              const userOrders = orders.map((order) => ({
+                ...order,
+                userId,
+                orderItems: [],
+              }));
               prismaService.order.findMany.mockResolvedValue(userOrders as any);
 
               const result = await service.findAll(userId);
-              
+
               expect(result).toHaveLength(userOrders.length);
-              expect(result.every(order => order.userId === userId)).toBe(true);
-            }
+              expect(result.every((order) => order.userId === userId)).toBe(
+                true,
+              );
+            },
           ),
-          { numRuns: 20 }
+          { numRuns: 20 },
         );
       });
     });
@@ -360,13 +392,22 @@ describe('OrdersService', () => {
             fc.string({ minLength: 1 }),
             fc.string({ minLength: 1 }),
             fc.record({
-              totalPrice: fc.float({ min: Math.fround(0.01), max: Math.fround(1000) }),
+              totalPrice: fc.float({
+                min: Math.fround(0.01),
+                max: Math.fround(1000),
+              }),
               status: fc.constantFrom('PENDING', 'COMPLETED', 'CANCELLED'),
-              orderItems: fc.array(fc.record({
-                bookId: fc.string({ minLength: 1 }),
-                quantity: fc.integer({ min: 1, max: 10 }),
-                price: fc.float({ min: Math.fround(0.01), max: Math.fround(100) }),
-              }), { maxLength: 5 }),
+              orderItems: fc.array(
+                fc.record({
+                  bookId: fc.string({ minLength: 1 }),
+                  quantity: fc.integer({ min: 1, max: 10 }),
+                  price: fc.float({
+                    min: Math.fround(0.01),
+                    max: Math.fround(100),
+                  }),
+                }),
+                { maxLength: 5 },
+              ),
             }),
             async (userId, orderId, orderData) => {
               const mockOrder = {
@@ -374,18 +415,18 @@ describe('OrdersService', () => {
                 userId,
                 ...orderData,
               };
-              
+
               prismaService.order.findFirst.mockResolvedValue(mockOrder as any);
 
               const result = await service.findOne(userId, orderId);
-              
+
               expect(result.id).toBe(orderId);
               expect(result.userId).toBe(userId);
               expect(result.totalPrice).toBe(orderData.totalPrice);
               expect(result.status).toBe(orderData.status);
-            }
+            },
           ),
-          { numRuns: 20 }
+          { numRuns: 20 },
         );
       });
     });
@@ -402,18 +443,24 @@ describe('OrdersService', () => {
                 book: fc.record({
                   id: fc.string({ minLength: 1 }),
                   title: fc.string({ minLength: 1 }),
-                  price: fc.float({ min: Math.fround(0.01), max: Math.fround(100) }),
+                  price: fc.float({
+                    min: Math.fround(0.01),
+                    max: Math.fround(100),
+                  }),
                   stock: fc.integer({ min: 1, max: 4 }), // Less than quantity
                 }),
               }),
-              { minLength: 1, maxLength: 3 }
+              { minLength: 1, maxLength: 3 },
             ),
             async (userId, cartItems) => {
-              const totalPrice = cartItems.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
+              const totalPrice = cartItems.reduce(
+                (sum, item) => sum + item.book.price * item.quantity,
+                0,
+              );
               const mockCart = { items: cartItems, totalPrice };
 
               cartService.getCart.mockResolvedValue(mockCart as any);
-              
+
               // Mock insufficient stock
               for (const item of cartItems) {
                 prismaService.book.findUnique.mockResolvedValueOnce({
@@ -423,10 +470,12 @@ describe('OrdersService', () => {
                 } as any);
               }
 
-              await expect(service.create(userId)).rejects.toThrow(BadRequestException);
-            }
+              await expect(service.create(userId)).rejects.toThrow(
+                BadRequestException,
+              );
+            },
           ),
-          { numRuns: 20 }
+          { numRuns: 20 },
         );
       });
     });
@@ -443,14 +492,20 @@ describe('OrdersService', () => {
                 book: fc.record({
                   id: fc.string({ minLength: 1 }),
                   title: fc.string({ minLength: 1 }),
-                  price: fc.float({ min: Math.fround(0.01), max: Math.fround(100) }),
+                  price: fc.float({
+                    min: Math.fround(0.01),
+                    max: Math.fround(100),
+                  }),
                   stock: fc.integer({ min: 10, max: 100 }),
                 }),
               }),
-              { minLength: 1, maxLength: 3 }
+              { minLength: 1, maxLength: 3 },
             ),
             async (userId, cartItems) => {
-              const totalPrice = cartItems.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
+              const totalPrice = cartItems.reduce(
+                (sum, item) => sum + item.book.price * item.quantity,
+                0,
+              );
               const mockCart = { items: cartItems, totalPrice };
               const mockOrder = {
                 id: 'order1',
@@ -461,7 +516,7 @@ describe('OrdersService', () => {
               };
 
               cartService.getCart.mockResolvedValue(mockCart as any);
-              
+
               // Mock book stock validation
               for (const item of cartItems) {
                 prismaService.book.findUnique.mockResolvedValueOnce({
@@ -472,25 +527,32 @@ describe('OrdersService', () => {
               }
 
               const mockBookUpdate = jest.fn();
-              prismaService.$transaction.mockImplementation(async (callback: any) => {
-                return callback({
-                  order: {
-                    create: jest.fn().mockResolvedValue({ id: 'order1', userId, totalPrice, status: 'PENDING' }),
-                    update: jest.fn().mockResolvedValue(mockOrder),
-                  },
-                  orderItem: {
-                    create: jest.fn().mockImplementation((data) => ({
-                      id: `item${Math.random()}`,
-                      ...data.data,
-                    })),
-                  },
-                  book: { update: mockBookUpdate },
-                  cartItem: { deleteMany: jest.fn() },
-                } as any);
-              });
+              prismaService.$transaction.mockImplementation(
+                async (callback: any) => {
+                  return callback({
+                    order: {
+                      create: jest.fn().mockResolvedValue({
+                        id: 'order1',
+                        userId,
+                        totalPrice,
+                        status: 'PENDING',
+                      }),
+                      update: jest.fn().mockResolvedValue(mockOrder),
+                    },
+                    orderItem: {
+                      create: jest.fn().mockImplementation((data) => ({
+                        id: `item${Math.random()}`,
+                        ...data.data,
+                      })),
+                    },
+                    book: { update: mockBookUpdate },
+                    cartItem: { deleteMany: jest.fn() },
+                  } as any);
+                },
+              );
 
               await service.create(userId);
-              
+
               // Verify stock was reduced for each item
               expect(mockBookUpdate).toHaveBeenCalledTimes(cartItems.length);
               cartItems.forEach((item) => {
@@ -499,9 +561,9 @@ describe('OrdersService', () => {
                   data: { stock: { decrement: item.quantity } },
                 });
               });
-            }
+            },
           ),
-          { numRuns: 20 }
+          { numRuns: 20 },
         );
       });
     });
@@ -518,14 +580,20 @@ describe('OrdersService', () => {
                 book: fc.record({
                   id: fc.string({ minLength: 1 }),
                   title: fc.string({ minLength: 1 }),
-                  price: fc.float({ min: Math.fround(0.01), max: Math.fround(100) }),
+                  price: fc.float({
+                    min: Math.fround(0.01),
+                    max: Math.fround(100),
+                  }),
                   stock: fc.integer({ min: 10, max: 100 }),
                 }),
               }),
-              { minLength: 1, maxLength: 3 }
+              { minLength: 1, maxLength: 3 },
             ),
             async (userId, cartItems) => {
-              const totalPrice = cartItems.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
+              const totalPrice = cartItems.reduce(
+                (sum, item) => sum + item.book.price * item.quantity,
+                0,
+              );
               const mockCart = { items: cartItems, totalPrice };
               const mockOrder = {
                 id: 'order1',
@@ -536,7 +604,7 @@ describe('OrdersService', () => {
               };
 
               cartService.getCart.mockResolvedValue(mockCart as any);
-              
+
               // Mock book stock validation
               for (const item of cartItems) {
                 prismaService.book.findUnique.mockResolvedValueOnce({
@@ -547,32 +615,39 @@ describe('OrdersService', () => {
               }
 
               const mockCartClear = jest.fn();
-              prismaService.$transaction.mockImplementation(async (callback: any) => {
-                return callback({
-                  order: {
-                    create: jest.fn().mockResolvedValue({ id: 'order1', userId, totalPrice, status: 'PENDING' }),
-                    update: jest.fn().mockResolvedValue(mockOrder),
-                  },
-                  orderItem: {
-                    create: jest.fn().mockImplementation((data) => ({
-                      id: `item${Math.random()}`,
-                      ...data.data,
-                    })),
-                  },
-                  book: { update: jest.fn() },
-                  cartItem: { deleteMany: mockCartClear },
-                } as any);
-              });
+              prismaService.$transaction.mockImplementation(
+                async (callback: any) => {
+                  return callback({
+                    order: {
+                      create: jest.fn().mockResolvedValue({
+                        id: 'order1',
+                        userId,
+                        totalPrice,
+                        status: 'PENDING',
+                      }),
+                      update: jest.fn().mockResolvedValue(mockOrder),
+                    },
+                    orderItem: {
+                      create: jest.fn().mockImplementation((data) => ({
+                        id: `item${Math.random()}`,
+                        ...data.data,
+                      })),
+                    },
+                    book: { update: jest.fn() },
+                    cartItem: { deleteMany: mockCartClear },
+                  } as any);
+                },
+              );
 
               await service.create(userId);
-              
+
               // Verify cart was cleared
               expect(mockCartClear).toHaveBeenCalledWith({
                 where: { userId },
               });
-            }
+            },
           ),
-          { numRuns: 20 }
+          { numRuns: 20 },
         );
       });
     });
@@ -589,18 +664,24 @@ describe('OrdersService', () => {
                 book: fc.record({
                   id: fc.string({ minLength: 1 }),
                   title: fc.string({ minLength: 1 }),
-                  price: fc.float({ min: Math.fround(0.01), max: Math.fround(100) }),
+                  price: fc.float({
+                    min: Math.fround(0.01),
+                    max: Math.fround(100),
+                  }),
                   stock: fc.integer({ min: 10, max: 100 }),
                 }),
               }),
-              { minLength: 1, maxLength: 3 }
+              { minLength: 1, maxLength: 3 },
             ),
             async (userId, cartItems) => {
-              const totalPrice = cartItems.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
+              const totalPrice = cartItems.reduce(
+                (sum, item) => sum + item.book.price * item.quantity,
+                0,
+              );
               const mockCart = { items: cartItems, totalPrice };
 
               cartService.getCart.mockResolvedValue(mockCart as any);
-              
+
               // Mock book stock validation
               for (const item of cartItems) {
                 prismaService.book.findUnique.mockResolvedValueOnce({
@@ -611,36 +692,43 @@ describe('OrdersService', () => {
               }
 
               // Verify that $transaction is called, ensuring atomicity
-              prismaService.$transaction.mockImplementation(async (callback: any) => {
-                return callback({
-                  order: {
-                    create: jest.fn().mockResolvedValue({ id: 'order1', userId, totalPrice, status: 'PENDING' }),
-                    update: jest.fn().mockResolvedValue({
-                      id: 'order1',
-                      userId,
-                      totalPrice,
-                      status: 'COMPLETED',
-                      orderItems: [],
-                    }),
-                  },
-                  orderItem: {
-                    create: jest.fn().mockImplementation((data) => ({
-                      id: `item${Math.random()}`,
-                      ...data.data,
-                    })),
-                  },
-                  book: { update: jest.fn() },
-                  cartItem: { deleteMany: jest.fn() },
-                } as any);
-              });
+              prismaService.$transaction.mockImplementation(
+                async (callback: any) => {
+                  return callback({
+                    order: {
+                      create: jest.fn().mockResolvedValue({
+                        id: 'order1',
+                        userId,
+                        totalPrice,
+                        status: 'PENDING',
+                      }),
+                      update: jest.fn().mockResolvedValue({
+                        id: 'order1',
+                        userId,
+                        totalPrice,
+                        status: 'COMPLETED',
+                        orderItems: [],
+                      }),
+                    },
+                    orderItem: {
+                      create: jest.fn().mockImplementation((data) => ({
+                        id: `item${Math.random()}`,
+                        ...data.data,
+                      })),
+                    },
+                    book: { update: jest.fn() },
+                    cartItem: { deleteMany: jest.fn() },
+                  } as any);
+                },
+              );
 
               await service.create(userId);
-              
+
               // Verify transaction was used for atomicity
               expect(prismaService.$transaction).toHaveBeenCalled();
-            }
+            },
           ),
-          { numRuns: 20 }
+          { numRuns: 20 },
         );
       });
     });

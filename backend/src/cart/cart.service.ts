@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -15,7 +20,9 @@ export class CartService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid user session. Please login again.');
+      throw new UnauthorizedException(
+        'Invalid user session. Please login again.',
+      );
     }
 
     // Check if book exists and has sufficient stock
@@ -44,7 +51,7 @@ export class CartService {
     if (existingCartItem) {
       // Update existing cart item
       const newQuantity = existingCartItem.quantity + dto.quantity;
-      
+
       if (book.stock < newQuantity) {
         throw new BadRequestException('Insufficient stock available');
       }
@@ -67,7 +74,11 @@ export class CartService {
     }
   }
 
-  async updateItem(userId: string, bookId: string, dto: UpdateCartItemDto): Promise<CartItem> {
+  async updateItem(
+    userId: string,
+    bookId: string,
+    dto: UpdateCartItemDto,
+  ): Promise<CartItem> {
     // Check if book exists and has sufficient stock
     const book = await this.prisma.book.findUnique({
       where: { id: bookId },
@@ -122,14 +133,16 @@ export class CartService {
     });
   }
 
-  async getCart(userId: string): Promise<{ items: CartItem[]; totalPrice: number }> {
+  async getCart(
+    userId: string,
+  ): Promise<{ items: CartItem[]; totalPrice: number }> {
     const cartItems = await this.prisma.cartItem.findMany({
       where: { userId },
       include: { book: true },
     });
 
     const totalPrice = cartItems.reduce((total, item) => {
-      return total + (Number(item.book.price) * item.quantity);
+      return total + Number(item.book.price) * item.quantity;
     }, 0);
 
     return {

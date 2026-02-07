@@ -86,9 +86,15 @@ describe('CartService', () => {
               book: mockBook,
             };
 
-            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
-            (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(null); // No existing item
-            (prismaService.cartItem.create as jest.Mock).mockResolvedValue(mockCartItem);
+            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+              mockBook,
+            );
+            (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(
+              null,
+            ); // No existing item
+            (prismaService.cartItem.create as jest.Mock).mockResolvedValue(
+              mockCartItem,
+            );
 
             // Act: Add item to cart
             const result = await service.addItem(testData.userId, addToCartDto);
@@ -159,12 +165,22 @@ describe('CartService', () => {
               quantity: testData.newQuantity,
             };
 
-            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
-            (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(existingCartItem);
-            (prismaService.cartItem.update as jest.Mock).mockResolvedValue(updatedCartItem);
+            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+              mockBook,
+            );
+            (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(
+              existingCartItem,
+            );
+            (prismaService.cartItem.update as jest.Mock).mockResolvedValue(
+              updatedCartItem,
+            );
 
             // Act: Update cart item
-            const result = await service.updateItem(testData.userId, testData.bookId, updateDto);
+            const result = await service.updateItem(
+              testData.userId,
+              testData.bookId,
+              updateDto,
+            );
 
             // Assert: Cart item quantity is updated
             expect(prismaService.cartItem.update).toHaveBeenCalledWith({
@@ -214,11 +230,18 @@ describe('CartService', () => {
               book: mockBook,
             };
 
-            (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(existingCartItem);
-            (prismaService.cartItem.delete as jest.Mock).mockResolvedValue(existingCartItem);
+            (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(
+              existingCartItem,
+            );
+            (prismaService.cartItem.delete as jest.Mock).mockResolvedValue(
+              existingCartItem,
+            );
 
             // Act: Remove item from cart
-            const result = await service.removeItem(testData.userId, testData.bookId);
+            const result = await service.removeItem(
+              testData.userId,
+              testData.bookId,
+            );
 
             // Assert: Cart item is deleted
             expect(prismaService.cartItem.delete).toHaveBeenCalledWith({
@@ -245,32 +268,37 @@ describe('CartService', () => {
           }),
           async (testData) => {
             // Arrange: Mock cart items with books
-            const mockCartItems = Array.from({ length: testData.itemCount }, (_, i) => ({
-              id: `cart-item-${i}`,
-              userId: testData.userId,
-              bookId: `book-${i}`,
-              quantity: i + 1,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              book: {
-                id: `book-${i}`,
-                title: `Book ${i}`,
-                author: 'Test Author',
-                isbn: `123456789${i}`,
-                price: 10.00 + i,
-                stock: 10,
-                description: `Description ${i}`,
+            const mockCartItems = Array.from(
+              { length: testData.itemCount },
+              (_, i) => ({
+                id: `cart-item-${i}`,
+                userId: testData.userId,
+                bookId: `book-${i}`,
+                quantity: i + 1,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-              },
-            }));
+                book: {
+                  id: `book-${i}`,
+                  title: `Book ${i}`,
+                  author: 'Test Author',
+                  isbn: `123456789${i}`,
+                  price: 10.0 + i,
+                  stock: 10,
+                  description: `Description ${i}`,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                },
+              }),
+            );
 
             // Calculate expected total
             const expectedTotal = mockCartItems.reduce((total, item) => {
-              return total + (Number(item.book.price) * item.quantity);
+              return total + Number(item.book.price) * item.quantity;
             }, 0);
 
-            (prismaService.cartItem.findMany as jest.Mock).mockResolvedValue(mockCartItems);
+            (prismaService.cartItem.findMany as jest.Mock).mockResolvedValue(
+              mockCartItems,
+            );
 
             // Act: Get cart
             const result = await service.getCart(testData.userId);
@@ -320,11 +348,14 @@ describe('CartService', () => {
               quantity: testData.requestedQuantity,
             };
 
-            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
+            (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+              mockBook,
+            );
 
             // Act & Assert: Adding item should be rejected due to insufficient stock
-            await expect(service.addItem(testData.userId, addToCartDto))
-              .rejects.toThrow('Insufficient stock available');
+            await expect(
+              service.addItem(testData.userId, addToCartDto),
+            ).rejects.toThrow('Insufficient stock available');
 
             expect(prismaService.cartItem.create).not.toHaveBeenCalled();
           },
@@ -371,13 +402,14 @@ describe('CartService', () => {
               },
             ];
 
-            (prismaService.cartItem.findMany as jest.Mock)
-              .mockImplementation(({ where }) => {
+            (prismaService.cartItem.findMany as jest.Mock).mockImplementation(
+              ({ where }) => {
                 if (where.userId === testData.user1Id) {
                   return Promise.resolve(user1CartItems);
                 }
                 return Promise.resolve([]);
-              });
+              },
+            );
 
             // Act: Get carts for both users
             const user1Cart = await service.getCart(testData.user1Id);
@@ -427,9 +459,15 @@ describe('CartService', () => {
           book: mockBook,
         };
 
-        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
-        (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(null);
-        (prismaService.cartItem.create as jest.Mock).mockResolvedValue(mockCartItem);
+        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+          mockBook,
+        );
+        (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(
+          null,
+        );
+        (prismaService.cartItem.create as jest.Mock).mockResolvedValue(
+          mockCartItem,
+        );
 
         // Act
         const result = await service.addItem(userId, addToCartDto);
@@ -473,9 +511,15 @@ describe('CartService', () => {
           book: mockBook,
         };
 
-        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
-        (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(existingCartItem);
-        (prismaService.cartItem.update as jest.Mock).mockResolvedValue(updatedCartItem);
+        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+          mockBook,
+        );
+        (prismaService.cartItem.findUnique as jest.Mock).mockResolvedValue(
+          existingCartItem,
+        );
+        (prismaService.cartItem.update as jest.Mock).mockResolvedValue(
+          updatedCartItem,
+        );
 
         // Act
         const result = await service.addItem(userId, addToCartDto);
@@ -500,8 +544,9 @@ describe('CartService', () => {
         (prismaService.book.findUnique as jest.Mock).mockResolvedValue(null);
 
         // Act & Assert
-        await expect(service.addItem(userId, addToCartDto))
-          .rejects.toThrow(NotFoundException);
+        await expect(service.addItem(userId, addToCartDto)).rejects.toThrow(
+          NotFoundException,
+        );
       });
 
       it('should throw BadRequestException when insufficient stock', async () => {
@@ -517,11 +562,14 @@ describe('CartService', () => {
           stock: 5, // Less than requested quantity
         };
 
-        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
+        (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
+          mockBook,
+        );
 
         // Act & Assert
-        await expect(service.addItem(userId, addToCartDto))
-          .rejects.toThrow(BadRequestException);
+        await expect(service.addItem(userId, addToCartDto)).rejects.toThrow(
+          BadRequestException,
+        );
       });
     });
 
@@ -535,7 +583,7 @@ describe('CartService', () => {
             userId,
             bookId: 'book-1',
             quantity: 2,
-            book: { price: 10.50 },
+            book: { price: 10.5 },
           },
           {
             id: 'item-2',
@@ -546,7 +594,9 @@ describe('CartService', () => {
           },
         ];
 
-        (prismaService.cartItem.findMany as jest.Mock).mockResolvedValue(mockCartItems);
+        (prismaService.cartItem.findMany as jest.Mock).mockResolvedValue(
+          mockCartItems,
+        );
 
         // Act
         const result = await service.getCart(userId);
@@ -561,7 +611,9 @@ describe('CartService', () => {
       it('should delete all cart items for user', async () => {
         // Arrange
         const userId = 'user-id';
-        (prismaService.cartItem.deleteMany as jest.Mock).mockResolvedValue({ count: 3 });
+        (prismaService.cartItem.deleteMany as jest.Mock).mockResolvedValue({
+          count: 3,
+        });
 
         // Act
         await service.clearCart(userId);

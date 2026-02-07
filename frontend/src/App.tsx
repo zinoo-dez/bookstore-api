@@ -18,6 +18,7 @@ import AdminOrdersPage from '@/pages/admin/AdminOrdersPage'
 import AdminUsersPage from '@/pages/admin/AdminUsersPage'
 import ProtectedRoute from '@/components/guards/ProtectedRoute'
 import AdminRoute from '@/components/guards/AdminRoute'
+import ProfileSettingsPage from '@/pages/ProfileSettingsPage'
 
 function App() {
   const { isAuthenticated, user } = useAuthStore()
@@ -29,69 +30,77 @@ function App() {
           {/* Public Routes with Layout */}
           <Route path="/" element={<Layout />}>
             <Route index element={
-              isAuthenticated && user?.role === 'ADMIN' 
-                ? <Navigate to="/admin" replace /> 
+              isAuthenticated && user?.role === 'ADMIN'
+                ? <Navigate to="/admin" replace />
                 : <HomePage />
             } />
-            <Route 
-              path="login" 
+            <Route
+              path="login"
               element={
                 isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
-              } 
+              }
             />
-            <Route 
-              path="register" 
+            <Route
+              path="register"
               element={
                 isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />
-              } 
+              }
             />
             <Route path="books" element={
-              user?.role === 'ADMIN' 
-                ? <Navigate to="/admin/books" replace /> 
+              user?.role === 'ADMIN'
+                ? <Navigate to="/admin/books" replace />
                 : <BooksPage />
             } />
             <Route path="books/:id" element={
-              user?.role === 'ADMIN' 
-                ? <Navigate to="/admin/books" replace /> 
+              user?.role === 'ADMIN'
+                ? <Navigate to="/admin/books" replace />
                 : <BookDetailPage />
             } />
-            <Route 
-              path="cart" 
+            <Route
+              path="cart"
               element={
-                user?.role === 'ADMIN' 
+                user?.role === 'ADMIN'
                   ? <Navigate to="/admin" replace />
                   : <ProtectedRoute><CartPage /></ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="checkout" 
+            <Route
+              path="checkout"
               element={
-                user?.role === 'ADMIN' 
+                user?.role === 'ADMIN'
                   ? <Navigate to="/admin" replace />
                   : <ProtectedRoute><CheckoutPage /></ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="order-confirmation/:orderId" 
+            <Route
+              path="order-confirmation/:orderId"
               element={
-                user?.role === 'ADMIN' 
+                user?.role === 'ADMIN'
                   ? <Navigate to="/admin" replace />
                   : <ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="orders" 
+            <Route
+              path="orders"
               element={
-                user?.role === 'ADMIN' 
+                user?.role === 'ADMIN'
                   ? <Navigate to="/admin/orders" replace />
                   : <ProtectedRoute><OrdersPage /></ProtectedRoute>
-              } 
+              }
+            />
+            <Route
+              path="profile"
+              element={
+                <ProtectedRoute>
+                  <ProfileSettingsPage />
+                </ProtectedRoute>
+              }
             />
           </Route>
 
           {/* Admin Routes with Admin Layout */}
-          <Route 
-            path="/admin" 
+          <Route
+            path="/admin"
             element={
               <AdminRoute>
                 <AdminLayout />

@@ -15,7 +15,7 @@ describe('Swagger Documentation (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    
+
     // Apply the same global configuration as main.ts
     app.useGlobalFilters(new AllExceptionsFilter());
     app.useGlobalPipes(
@@ -32,7 +32,9 @@ describe('Swagger Documentation (e2e)', () => {
     // Configure Swagger
     const config = new DocumentBuilder()
       .setTitle('Bookstore API')
-      .setDescription('A comprehensive bookstore API with authentication, book management, shopping cart, and order processing')
+      .setDescription(
+        'A comprehensive bookstore API with authentication, book management, shopping cart, and order processing',
+      )
       .setVersion('1.0')
       .addBearerAuth(
         {
@@ -97,19 +99,19 @@ describe('Swagger Documentation (e2e)', () => {
         .expect(200)
         .expect((res) => {
           const paths = res.body.paths;
-          
+
           // Check auth endpoints
           expect(paths).toHaveProperty('/auth/register');
           expect(paths).toHaveProperty('/auth/login');
-          
+
           // Check books endpoints
           expect(paths).toHaveProperty('/books');
           expect(paths).toHaveProperty('/books/{id}');
-          
+
           // Check cart endpoints
           expect(paths).toHaveProperty('/cart');
           expect(paths).toHaveProperty('/cart/{bookId}');
-          
+
           // Check orders endpoints
           expect(paths).toHaveProperty('/orders');
           expect(paths).toHaveProperty('/orders/{id}');
@@ -123,9 +125,15 @@ describe('Swagger Documentation (e2e)', () => {
         .expect((res) => {
           expect(res.body).toHaveProperty('components');
           expect(res.body.components).toHaveProperty('securitySchemes');
-          expect(res.body.components.securitySchemes).toHaveProperty('JWT-auth');
-          expect(res.body.components.securitySchemes['JWT-auth'].type).toBe('http');
-          expect(res.body.components.securitySchemes['JWT-auth'].scheme).toBe('bearer');
+          expect(res.body.components.securitySchemes).toHaveProperty(
+            'JWT-auth',
+          );
+          expect(res.body.components.securitySchemes['JWT-auth'].type).toBe(
+            'http',
+          );
+          expect(res.body.components.securitySchemes['JWT-auth'].scheme).toBe(
+            'bearer',
+          );
         });
     });
 
@@ -185,14 +193,20 @@ describe('Swagger Documentation (e2e)', () => {
         .expect(200)
         .expect((res) => {
           const paths = res.body.paths;
-          
+
           // Check that POST /auth/register has request body schema
           expect(paths['/auth/register'].post).toHaveProperty('requestBody');
-          expect(paths['/auth/register'].post.requestBody.content['application/json']).toHaveProperty('schema');
-          
+          expect(
+            paths['/auth/register'].post.requestBody.content[
+              'application/json'
+            ],
+          ).toHaveProperty('schema');
+
           // Check that endpoints have response schemas
           expect(paths['/auth/register'].post).toHaveProperty('responses');
-          expect(paths['/auth/register'].post.responses['201']).toHaveProperty('description');
+          expect(paths['/auth/register'].post.responses['201']).toHaveProperty(
+            'description',
+          );
         });
     });
 
@@ -202,7 +216,7 @@ describe('Swagger Documentation (e2e)', () => {
         .expect(200)
         .expect((res) => {
           const paths = res.body.paths;
-          
+
           // Check that operations have summaries
           expect(paths['/auth/register'].post).toHaveProperty('summary');
           expect(paths['/books'].get).toHaveProperty('summary');

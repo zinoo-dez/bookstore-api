@@ -1,15 +1,21 @@
-import { 
-  Controller, 
-  Post, 
-  Patch, 
-  Delete, 
-  Get, 
-  Body, 
-  Param, 
-  UseGuards, 
-  Request 
+import {
+  Controller,
+  Post,
+  Patch,
+  Delete,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
@@ -25,8 +31,8 @@ export class CartController {
   @Post()
   @ApiOperation({ summary: 'Add item to cart' })
   @ApiBody({ type: AddToCartDto })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Item added to cart successfully',
     schema: {
       type: 'object',
@@ -40,8 +46,14 @@ export class CartController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - insufficient stock or invalid data' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - insufficient stock or invalid data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 404, description: 'Book not found' })
   addItem(@Request() req: any, @Body() dto: AddToCartDto) {
     return this.cartService.addItem(req.user.sub, dto);
@@ -50,8 +62,8 @@ export class CartController {
   @Patch(':bookId')
   @ApiOperation({ summary: 'Update cart item quantity' })
   @ApiBody({ type: UpdateCartItemDto })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Cart item updated successfully',
     schema: {
       type: 'object',
@@ -65,8 +77,14 @@ export class CartController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - insufficient stock or invalid data' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - insufficient stock or invalid data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 404, description: 'Cart item not found' })
   updateItem(
     @Request() req: any,
@@ -78,8 +96,14 @@ export class CartController {
 
   @Delete(':bookId')
   @ApiOperation({ summary: 'Remove item from cart' })
-  @ApiResponse({ status: 200, description: 'Item removed from cart successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 200,
+    description: 'Item removed from cart successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 404, description: 'Cart item not found' })
   removeItem(@Request() req: any, @Param('bookId') bookId: string) {
     return this.cartService.removeItem(req.user.sub, bookId);
@@ -87,8 +111,8 @@ export class CartController {
 
   @Get()
   @ApiOperation({ summary: 'Get user cart with items and total price' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Cart retrieved successfully',
     schema: {
       type: 'object',
@@ -121,7 +145,10 @@ export class CartController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   getCart(@Request() req: any) {
     return this.cartService.getCart(req.user.sub);
   }

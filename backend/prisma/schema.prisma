@@ -25,17 +25,21 @@ enum OrderStatus {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  password  String
-  name      String
-  role      Role       @default(USER)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id              String     @id @default(uuid())
+  email           String     @unique
+  password        String
+  name            String
+  role            Role       @default(USER)
+  avatarType      String?    @default("emoji")
+  avatarValue     String?    @default("avatar-1")
+  backgroundColor String?    @default("bg-slate-100")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
   
   // Relations
-  cartItems CartItem[]
-  orders    Order[]
+  cart            CartItem[]
+  orders          Order[]
+  reviews         Review[]
 
   @@index([email])
 }
@@ -49,16 +53,38 @@ model Book {
   price       Decimal     @db.Decimal(10, 2)
   stock       Int         @default(0)
   coverImage  String?     // URL to book cover image
+  categories  String[]    // Book categories/genres (array)
+  rating      Float?      @default(0) // Average rating (0-5)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   // Relations
   cartItems   CartItem[]
   orderItems  OrderItem[]
+  reviews     Review[]
 
   @@index([title])
   @@index([author])
   @@index([isbn])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  rating    Int      // 1-5 stars
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  // One review per user per book
+  @@unique([userId, bookId])
+  @@index([bookId])
+  @@index([userId])
 }
 model CartItem {
   id        String   @id @default(uuid())

@@ -7,6 +7,9 @@ import { useAuthStore } from '@/store/auth.store'
 import Button from '@/components/ui/Button'
 import Loader from '@/components/ui/Loader'
 import BookCover from '@/components/ui/BookCover'
+import StarRating from '@/components/ui/StarRating'
+import ReviewForm from '@/components/books/ReviewForm'
+import ReviewsList from '@/components/books/ReviewsList'
 import { getErrorMessage } from '@/lib/api'
 
 const BookDetailPage = () => {
@@ -18,12 +21,10 @@ const BookDetailPage = () => {
   const [quantity, setQuantity] = useState(1)
   const [showSuccess, setShowSuccess] = useState(false)
   const [error, setError] = useState('')
-  const [isInCart, setIsInCart] = useState(false)
-  const [totalInCart, setTotalInCart] = useState(0)
 
   const handleAddToCart = async () => {
     if (!book) return
-    
+
     if (!isAuthenticated) {
       navigate('/login')
       return
@@ -114,7 +115,14 @@ const BookDetailPage = () => {
         {/* Book Details */}
         <div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">{book.title}</h1>
-          <p className="text-xl text-gray-600 mb-6">by {book.author}</p>
+          <p className="text-xl text-gray-600 mb-2">by {book.author}</p>
+
+          {/* Rating */}
+          {book.rating !== null && book.rating > 0 && (
+            <div className="mb-6">
+              <StarRating rating={book.rating} size="lg" showNumber />
+            </div>
+          )}
 
           {/* Price */}
           <div className="mb-6">
@@ -127,13 +135,12 @@ const BookDetailPage = () => {
           <div className="mb-6">
             <div className="flex items-center gap-2">
               <span className="font-medium">Availability:</span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                book.stockStatus === 'IN_STOCK' 
-                  ? 'bg-green-100 text-green-800'
-                  : book.stockStatus === 'LOW_STOCK'
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${book.stockStatus === 'IN_STOCK'
+                ? 'bg-green-100 text-green-800'
+                : book.stockStatus === 'LOW_STOCK'
                   ? 'bg-yellow-100 text-yellow-800'
                   : 'bg-red-100 text-red-800'
-              }`}>
+                }`}>
                 {book.stock > 0 ? `${book.stock} in stock` : 'Out of stock'}
               </span>
             </div>
@@ -157,6 +164,18 @@ const BookDetailPage = () => {
                 <span className="text-gray-600">Author:</span>
                 <span className="font-medium">{book.author}</span>
               </div>
+              {book.categories && book.categories.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Categories:</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {book.categories.map((cat, idx) => (
+                      <span key={idx} className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded">
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Stock Status:</span>
                 <span className="font-medium">{book.stockStatus.replace('_', ' ')}</span>
@@ -197,11 +216,6 @@ const BookDetailPage = () => {
                     (Max: {maxQuantity})
                   </span>
                 </div>
-                {isInCart && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    {totalInCart} already in cart
-                  </p>
-                )}
               </div>
 
               {/* Action Buttons */}
@@ -255,6 +269,23 @@ const BookDetailPage = () => {
                 <p className="text-gray-600">100% protected</p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Review Form */}
+          <div>
+            <ReviewForm bookId={book.id} />
+          </div>
+
+          {/* Reviews List */}
+          <div>
+            <ReviewsList bookId={book.id} />
           </div>
         </div>
       </div>

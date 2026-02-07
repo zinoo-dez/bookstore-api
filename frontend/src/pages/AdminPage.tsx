@@ -3,14 +3,14 @@ import BookFormModal from '@/components/admin/BookFormModal'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useBooks } from '@/services/books'
-import { useOrders } from '@/services/orders'
+import { useAdminOrders } from '@/services/orders'
 import Loader from '@/components/ui/Loader'
 import Button from '@/components/ui/Button'
 
 const AdminPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { data: booksData, isLoading: booksLoading } = useBooks({ limit: 100 })
-  const { data: orders, isLoading: ordersLoading } = useOrders()
+  const { data: orders, isLoading: ordersLoading } = useAdminOrders()
 
   const handleAddBook = () => {
     setIsModalOpen(true)
@@ -169,7 +169,7 @@ const AdminPage = () => {
               View All →
             </Link>
           </div>
-          
+
           {recentOrders.length === 0 ? (
             <p className="text-gray-500 text-center py-8">No orders yet</p>
           ) : (
@@ -196,13 +196,12 @@ const AdminPage = () => {
                     </p>
                   </div>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      order.status === 'COMPLETED'
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'COMPLETED'
                         ? 'bg-green-100 text-green-800'
                         : order.status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
                   >
                     {order.status}
                   </span>
@@ -220,7 +219,7 @@ const AdminPage = () => {
               View All →
             </Link>
           </div>
-          
+
           {lowStockBooks.length === 0 ? (
             <p className="text-gray-500 text-center py-8">All books well stocked! 🎉</p>
           ) : (
@@ -236,11 +235,10 @@ const AdminPage = () => {
                   </div>
                   <div className="text-right">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        book.stock <= 5
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${book.stock <= 5
                           ? 'bg-red-100 text-red-800'
                           : 'bg-orange-100 text-orange-800'
-                      }`}
+                        }`}
                     >
                       {book.stock} left
                     </span>

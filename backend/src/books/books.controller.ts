@@ -1,16 +1,23 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Patch, 
-  Delete, 
-  Param, 
-  Body, 
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
   Query,
   UseGuards,
-  BadRequestException
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
@@ -26,17 +33,59 @@ export class BooksController {
   constructor(private readonly booksService: BooksService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all books with optional search and pagination' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10)' })
-  @ApiQuery({ name: 'title', required: false, type: String, description: 'Filter by title' })
-  @ApiQuery({ name: 'author', required: false, type: String, description: 'Filter by author' })
-  @ApiQuery({ name: 'category', required: false, type: String, description: 'Filter by category' })
-  @ApiQuery({ name: 'isbn', required: false, type: String, description: 'Filter by ISBN' })
-  @ApiQuery({ name: 'sortBy', required: false, type: String, description: 'Sort by field (title, author, price, createdAt)' })
-  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'], description: 'Sort order' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({
+    summary: 'Get all books with optional search and pagination',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiQuery({
+    name: 'title',
+    required: false,
+    type: String,
+    description: 'Filter by title',
+  })
+  @ApiQuery({
+    name: 'author',
+    required: false,
+    type: String,
+    description: 'Filter by author',
+  })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    type: String,
+    description: 'Filter by category',
+  })
+  @ApiQuery({
+    name: 'isbn',
+    required: false,
+    type: String,
+    description: 'Filter by ISBN',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    type: String,
+    description: 'Sort by field (title, author, price, createdAt)',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    enum: ['asc', 'desc'],
+    description: 'Sort order',
+  })
+  @ApiResponse({
+    status: 200,
     description: 'Books retrieved successfully',
     schema: {
       type: 'object',
@@ -54,7 +103,10 @@ export class BooksController {
               stock: { type: 'number' },
               description: { type: 'string', nullable: true },
               inStock: { type: 'boolean' },
-              stockStatus: { type: 'string', enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'] },
+              stockStatus: {
+                type: 'string',
+                enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'],
+              },
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
             },
@@ -76,8 +128,8 @@ export class BooksController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all out of stock books (Admin only)' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Out of stock books retrieved successfully',
     schema: {
       type: 'array',
@@ -99,7 +151,10 @@ export class BooksController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   getOutOfStockBooks() {
     return this.booksService.getOutOfStockBooks();
@@ -110,8 +165,8 @@ export class BooksController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all low stock books (Admin only)' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Low stock books retrieved successfully',
     schema: {
       type: 'array',
@@ -133,7 +188,10 @@ export class BooksController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   getLowStockBooks() {
     return this.booksService.getLowStockBooks();
@@ -141,8 +199,8 @@ export class BooksController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a book by ID' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Book found',
     schema: {
       type: 'object',
@@ -155,7 +213,10 @@ export class BooksController {
         stock: { type: 'number' },
         description: { type: 'string', nullable: true },
         inStock: { type: 'boolean' },
-        stockStatus: { type: 'string', enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'] },
+        stockStatus: {
+          type: 'string',
+          enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'],
+        },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
       },
@@ -168,9 +229,14 @@ export class BooksController {
 
   @Get(':id/stock-availability')
   @ApiOperation({ summary: 'Check stock availability for a specific quantity' })
-  @ApiQuery({ name: 'quantity', required: true, type: Number, description: 'Requested quantity' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiQuery({
+    name: 'quantity',
+    required: true,
+    type: Number,
+    description: 'Requested quantity',
+  })
+  @ApiResponse({
+    status: 200,
     description: 'Stock availability checked',
     schema: {
       type: 'object',
@@ -184,18 +250,21 @@ export class BooksController {
   @ApiResponse({ status: 404, description: 'Book not found' })
   @ApiResponse({ status: 400, description: 'Invalid quantity' })
   async checkStockAvailability(
-    @Param('id') id: string, 
-    @Query('quantity') quantity: string
+    @Param('id') id: string,
+    @Query('quantity') quantity: string,
   ) {
     const requestedQuantity = parseInt(quantity, 10);
-    
+
     if (isNaN(requestedQuantity) || requestedQuantity <= 0) {
       throw new BadRequestException('Invalid quantity');
     }
 
     const book = await this.booksService.findOne(id);
-    const available = await this.booksService.checkStockAvailability(id, requestedQuantity);
-    
+    const available = await this.booksService.checkStockAvailability(
+      id,
+      requestedQuantity,
+    );
+
     return {
       available,
       requestedQuantity,
@@ -209,8 +278,8 @@ export class BooksController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new book (Admin only)' })
   @ApiBody({ type: CreateBookDto })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Book successfully created',
     schema: {
       type: 'object',
@@ -223,13 +292,19 @@ export class BooksController {
         stock: { type: 'number' },
         description: { type: 'string', nullable: true },
         inStock: { type: 'boolean' },
-        stockStatus: { type: 'string', enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'] },
+        stockStatus: {
+          type: 'string',
+          enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'],
+        },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
   create(@Body() dto: CreateBookDto) {
@@ -242,8 +317,8 @@ export class BooksController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a book (Admin only)' })
   @ApiBody({ type: UpdateBookDto })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Book successfully updated',
     schema: {
       type: 'object',
@@ -256,13 +331,19 @@ export class BooksController {
         stock: { type: 'number' },
         description: { type: 'string', nullable: true },
         inStock: { type: 'boolean' },
-        stockStatus: { type: 'string', enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'] },
+        stockStatus: {
+          type: 'string',
+          enum: ['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK'],
+        },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'Book not found' })
   @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
@@ -276,7 +357,10 @@ export class BooksController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete a book (Admin only)' })
   @ApiResponse({ status: 200, description: 'Book successfully deleted' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @ApiResponse({ status: 404, description: 'Book not found' })
   remove(@Param('id') id: string) {

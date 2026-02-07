@@ -105,14 +105,20 @@ describe('Guards', () => {
         const mockContext = {
           switchToHttp: () => ({
             getRequest: () => ({
-              user: { sub: 'admin-id', email: 'admin@example.com', role: 'ADMIN' },
+              user: {
+                sub: 'admin-id',
+                email: 'admin@example.com',
+                role: 'ADMIN',
+              },
             }),
           }),
           getHandler: jest.fn(),
           getClass: jest.fn(),
         } as unknown as ExecutionContext;
 
-        (reflector.getAllAndOverride as jest.Mock).mockReturnValue([Role.ADMIN]);
+        (reflector.getAllAndOverride as jest.Mock).mockReturnValue([
+          Role.ADMIN,
+        ]);
 
         // Act
         const result = rolesGuard.canActivate(mockContext);
@@ -133,7 +139,9 @@ describe('Guards', () => {
           getClass: jest.fn(),
         } as unknown as ExecutionContext;
 
-        (reflector.getAllAndOverride as jest.Mock).mockReturnValue([Role.ADMIN]);
+        (reflector.getAllAndOverride as jest.Mock).mockReturnValue([
+          Role.ADMIN,
+        ]);
 
         // Act
         const result = rolesGuard.canActivate(mockContext);
@@ -154,7 +162,10 @@ describe('Guards', () => {
           getClass: jest.fn(),
         } as unknown as ExecutionContext;
 
-        (reflector.getAllAndOverride as jest.Mock).mockReturnValue([Role.ADMIN, Role.USER]);
+        (reflector.getAllAndOverride as jest.Mock).mockReturnValue([
+          Role.ADMIN,
+          Role.USER,
+        ]);
 
         // Act
         const result = rolesGuard.canActivate(mockContext);
