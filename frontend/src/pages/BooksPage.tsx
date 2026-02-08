@@ -61,7 +61,7 @@ const BooksPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col lg:flex-row gap-10">
 
@@ -76,11 +76,11 @@ const BooksPage = () => {
                   <motion.h1
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="text-4xl font-black text-gray-900 tracking-tight mb-2"
+                    className="text-4xl font-black text-gray-900 tracking-tight mb-2 dark:text-slate-100"
                   >
                     Browse Collections
                   </motion.h1>
-                  <p className="text-gray-500 font-medium">
+                  <p className="text-gray-500 font-medium dark:text-slate-400">
                     Discover your next favorite story among {total} curated books
                   </p>
                 </div>
@@ -95,7 +95,7 @@ const BooksPage = () => {
                     exit={{ opacity: 0, y: 10 }}
                     className="flex flex-wrap items-center gap-2 mt-8"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mr-2">Active Filters:</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mr-2 dark:text-slate-500">Active Filters:</span>
                     {activeFilters.map(filter => (
                       <motion.button
                         key={filter.id}
@@ -104,11 +104,11 @@ const BooksPage = () => {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.8, opacity: 0 }}
                         onClick={filter.reset}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm hover:shadow-md hover:border-primary-100 group transition-all"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm hover:shadow-md hover:border-primary-100 group transition-all dark:bg-slate-900 dark:border-slate-800"
                       >
-                        <span className="text-xs font-bold text-gray-700 group-hover:text-primary-700">{filter.label}</span>
-                        <div className="w-4 h-4 rounded-full bg-gray-100 group-hover:bg-primary-100 flex items-center justify-center transition-colors">
-                          <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span className="text-xs font-bold text-gray-700 group-hover:text-primary-700 dark:text-slate-200">{filter.label}</span>
+                        <div className="w-4 h-4 rounded-full bg-gray-100 group-hover:bg-primary-100 flex items-center justify-center transition-colors dark:bg-slate-800">
+                          <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-primary-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </div>
@@ -129,15 +129,15 @@ const BooksPage = () => {
             {(isLoading || (isFetching && books.length === 0)) ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-6 animate-pulse">
-                    <div className="aspect-[3/4] bg-gray-100 rounded-xl"></div>
+                  <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-6 animate-pulse dark:bg-slate-900 dark:border-slate-800">
+                    <div className="aspect-[3/4] bg-gray-100 rounded-xl dark:bg-slate-800"></div>
                     <div className="space-y-3">
-                      <div className="h-5 bg-gray-100 rounded-full w-3/4"></div>
-                      <div className="h-4 bg-gray-100 rounded-full w-1/2"></div>
+                      <div className="h-5 bg-gray-100 rounded-full w-3/4 dark:bg-slate-800"></div>
+                      <div className="h-4 bg-gray-100 rounded-full w-1/2 dark:bg-slate-800"></div>
                     </div>
                     <div className="flex justify-between items-center pt-2">
-                      <div className="h-8 bg-gray-100 rounded-full w-20"></div>
-                      <div className="h-6 bg-gray-100 rounded-full w-16"></div>
+                      <div className="h-8 bg-gray-100 rounded-full w-20 dark:bg-slate-800"></div>
+                      <div className="h-6 bg-gray-100 rounded-full w-16 dark:bg-slate-800"></div>
                     </div>
                   </div>
                 ))}
@@ -153,15 +153,15 @@ const BooksPage = () => {
                 {/* Pagination */}
                 {totalPages > 1 && (
                   <footer className="mt-16 flex flex-col items-center gap-8">
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-800">
                       <button
                         onClick={() => handlePageChange(Math.max(1, page - 1))}
                         disabled={page === 1}
                         className={cn(
                           "p-2.5 rounded-xl transition-all border",
                           page === 1
-                            ? "text-gray-300 border-transparent cursor-not-allowed"
-                            : "text-gray-600 border-transparent hover:bg-gray-50 hover:border-gray-100 active:scale-90"
+                            ? "text-gray-300 border-transparent cursor-not-allowed dark:text-slate-600"
+                            : "text-gray-600 border-transparent hover:bg-gray-50 hover:border-gray-100 active:scale-90 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:border-slate-700"
                         )}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +188,7 @@ const BooksPage = () => {
                                   "w-10 h-10 rounded-xl text-xs font-black transition-all border",
                                   isCurrent
                                     ? "bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-200"
-                                    : "bg-transparent text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-900 active:scale-90"
+                                    : "bg-transparent text-gray-500 border-transparent hover:bg-gray-50 hover:text-gray-900 active:scale-90 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                                 )}
                               >
                                 {pageNum}
@@ -200,7 +200,7 @@ const BooksPage = () => {
                             (pageNum === 2 && page > 3) ||
                             (pageNum === totalPages - 1 && page < totalPages - 2)
                           ) {
-                            return <span key={pageNum} className="text-gray-300 px-1">•••</span>
+                            return <span key={pageNum} className="text-gray-300 px-1 dark:text-slate-600">•••</span>
                           }
 
                           return null
@@ -213,8 +213,8 @@ const BooksPage = () => {
                         className={cn(
                           "p-2.5 rounded-xl transition-all border",
                           page === totalPages
-                            ? "text-gray-300 border-transparent cursor-not-allowed"
-                            : "text-gray-600 border-transparent hover:bg-gray-50 hover:border-gray-100 active:scale-90"
+                            ? "text-gray-300 border-transparent cursor-not-allowed dark:text-slate-600"
+                            : "text-gray-600 border-transparent hover:bg-gray-50 hover:border-gray-100 active:scale-90 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:border-slate-700"
                         )}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +223,7 @@ const BooksPage = () => {
                       </button>
                     </div>
 
-                    <div className="px-6 py-2 bg-gray-50 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    <div className="px-6 py-2 bg-gray-50 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400 dark:bg-slate-900 dark:text-slate-500">
                       Page {page} of {totalPages} • {total} total books
                     </div>
                   </footer>
@@ -233,18 +233,18 @@ const BooksPage = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-gray-200"
+                className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 dark:bg-slate-900 dark:border-slate-800"
               >
-                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 dark:bg-slate-800">
                   <span className="text-4xl">📚</span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No books found</h3>
-                <p className="text-gray-500 mb-8 max-w-xs text-center font-medium">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 dark:text-slate-100">No books found</h3>
+                <p className="text-gray-500 mb-8 max-w-xs text-center font-medium dark:text-slate-400">
                   We couldn't find any books matching your current filters. Try adjusting your search or categories.
                 </p>
                 <button
                   onClick={resetFilters}
-                  className="px-8 py-3 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl"
+                  className="px-8 py-3 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl dark:bg-slate-100 dark:text-slate-900"
                 >
                   Reset All Filters
                 </button>
@@ -266,7 +266,7 @@ const BooksPage = () => {
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
         </svg>
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-gray-900 border-2 border-white rounded-full flex items-center justify-center">
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-gray-900 border-2 border-white rounded-full flex items-center justify-center dark:bg-slate-100 dark:border-slate-900">
           <span className="text-[10px] font-black">{activeFilters.length}</span>
         </div>
       </motion.button>

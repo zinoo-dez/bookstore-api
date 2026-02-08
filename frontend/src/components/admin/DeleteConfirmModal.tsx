@@ -36,19 +36,19 @@ const DeleteConfirmModal = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+          className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 dark:bg-slate-900 dark:border dark:border-slate-800"
         >
           <div className="p-6">
             {/* Icon */}
-            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4 dark:bg-rose-900/40">
               <span className="text-2xl">⚠️</span>
             </div>
 
             {/* Content */}
-            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2 dark:text-slate-100">
               {title}
             </h3>
-            <p className="text-sm text-gray-600 text-center mb-6">
+            <p className="text-sm text-gray-600 text-center mb-6 dark:text-slate-400">
               {message}
             </p>
 

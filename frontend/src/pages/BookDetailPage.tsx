@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useBook } from '@/services/books'
+import { useBookReviews } from '@/services/reviews'
 import { useAddToCart } from '@/services/cart'
 import { useAuthStore } from '@/store/auth.store'
 import Button from '@/components/ui/Button'
-import Loader from '@/components/ui/Loader'
+import Skeleton from '@/components/ui/Skeleton'
 import BookCover from '@/components/ui/BookCover'
 import StarRating from '@/components/ui/StarRating'
 import ReviewForm from '@/components/books/ReviewForm'
@@ -16,11 +17,14 @@ const BookDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: book, isLoading } = useBook(id!)
+  const { data: reviews } = useBookReviews(id!)
   const addToCart = useAddToCart()
   const { isAuthenticated } = useAuthStore()
   const [quantity, setQuantity] = useState(1)
   const [showSuccess, setShowSuccess] = useState(false)
   const [error, setError] = useState('')
+  const reviewCount = reviews?.length ?? 0
+  const hasRating = book?.rating !== null && (book?.rating ?? 0) > 0
 
   const handleAddToCart = async () => {
     if (!book) return
@@ -54,15 +58,36 @@ const BookDetailPage = () => {
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <Loader size="lg" text="Loading book details..." />
+        <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-12">
+          <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 dark:border-slate-800/80 dark:bg-slate-900/80 dark:shadow-slate-900/40">
+            <Skeleton className="aspect-[3/4] w-full rounded-2xl" />
+            <div className="mt-6 flex flex-wrap gap-2">
+              {[0, 1, 2].map((item) => (
+                <Skeleton key={item} className="h-6 w-16 rounded-lg" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-6">
+            <Skeleton variant="logo" className="h-10 w-10" />
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="h-8 w-40" />
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+            <Skeleton className="h-12 w-48 rounded-xl" />
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!book) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Book not found</h2>
+      <div className="max-w-6xl mx-auto px-4 py-12 text-center">
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">Book not found</h2>
         <Link to="/books">
           <Button>Browse Books</Button>
         </Link>
@@ -76,216 +101,221 @@ const BookDetailPage = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="max-w-6xl mx-auto px-4 py-8"
+      className="bg-slate-50 dark:bg-slate-950"
     >
-      {/* Breadcrumb */}
-      <nav className="mb-6 text-sm">
-        <Link to="/" className="text-gray-600 hover:text-primary-600">Home</Link>
-        <span className="mx-2 text-gray-400">/</span>
-        <Link to="/books" className="text-gray-600 hover:text-primary-600">Books</Link>
-        <span className="mx-2 text-gray-400">/</span>
-        <span className="text-gray-900">{book.title}</span>
-      </nav>
+      <div className="relative isolate overflow-hidden">
+        <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary-200/50 blur-3xl dark:bg-primary-900/40" />
+        <div className="absolute -bottom-24 left-0 h-72 w-72 rounded-full bg-amber-200/50 blur-3xl dark:bg-amber-900/30" />
 
-      {/* Success Message */}
-      {showSuccess && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center justify-between"
-        >
-          <span>✓ Added to cart successfully!</span>
-          <Link to="/cart" className="text-green-600 hover:text-green-800 font-medium">
-            View Cart
-          </Link>
-        </motion.div>
-      )}
+        <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+          {/* Breadcrumb */}
+          <nav className="mb-8 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <Link to="/" className="hover:text-primary-600">Home</Link>
+            <span className="mx-2 text-slate-300">/</span>
+            <Link to="/books" className="hover:text-primary-600">Books</Link>
+            <span className="mx-2 text-slate-300">/</span>
+            <span className="text-slate-700 dark:text-slate-300">{book.title}</span>
+          </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* Book Image */}
-        <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-          <BookCover
-            src={book.coverImage}
-            alt={book.title}
-            className="w-full h-full"
-          />
-        </div>
-
-        {/* Book Details */}
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{book.title}</h1>
-          <p className="text-xl text-gray-600 mb-2">by {book.author}</p>
-
-          {/* Rating */}
-          {book.rating !== null && book.rating > 0 && (
-            <div className="mb-6">
-              <StarRating rating={book.rating} size="lg" showNumber />
-            </div>
+          {/* Success Message */}
+          {showSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 flex items-center justify-between dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-200"
+            >
+              <span className="font-semibold">Added to cart successfully.</span>
+              <Link to="/cart" className="text-emerald-700 hover:text-emerald-900 font-semibold">
+                View Cart
+              </Link>
+            </motion.div>
           )}
 
-          {/* Price */}
-          <div className="mb-6">
-            <p className="text-3xl font-bold text-primary-600">
-              ${book.price.toFixed(2)}
-            </p>
-          </div>
-
-          {/* Stock Status */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Availability:</span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${book.stockStatus === 'IN_STOCK'
-                ? 'bg-green-100 text-green-800'
-                : book.stockStatus === 'LOW_STOCK'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-red-100 text-red-800'
-                }`}>
-                {book.stock > 0 ? `${book.stock} in stock` : 'Out of stock'}
-              </span>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Description</h2>
-            <p className="text-gray-700 leading-relaxed">{book.description}</p>
-          </div>
-
-          {/* Book Details */}
-          <div className="mb-8 p-4 bg-gray-50 rounded-lg">
-            <h2 className="text-lg font-semibold mb-3">Book Details</h2>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">ISBN:</span>
-                <span className="font-medium">{book.isbn}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Author:</span>
-                <span className="font-medium">{book.author}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-12">
+            {/* Book Image */}
+            <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur dark:border-slate-800/80 dark:bg-slate-900/80 dark:shadow-slate-900/40">
+              <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-sm">
+                <BookCover
+                  src={book.coverImage}
+                  alt={book.title}
+                  className="w-full h-full"
+                />
               </div>
               {book.categories && book.categories.length > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Categories:</span>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    {book.categories.map((cat, idx) => (
-                      <span key={idx} className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded">
-                        {cat}
-                      </span>
-                    ))}
-                  </div>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {book.categories.map((cat, idx) => (
+                    <span key={idx} className="text-[10px] font-semibold uppercase tracking-wider bg-primary-50 text-primary-700 px-2 py-1 rounded-lg border border-primary-100/60 dark:bg-primary-900/40 dark:text-primary-200 dark:border-primary-900/50">
+                      {cat}
+                    </span>
+                  ))}
                 </div>
               )}
-              <div className="flex justify-between">
-                <span className="text-gray-600">Stock Status:</span>
-                <span className="font-medium">{book.stockStatus.replace('_', ' ')}</span>
-              </div>
             </div>
-          </div>
 
-          {/* Add to Cart Section */}
-          {book.inStock ? (
-            <div className="space-y-4">
-              {/* Quantity Selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
-                </label>
+            {/* Book Details */}
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100">{book.title}</h1>
+              <p className="mt-2 text-lg text-slate-600 dark:text-slate-400">by {book.author}</p>
+
+              {/* Rating */}
+              {(hasRating || reviewCount > 0) && (
+                <div className="mt-6">
+                  {hasRating && <StarRating rating={book.rating} size="lg" showNumber />}
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    Rated by {reviewCount}
+                  </p>
+                </div>
+              )}
+
+              {/* Price */}
+              <div className="mt-6 flex items-end gap-4">
+                <p className="text-4xl font-black text-primary-600">
+                  ${book.price.toFixed(2)}
+                </p>
+                <span className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Ready to ship</span>
+              </div>
+
+              {/* Stock Status */}
+              <div className="mt-6">
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center justify-center font-medium"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    max={maxQuantity}
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.min(maxQuantity, Math.max(1, parseInt(e.target.value) || 1)))}
-                    className="w-20 text-center border border-gray-300 rounded-lg py-2 font-medium"
-                  />
-                  <button
-                    onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
-                    className="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center justify-center font-medium"
-                  >
-                    +
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    (Max: {maxQuantity})
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Availability</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest ${book.stockStatus === 'IN_STOCK'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                    : book.stockStatus === 'LOW_STOCK'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                      : 'bg-rose-50 text-rose-700 border border-rose-100'
+                    }`}>
+                    {book.stock > 0 ? `${book.stock} in stock` : 'Out of stock'}
                   </span>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleAddToCart}
-                  className="flex-1"
-                  size="lg"
-                >
-                  🛒 Add to Cart
-                </Button>
-                <Button
-                  onClick={handleBuyNow}
-                  variant="secondary"
-                  className="flex-1"
-                  size="lg"
-                >
-                  Buy Now
-                </Button>
+              {/* Description */}
+              <div className="mt-8">
+                <h2 className="text-lg font-bold text-slate-900 mb-2 dark:text-slate-100">Description</h2>
+                <p className="text-slate-600 leading-relaxed dark:text-slate-400">{book.description}</p>
               </div>
 
-              {!isAuthenticated && (
-                <p className="text-sm text-gray-600 text-center">
-                  Please <Link to="/login" className="text-primary-600 hover:underline">login</Link> to add items to cart
-                </p>
+              {/* Book Details */}
+              <div className="mt-8 p-5 bg-white/80 rounded-2xl border border-slate-200/70 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/80">
+                <h2 className="text-lg font-bold text-slate-900 mb-3 dark:text-slate-100">Book Details</h2>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">ISBN</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{book.isbn}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">Author</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{book.author}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 dark:text-slate-400">Stock Status</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{book.stockStatus.replace('_', ' ')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add to Cart Section */}
+              {book.inStock ? (
+                <div className="mt-8 space-y-4">
+                  {/* Quantity Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2 dark:text-slate-400">
+                      Quantity
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="h-10 w-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-lg font-semibold dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max={maxQuantity}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.min(maxQuantity, Math.max(1, parseInt(e.target.value) || 1)))}
+                        className="w-20 text-center border border-slate-200 rounded-xl py-2 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                      <button
+                        onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
+                        className="h-10 w-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-lg font-semibold dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                      >
+                        +
+                      </button>
+                      <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                        Max {maxQuantity}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      onClick={handleAddToCart}
+                      className="flex-1"
+                      size="lg"
+                    >
+                      Add to Cart
+                    </Button>
+                    <Button
+                      onClick={handleBuyNow}
+                      variant="secondary"
+                      className="flex-1"
+                      size="lg"
+                    >
+                      Buy Now
+                    </Button>
+                  </div>
+
+                  {!isAuthenticated && (
+                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 text-center dark:text-slate-400">
+                      Please <Link to="/login" className="text-primary-600 hover:text-primary-700">login</Link> to add items to cart
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 dark:border-rose-900/60 dark:bg-rose-950/60">
+                  <p className="text-rose-800 font-semibold">This book is currently out of stock</p>
+                  <p className="text-rose-600 text-sm mt-1">Check back later or browse similar books</p>
+                </div>
               )}
-            </div>
-          ) : (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800 font-medium">This book is currently out of stock</p>
-              <p className="text-red-600 text-sm mt-1">Check back later or browse similar books</p>
-            </div>
-          )}
 
-          {/* Additional Info */}
-          <div className="mt-8 pt-8 border-t">
-            <div className="grid grid-cols-3 gap-4 text-center text-sm">
-              <div>
-                <div className="text-2xl mb-1">🚚</div>
-                <p className="font-medium">Free Shipping</p>
-                <p className="text-gray-600">On all orders</p>
-              </div>
-              <div>
-                <div className="text-2xl mb-1">↩️</div>
-                <p className="font-medium">Easy Returns</p>
-                <p className="text-gray-600">30-day policy</p>
-              </div>
-              <div>
-                <div className="text-2xl mb-1">🔒</div>
-                <p className="font-medium">Secure Payment</p>
-                <p className="text-gray-600">100% protected</p>
+              {/* Additional Info */}
+              <div className="mt-10 pt-8 border-t border-slate-200/70 dark:border-slate-800/80">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-sm">
+                  {[
+                    { title: 'Free Shipping', copy: 'On all orders' },
+                    { title: 'Easy Returns', copy: '30-day policy' },
+                    { title: 'Secure Payment', copy: '100% protected' },
+                  ].map((item) => (
+                    <div key={item.title} className="rounded-xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800/80 dark:bg-slate-900/80">
+                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.title}</p>
+                      <p className="text-xs text-slate-500 mt-1 dark:text-slate-400">{item.copy}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Reviews Section */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
+          {/* Reviews Section */}
+          <div className="mt-12">
+            <h2 className="text-2xl font-black text-slate-900 mb-6 dark:text-slate-100">Reviews</h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Review Form */}
-          <div>
-            <ReviewForm bookId={book.id} />
-          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Review Form */}
+              <div>
+                <ReviewForm bookId={book.id} />
+              </div>
 
-          {/* Reviews List */}
-          <div>
-            <ReviewsList bookId={book.id} />
+              {/* Reviews List */}
+              <div>
+                <ReviewsList bookId={book.id} />
+              </div>
+            </div>
           </div>
         </div>
       </div>

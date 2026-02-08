@@ -224,4 +224,75 @@ export class BooksService {
 
     return this.enhanceBooksWithStockStatus(books);
   }
+
+  /**
+   * Get popular books based on total quantity purchased
+   */
+  async getPopularBooks(limit = 6): Promise<BookWithStockStatus[]> {
+    const topPurchased = await this.prisma.orderItem.groupBy({
+      by: ['bookId'],
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: limit,
+    });
+
+    if (topPurchased.length === 0) {
+      return [];
+    }
+
+    const orderedIds = topPurchased.map((item) => item.bookId);
+    const books = await this.prisma.book.findMany({
+      where: { id: { in: orderedIds } },
+    });
+
+    const bookMap = new Map(books.map((book) => [book.id, book]));
+    const orderedBooks = orderedIds
+      .map((id) => bookMap.get(id))
+      .filter((book): book is Book => !!book);
+
+    return this.enhanceBooksWithStockStatus(orderedBooks);
+  }
+
+  /**
+   * Get recommended books based on the user's most recent purchase category
+   */
+  async getRecommendedBooks(
+    userId: string,
+    limit = 6,
+  ): Promise<BookWithStockStatus[]> {
+    const latestOrder = await this.prisma.order.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        orderItems: {
+          orderBy: { createdAt: 'desc' },
+          include: { book: true },
+        },
+      },
+    });
+
+    if (!latestOrder || latestOrder.orderItems.length === 0) {
+      return [];
+    }
+
+    const lastBook = latestOrder.orderItems[0]?.book;
+    const category = lastBook?.categories?.[0];
+
+    if (!category) {
+      return [];
+    }
+
+    const excludeIds = latestOrder.orderItems.map((item) => item.bookId);
+
+    const books = await this.prisma.book.findMany({
+      where: {
+        categories: { hasSome: [category] },
+        id: { notIn: excludeIds },
+      },
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return this.enhanceBooksWithStockStatus(books);
+  }
 }

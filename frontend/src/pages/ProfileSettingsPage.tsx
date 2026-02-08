@@ -74,9 +74,7 @@ const ProfileSettingsPage = () => {
         let finalAvatarValue = avatarValue;
 
         if (activeTab === 'emoji') {
-            // If currently showing emoji tab, we must send an emoji value.
-            // If avatarValue is currently a URL (because user switched tabs but didn't select new emoji),
-            // we should fall back to a default or valid emoji.
+            // If user selected an emoji but the value looks like a URL, reset to default emoji
             if (avatarValue.startsWith('/uploads') || avatarValue.includes('/')) {
                 finalAvatarValue = 'avatar-1'; // Default Fallback
             }

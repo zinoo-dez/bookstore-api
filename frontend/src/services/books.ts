@@ -9,6 +9,7 @@ import {
   booksResponseSchema,
   createBookSchema 
 } from '@/lib/schemas'
+import { z } from 'zod'
 
 export const useBooks = (params: SearchBooksData = {}) => {
   return useQuery({
@@ -91,5 +92,26 @@ export const useLowStockBooks = () => {
       const response = await api.get('/books/inventory/low-stock')
       return response.data.map((book: any) => bookSchema.parse(book))
     },
+  })
+}
+
+export const usePopularBooks = (limit = 6) => {
+  return useQuery({
+    queryKey: ['books', 'popular', limit],
+    queryFn: async (): Promise<Book[]> => {
+      const response = await api.get('/books/popular', { params: { limit } })
+      return z.array(bookSchema).parse(response.data)
+    },
+  })
+}
+
+export const useRecommendedBooks = (limit = 6, enabled = true) => {
+  return useQuery({
+    queryKey: ['books', 'recommended', limit],
+    queryFn: async (): Promise<Book[]> => {
+      const response = await api.get('/books/recommended', { params: { limit } })
+      return z.array(bookSchema).parse(response.data)
+    },
+    enabled,
   })
 }

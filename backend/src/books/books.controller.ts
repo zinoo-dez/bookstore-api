@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -121,6 +122,37 @@ export class BooksController {
   })
   findAll(@Query() searchDto: SearchBooksDto) {
     return this.booksService.findAll(searchDto);
+  }
+
+  @Get('popular')
+  @ApiOperation({ summary: 'Get popular books based on purchases' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of popular books to return (default: 6)',
+  })
+  @ApiResponse({ status: 200, description: 'Popular books retrieved successfully' })
+  getPopularBooks(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    return this.booksService.getPopularBooks(parsedLimit);
+  }
+
+  @Get('recommended')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get recommended books based on recent user purchases' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of recommended books to return (default: 6)',
+  })
+  @ApiResponse({ status: 200, description: 'Recommended books retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  getRecommendedBooks(@Request() req: any, @Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    return this.booksService.getRecommendedBooks(req.user.sub, parsedLimit);
   }
 
   @Get('inventory/out-of-stock')

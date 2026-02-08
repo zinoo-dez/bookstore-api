@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useOrder } from '@/services/orders'
 import Button from '@/components/ui/Button'
-import Loader from '@/components/ui/Loader'
+import Skeleton from '@/components/ui/Skeleton'
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams<{ orderId: string }>()
@@ -18,8 +18,25 @@ const OrderConfirmationPage = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Loader />
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div className="text-center space-y-4">
+          <Skeleton variant="logo" className="h-20 w-20 mx-auto" />
+          <Skeleton className="h-8 w-56 mx-auto" />
+          <Skeleton className="h-4 w-72 mx-auto" />
+        </div>
+        <div className="bg-white rounded-lg shadow-lg p-8 space-y-4">
+          <div className="flex justify-between items-start">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <div className="space-y-2">
+            {[0, 1, 2].map((item) => (
+              <Skeleton key={item} className="h-4 w-full" />
+            ))}
+          </div>
+          <Skeleton className="h-8 w-48" />
+        </div>
       </div>
     )
   }

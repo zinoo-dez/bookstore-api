@@ -82,7 +82,7 @@ model Review {
   book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   // One review per user per book
-  @@unique([userId, bookId])
+  // @@unique([userId, bookId])
   @@index([bookId])
   @@index([userId])
 }

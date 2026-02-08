@@ -17,6 +17,26 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.dark body {
+  background-color: #0c172d;
+  color: #e2e8f0;
+}
+
+/* Gold accent for dark mode only */
+.dark .bg-gold {
+  background-color: #da9b2e;
+}
+
+.dark .bg-gold-hover:hover {
+  background-color: #d97706;
+}
+
+.dark .gold-glow {
+  box-shadow: 0 0 12px rgba(218, 155, 46, 0.4);
 }
 
 code {

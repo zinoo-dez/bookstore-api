@@ -81,7 +81,7 @@ const Avatar = ({
     content = (
       <img
         src={imageSrc}
-        alt="User avatar"
+        alt=" "
         className="w-full h-full object-cover"
       />
     )

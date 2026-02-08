@@ -79,18 +79,18 @@ const FilterContent = ({
 }: FilterContentProps) => (
     <div className="space-y-4">
         {/* Search Section */}
-        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
             <button
                 onClick={() => toggleSection('search')}
-                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors"
+                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
             >
                 <div className="flex items-center gap-2.5">
                     <span className="text-lg">🔍</span>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Search</h3>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider dark:text-slate-100 dark:hover:text-amber-300">Search</h3>
                 </div>
                 <motion.svg
                     animate={{ rotate: openSections.search ? 180 : 0 }}
-                    className="w-4 h-4 text-gray-400"
+                    className="w-4 h-4 text-gray-400 dark:text-slate-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -108,25 +108,25 @@ const FilterContent = ({
                     >
                         <div className="px-5 pb-5 space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Book Title</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Book Title</label>
                                 <div className="relative group">
                                     <input
                                         type="text"
                                         placeholder="Atomic Habits..."
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all group-hover:bg-white"
+                                        className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all group-hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:group-hover:bg-slate-800"
                                     />
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Author</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Author</label>
                                 <input
                                     type="text"
                                     placeholder="James Clear..."
                                     value={author}
                                     onChange={(e) => setAuthor(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all hover:bg-white"
+                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-800"
                                 />
                             </div>
                         </div>
@@ -136,18 +136,18 @@ const FilterContent = ({
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
             <button
                 onClick={() => toggleSection('filters')}
-                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors"
+                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
             >
                 <div className="flex items-center gap-2.5">
                     <span className="text-lg">🎛</span>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Filters</h3>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider dark:text-slate-100 dark:hover:text-amber-300">Filters</h3>
                 </div>
                 <motion.svg
                     animate={{ rotate: openSections.filters ? 180 : 0 }}
-                    className="w-4 h-4 text-gray-400"
+                    className="w-4 h-4 text-gray-400 dark:text-slate-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -166,11 +166,11 @@ const FilterContent = ({
                         <div className="px-5 pb-5 space-y-6">
                             {/* Category */}
                             <div className="space-y-3">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Category</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Category</label>
                                 <select
                                     value={category}
                                     onChange={(e) => setCategory(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-sm appearance-none cursor-pointer hover:bg-white transition-all"
+                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-sm appearance-none cursor-pointer hover:bg-white transition-all dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
                                 >
                                     <option value="">All Categories</option>
                                     {CATEGORIES.map(cat => (
@@ -181,26 +181,26 @@ const FilterContent = ({
 
                             {/* Price Range */}
                             <div className="space-y-3">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Price Range</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Price Range</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="relative group">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs dark:text-slate-500">$</span>
                                         <input
                                             type="number"
                                             placeholder="Min"
                                             value={minPrice ?? ''}
                                             onChange={(e) => setPriceRange(e.target.value ? Number(e.target.value) : null, maxPrice)}
-                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white"
+                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-800"
                                         />
                                     </div>
                                     <div className="relative group">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs dark:text-slate-500">$</span>
                                         <input
                                             type="number"
                                             placeholder="Max"
                                             value={maxPrice ?? ''}
                                             onChange={(e) => setPriceRange(minPrice, e.target.value ? Number(e.target.value) : null)}
-                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white"
+                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-800"
                                         />
                                     </div>
                                 </div>
@@ -208,15 +208,15 @@ const FilterContent = ({
 
                             {/* Rating */}
                             <div className="space-y-3">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Min. Rating</label>
-                                <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Min. Rating</label>
+                                <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100 dark:bg-slate-800/60 dark:border-slate-700">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <button
                                             key={star}
                                             onClick={() => setMinRating(minRating === star ? null : star)}
                                             className={cn(
                                                 "p-1.5 rounded-lg transition-all",
-                                                (minRating ?? 0) >= star ? "text-yellow-400 scale-110" : "text-gray-300 hover:text-gray-400"
+                                                (minRating ?? 0) >= star ? "text-yellow-400 scale-110" : "text-gray-300 hover:text-gray-400 dark:text-slate-600 dark:hover:text-amber-300"
                                             )}
                                         >
                                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -228,8 +228,8 @@ const FilterContent = ({
                             </div>
 
                             {/* Availability */}
-                            <label className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100 cursor-pointer group hover:bg-white transition-all">
-                                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider group-hover:text-primary-600 transition-colors">In Stock Only</span>
+                            <label className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100 cursor-pointer group hover:bg-white transition-all dark:bg-slate-800/60 dark:border-slate-700 dark:hover:bg-slate-800">
+                                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider group-hover:text-primary-600 transition-colors dark:text-slate-300 dark:group-hover:text-amber-300">In Stock Only</span>
                                 <div className="relative inline-flex items-center cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -237,7 +237,7 @@ const FilterContent = ({
                                         onChange={(e) => setInStockOnly(e.target.checked)}
                                         className="sr-only peer"
                                     />
-                                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600 dark:bg-slate-700 dark:after:bg-slate-100 dark:after:border-slate-600"></div>
                                 </div>
                             </label>
                         </div>
@@ -247,18 +247,18 @@ const FilterContent = ({
         </div>
 
         {/* Sort Section */}
-        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
             <button
                 onClick={() => toggleSection('sorting')}
-                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors"
+                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
             >
                 <div className="flex items-center gap-2.5">
                     <span className="text-lg">⇅</span>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Sort By</h3>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider dark:text-slate-100 dark:hover:text-amber-300">Sort By</h3>
                 </div>
                 <motion.svg
                     animate={{ rotate: openSections.sorting ? 180 : 0 }}
-                    className="w-4 h-4 text-gray-400"
+                    className="w-4 h-4 text-gray-400 dark:text-slate-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -284,8 +284,8 @@ const FilterContent = ({
                                         className={cn(
                                             "w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border",
                                             isActive
-                                                ? "bg-primary-50 text-primary-700 border-primary-100 shadow-sm shadow-primary-100/50"
-                                                : "text-gray-500 hover:text-gray-700 border-transparent hover:bg-gray-50"
+                                                ? "bg-primary-50 text-primary-700 border-primary-100 shadow-sm shadow-primary-100/50 dark:bg-primary-900/40 dark:text-primary-200 dark:border-primary-900/50"
+                                                : "text-gray-500 hover:text-gray-700 border-transparent hover:bg-gray-50 dark:text-slate-400 dark:hover:text-amber-300 dark:hover:bg-slate-800"
                                         )}
                                     >
                                         {option.label}
@@ -314,7 +314,7 @@ const FilterContent = ({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={resetFilters}
-                className="w-full py-4 px-6 bg-gray-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl active:scale-95"
+                className="w-full py-4 px-6 bg-gray-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl active:scale-95 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
             >
                 Reset All Filters ({activeFilterCount})
             </motion.button>
@@ -374,7 +374,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                 <motion.div
                     initial={false}
                     animate={{ width: isSidebarOpen ? 300 : 70 }}
-                    className="sticky top-24 h-[calc(100vh-8rem)] bg-gray-50/30 rounded-3xl p-2 border border-white transition-all shadow-inner"
+                    className="sticky top-24 h-[calc(100vh-8rem)] bg-gray-50/30 rounded-3xl p-2 border border-white transition-all shadow-inner dark:bg-slate-900/60 dark:border-slate-800"
                 >
                     <div className="h-full flex flex-col p-2">
                         <div className="flex items-center justify-between mb-6 px-0 pt-2">
@@ -390,16 +390,16 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                                             </svg>
                                         </div>
-                                        <span className="text-sm font-black uppercase tracking-widest text-gray-900">Explore</span>
+                                        <span className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-slate-100 dark:hover:text-amber-300">Explore</span>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                             <button
                                 onClick={toggleSidebar}
-                                className="p-2.5 bg-white hover:bg-gray-50 rounded-xl transition-all shadow-sm border border-gray-100 hover:scale-110 active:scale-90"
+                                className="p-2.5 bg-white hover:bg-gray-50 rounded-xl transition-all shadow-sm border border-gray-100 hover:scale-110 active:scale-90 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800"
                             >
                                 <motion.div animate={{ rotate: isSidebarOpen ? 0 : 180 }}>
-                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4 text-gray-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                                     </svg>
                                 </motion.div>
@@ -453,11 +453,11 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="absolute right-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-2xl overflow-y-auto px-6 py-8"
+                            className="absolute right-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-2xl overflow-y-auto px-6 py-8 dark:bg-slate-950 dark:text-slate-100"
                         >
                             <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-xl font-black uppercase tracking-widest text-gray-900">Filters</h2>
-                                <button onClick={toggleMobileSidebar} className="p-2 bg-gray-100 rounded-xl">
+                                <h2 className="text-xl font-black uppercase tracking-widest text-gray-900 dark:text-slate-100">Filters</h2>
+                                <button onClick={toggleMobileSidebar} className="p-2 bg-gray-100 rounded-xl dark:bg-slate-800">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -502,6 +502,8 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
             `}</style>
         </>
     )

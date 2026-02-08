@@ -34,14 +34,14 @@ const BookCard = ({ book, index }: BookCardProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.5 }}
-            className="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-gray-100 transition-all duration-300 overflow-hidden relative"
+            className="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-gray-100 transition-all duration-300 overflow-hidden relative dark:bg-slate-900 dark:border-slate-800"
         >
             <Link to={`/books/${book.id}`} className="block p-5">
                 {/* Rating Badge */}
                 {book.rating !== null && book.rating > 0 && (
-                    <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm flex items-center gap-1.5 z-10 border border-gray-50">
+                    <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-2.5 py-1 shadow-sm flex items-center gap-1.5 z-10 border border-gray-50 dark:bg-slate-950/90 dark:border-slate-800">
                         <span className="text-yellow-400 text-sm leading-none">★</span>
-                        <span className="text-xs font-bold text-gray-900">
+                        <span className="text-xs font-bold text-gray-900 dark:text-slate-100">
                             {book.rating.toFixed(1)}
                         </span>
                     </div>
@@ -62,10 +62,10 @@ const BookCard = ({ book, index }: BookCardProps) => {
                     )}
                 </div>
 
-                <h3 className="text-lg font-bold text-gray-900 mb-1.5 line-clamp-2 leading-tight group-hover:text-primary-600 transition-colors">
+                <h3 className="text-lg font-bold text-gray-900 mb-1.5 line-clamp-2 leading-tight group-hover:text-primary-600 transition-colors dark:text-slate-100">
                     {book.title}
                 </h3>
-                <p className="text-sm text-gray-500 mb-4 font-medium italic">by {book.author}</p>
+                <p className="text-sm text-gray-500 mb-4 font-medium italic dark:text-slate-400">by {book.author}</p>
 
                 {/* Categories */}
                 {book.categories && book.categories.length > 0 && (
@@ -76,14 +76,14 @@ const BookCard = ({ book, index }: BookCardProps) => {
                             </span>
                         ))}
                         {book.categories.length > 2 && (
-                            <span className="text-[10px] font-medium text-gray-400">+{book.categories.length - 2} more</span>
+                            <span className="text-[10px] font-medium text-gray-400 dark:text-slate-500">+{book.categories.length - 2} more</span>
                         )}
                     </div>
                 )}
 
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex flex-col">
-                        <span className="text-2xl font-black text-gray-900 leading-none">
+                        <span className="text-2xl font-black text-gray-900 leading-none dark:text-slate-100">
                             ${Number(book.price).toFixed(2)}
                         </span>
                     </div>
@@ -101,7 +101,7 @@ const BookCard = ({ book, index }: BookCardProps) => {
 
                 <div className="flex flex-col gap-2">
                     <button
-                        className="w-full text-center py-2.5 text-xs font-bold uppercase tracking-widest border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-95"
+                        className="w-full text-center py-2.5 text-xs font-bold uppercase tracking-widest border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all active:scale-95 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         View Details
                     </button>

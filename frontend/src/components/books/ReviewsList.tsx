@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useBookReviews, useUpdateReview, useDeleteReview, type Review } from '@/services/reviews'
 import { useAuthStore } from '@/store/auth.store'
-import Loader from '@/components/ui/Loader'
+import Skeleton from '@/components/ui/Skeleton'
 import Button from '@/components/ui/Button'
 
 interface ReviewsListProps {
@@ -21,7 +21,23 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
     const [hoveredRating, setHoveredRating] = useState(0)
 
     if (isLoading) {
-        return <Loader size="sm" text="Loading reviews..." />
+        return (
+            <div className="space-y-3">
+                <Skeleton className="h-6 w-28" />
+                {[0, 1, 2].map((item) => (
+                    <div key={item} className="bg-white rounded-lg border p-4">
+                        <div className="flex items-start gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-40" />
+                                <Skeleton className="h-3 w-32" />
+                                <Skeleton className="h-3 w-full" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
     }
 
     if (!reviews || reviews.length === 0) {
@@ -71,20 +87,22 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
         }
     }
 
-    const getAvatarDisplay = (review: Review) => {
-        if (review.user.avatarType === 'emoji' && review.user.avatarValue) {
-            return (
-                <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${review.user.backgroundColor || 'bg-gray-200'
-                        }`}
-                >
-                    {review.user.avatarValue}
-                </div>
-            )
-        }
+    const getAvatarDisplay = () => {
         return (
-            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
-                {review.user.name.charAt(0).toUpperCase()}
+            <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5"
+                    aria-hidden="true"
+                >
+                    <path d="M20 21a8 8 0 0 0-16 0" />
+                    <circle cx="12" cy="7" r="4" />
+                </svg>
             </div>
         )
     }
@@ -182,7 +200,7 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                             // View Mode
                             <>
                                 <div className="flex items-start gap-3">
-                                    {getAvatarDisplay(review)}
+                                    {getAvatarDisplay()}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
                                             <div>

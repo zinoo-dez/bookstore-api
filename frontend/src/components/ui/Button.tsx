@@ -17,20 +17,21 @@ const Button = ({
   className = '',
   ...props 
 }: ButtonProps) => {
-  const baseStyles = 'font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+  const baseStyles = 'font-medium rounded-xl transition-all focus:outline-none focus-visible:ring-2'
+
   
   const variants = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    outline: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500',
+    primary: 'bg-primary-600 text-white shadow-lg shadow-primary-200/60 hover:bg-primary-700 hover:shadow-xl focus-visible:ring-primary-500 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-500 dark:shadow-amber-300/40 dark:focus-visible:ring-amber-400',
+    secondary: 'bg-slate-900 text-white shadow-lg shadow-slate-300/60 hover:bg-slate-800 focus-visible:ring-slate-500 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white',
+    danger: 'bg-rose-600 text-white shadow-lg shadow-rose-200/60 hover:bg-rose-700 focus-visible:ring-rose-500',
+    outline: 'border border-slate-200 text-slate-700 hover:bg-slate-50 focus-visible:ring-slate-400 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900',
   }
   
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
-  }
+  sm: 'px-3 py-1.5 text-sm font-medium',
+  md: 'px-4 py-2 text-sm font-medium',
+  lg: 'px-5 py-2.5 text-base font-medium',
+}
 
   return (
     <motion.button

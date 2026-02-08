@@ -24,7 +24,7 @@ function App() {
   const { isAuthenticated, user } = useAuthStore()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <AnimatePresence mode="wait">
         <Routes>
           {/* Public Routes with Layout */}

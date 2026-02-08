@@ -33,7 +33,13 @@ const BookCover = ({ src, alt, className = '' }: BookCoverProps) => {
             src={src}
             alt={alt}
             className={`w-full h-full object-cover ${imageLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
-            onLoad={() => setImageLoading(false)}
+            onLoad={(event) => {
+              const img = event.currentTarget
+              if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
+                setImageError(true)
+              }
+              setImageLoading(false)
+            }}
             onError={() => {
               setImageError(true)
               setImageLoading(false)
