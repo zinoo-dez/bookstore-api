@@ -1,16 +1,18 @@
 # dependencies
 node_modules/
-frontend/node_modules/
-backend/node_modules/
 
 # build output
 dist/
-backend/dist/
-frontend/dist/
+build/
 
 # env files
 .env
 .env.*
+!.env.example
+
+# runtime uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
 
 # editor
 .vscode/
@@ -18,13 +20,9 @@ frontend/dist/
 
 # logs
 *.log
+
 # OS
 .DS_Store
-/generated/prisma
-tasks.md
-requirements.md
 
-ADMIN_DASHBOARD_GUIDE.md
-ADMIN_PANEL_COMPLETE.md
-CONNECTION_GUIDE.md
-IMPLEMENTATION_PLAN.md
+# Prisma
+node_modules/.prisma/
