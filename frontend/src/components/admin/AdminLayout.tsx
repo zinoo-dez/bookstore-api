@@ -63,17 +63,17 @@ const AdminLayout = () => {
 
   return (
     <div
-      className="admin-shell surface-canvas flex min-h-screen text-slate-900 dark:text-slate-100"
+      className="admin-shell luxe-shell flex min-h-screen text-slate-900 dark:text-slate-100"
       data-admin-dept={departmentTheme}
     >
       <AdminSidebar />
       <div className="flex-1 min-w-0">
-        <div className="sticky top-0 z-20 flex items-center justify-end border-b border-slate-200/70 bg-white/76 px-6 py-3 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/72">
+        <div className="luxe-glass-nav sticky top-3 z-20 mx-4 mt-3 flex items-center justify-end rounded-2xl px-6 py-3">
           <div className="relative">
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-all duration-150 hover:border-[var(--admin-accent-border)] hover:bg-[var(--admin-accent-soft)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-[var(--admin-accent-border)] dark:hover:bg-[var(--admin-accent-soft)]"
+              className="metal-button inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-150 hover:border-[var(--admin-accent-border)]"
             >
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--admin-accent)] text-xs font-semibold text-white dark:text-slate-950">
                 {user?.name?.charAt(0).toUpperCase() || 'U'}

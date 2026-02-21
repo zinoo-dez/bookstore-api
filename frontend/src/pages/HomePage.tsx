@@ -154,7 +154,7 @@ const HomePage = () => {
   }
 
   return (
-    <div className="tech-home min-h-screen text-slate-900 dark:text-slate-100">
+    <div className="luxe-shell min-h-screen text-slate-900 dark:text-slate-100">
       <motion.div
         className="fixed inset-x-0 top-0 z-50 h-1 origin-left bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500"
         style={{ scaleX: pageProgressX }}
@@ -180,7 +180,7 @@ const HomePage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             style={{ scale: heroShellScale }}
-            className="surface-panel rounded-[36px] bg-white/75 p-8 dark:bg-slate-900/65"
+            className="luxe-panel section-reveal rounded-[36px] p-8"
           >
             <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
               <div>
@@ -235,7 +235,7 @@ const HomePage = () => {
                   transformPerspective: 1200,
                 }}
                 transition={{ type: 'spring', stiffness: 180, damping: 24 }}
-                className="tech-card rounded-3xl p-5 [transform-style:preserve-3d]"
+                className="luxe-card lift-3d rounded-3xl p-5"
               >
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Discovery Stack</p>
@@ -253,7 +253,7 @@ const HomePage = () => {
                     >
                       <Link
                         to={`/books/${book.id}`}
-                        className="tech-card block rounded-2xl p-2"
+                        className="luxe-card block rounded-2xl p-2"
                       >
                         <BookCover src={book.coverImage} alt={book.title} className="aspect-[2/3] w-full rounded-xl object-cover" />
                         <p className="mt-2 truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{book.title}</p>

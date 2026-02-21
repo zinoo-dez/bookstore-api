@@ -18,7 +18,7 @@ const CSSidebar = () => {
 
   return (
     <>
-      <div className="cs-card mb-4 overflow-x-auto rounded-2xl p-2 lg:hidden">
+      <div className="luxe-panel mb-4 overflow-x-auto rounded-2xl p-2 lg:hidden">
         <nav className="flex min-w-max items-center gap-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path || (item.path !== '/cs' && location.pathname.startsWith(item.path))
@@ -42,7 +42,7 @@ const CSSidebar = () => {
         </nav>
       </div>
 
-      <aside className="cs-card sticky top-6 hidden h-[calc(100vh-3rem)] w-64 flex-shrink-0 rounded-2xl p-6 lg:block">
+      <aside className="luxe-panel sticky top-6 hidden h-[calc(100vh-3rem)] w-64 flex-shrink-0 rounded-2xl p-6 lg:block">
         <div className="mb-8">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#61738a] dark:text-slate-400">
             Customer Service
@@ -64,7 +64,7 @@ const CSSidebar = () => {
                 className={cn(
                   'relative flex items-center gap-3 rounded-xl border px-3 py-2.5 pl-4 text-sm font-semibold transition',
                   isActive
-                    ? 'border-[#bdd4ee] bg-[#e9f3ff] text-[#1e4061] dark:border-[#3a6488] dark:bg-[#112339] dark:text-slate-100'
+                    ? 'luxe-card border-[#bdd4ee] bg-[#e9f3ff] text-[#1e4061] dark:border-[#3a6488] dark:bg-[#112339] dark:text-slate-100'
                     : 'border-transparent text-[#62748b] hover:border-[#c7d7ea] hover:text-[#1f2f44] dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-white'
                 )}
               >

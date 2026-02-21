@@ -142,9 +142,8 @@ const Navbar = () => {
   return (
     <header
       className={`
-        sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur
+        luxe-glass-nav sticky top-3 z-50 mx-auto w-[min(96%,80rem)] rounded-2xl
         transition-transform duration-300
-        dark:border-slate-800/70 dark:bg-slate-950/80
         ${isNavbarVisible ? 'translate-y-0' : '-translate-y-full'}
       `}
     >
@@ -349,15 +348,8 @@ const Navbar = () => {
                 onClick={toggleTheme}
                 aria-pressed={theme === 'dark'}
                 className="
-                  relative inline-flex h-9 w-14 items-center
-                  rounded-full
-                  border border-slate-200
-                  bg-slate-100
-                  transition-colors
-                  hover:bg-slate-200
-                  dark:border-slate-800
-                  dark:bg-slate-900
-                  dark:hover:bg-slate-800
+                  metal-button relative inline-flex h-9 w-14 items-center
+                  rounded-full transition-colors
                 "
               >
                 <span className="sr-only">Toggle theme</span>
@@ -471,19 +463,11 @@ const Navbar = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={handleLogout}
                     className="
+                      metal-button
                       px-4 py-2
                       text-xs font-semibold uppercase tracking-[0.2em]
                       rounded-xl
                       transition-colors
-
-                      text-slate-700
-                      border border-slate-200
-                      hover:bg-slate-50
-
-                      dark:text-slate-300
-                      dark:hover:text-[#E6B65C]
-                      dark:border-slate-700
-                      dark:hover:bg-slate-800
                     "
                   >
                     Logout

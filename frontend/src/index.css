@@ -4,6 +4,32 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --luxe-bg: #f6f7fb;
+  --luxe-bg-deep: #e8ebf3;
+  --luxe-text: #0f172a;
+  --luxe-gold: #c8a25b;
+  --luxe-gold-soft: rgba(200, 162, 91, 0.18);
+  --luxe-blue: #3a77f6;
+}
+
+.dark {
+  --luxe-bg: #070d18;
+  --luxe-bg-deep: #0d1627;
+  --luxe-text: #e2e8f0;
+  --luxe-gold: #dfbe82;
+  --luxe-gold-soft: rgba(223, 190, 130, 0.2);
+  --luxe-blue: #6ea0ff;
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at -8% -12%, rgba(58, 119, 246, 0.14), transparent 56%),
+    radial-gradient(980px 420px at 108% -6%, var(--luxe-gold-soft), transparent 52%),
+    linear-gradient(180deg, var(--luxe-bg) 0%, var(--luxe-bg-deep) 100%);
+  color: var(--luxe-text);
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -15,6 +41,104 @@
 }
 
 @layer components {
+  .luxe-shell {
+    background:
+      radial-gradient(900px 360px at 0% -8%, rgba(58, 119, 246, 0.16), transparent 56%),
+      radial-gradient(840px 340px at 98% -4%, var(--luxe-gold-soft), transparent 54%),
+      linear-gradient(180deg, var(--luxe-bg) 0%, var(--luxe-bg-deep) 100%);
+  }
+
+  .luxe-glass-nav {
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(246, 249, 255, 0.72));
+    backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: 0 24px 50px -40px rgba(15, 23, 42, 0.45);
+  }
+
+  .dark .luxe-glass-nav {
+    border-color: rgba(71, 85, 105, 0.52);
+    background: linear-gradient(160deg, rgba(11, 18, 32, 0.82), rgba(13, 24, 42, 0.7));
+    box-shadow: 0 28px 60px -44px rgba(2, 6, 23, 0.92);
+  }
+
+  .luxe-panel {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.84), rgba(242, 247, 255, 0.72));
+    backdrop-filter: blur(18px);
+    box-shadow: 0 24px 64px -48px rgba(15, 23, 42, 0.52);
+    border-radius: 1.5rem;
+  }
+
+  .dark .luxe-panel {
+    border-color: rgba(71, 85, 105, 0.5);
+    background: linear-gradient(160deg, rgba(14, 22, 38, 0.82), rgba(12, 18, 32, 0.72));
+    box-shadow: 0 28px 72px -48px rgba(2, 6, 23, 0.96);
+  }
+
+  .luxe-card {
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.72), rgba(246, 249, 255, 0.56));
+    box-shadow: 0 18px 46px -42px rgba(15, 23, 42, 0.34);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease, border-color 220ms ease;
+  }
+
+  .dark .luxe-card {
+    border-color: rgba(71, 85, 105, 0.3);
+    background: linear-gradient(160deg, rgba(15, 23, 42, 0.7), rgba(13, 21, 36, 0.62));
+    box-shadow: 0 22px 52px -44px rgba(2, 6, 23, 0.85);
+  }
+
+  .luxe-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(58, 119, 246, 0.28);
+    box-shadow: 0 28px 72px -44px rgba(58, 119, 246, 0.34);
+  }
+
+  .dark .luxe-card:hover {
+    border-color: rgba(223, 190, 130, 0.34);
+    box-shadow: 0 30px 72px -42px rgba(223, 190, 130, 0.22);
+  }
+
+  .lift-3d {
+    transform-style: preserve-3d;
+    perspective: 1200px;
+  }
+
+  .metal-button {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(236, 241, 250, 0.9));
+    color: #0f172a;
+    box-shadow: 0 16px 34px -26px rgba(15, 23, 42, 0.45);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .metal-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(58, 119, 246, 0.34);
+    box-shadow: 0 20px 42px -26px rgba(58, 119, 246, 0.36);
+  }
+
+  .dark .metal-button {
+    border-color: rgba(100, 116, 139, 0.48);
+    background: linear-gradient(160deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.92));
+    color: #e2e8f0;
+  }
+
+  .section-reveal {
+    animation: section-reveal 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes section-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.992);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .surface-canvas {
     background:
       radial-gradient(1200px 400px at 8% -10%, rgba(59, 130, 246, 0.16), transparent 55%),

@@ -154,7 +154,7 @@ const AdminOrdersPage = () => {
   }
 
   return (
-    <div className="surface-canvas min-h-screen p-8 dark:text-slate-100">
+    <div className="luxe-shell min-h-screen p-8 dark:text-slate-100">
       <div className="mx-auto max-w-7xl">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
@@ -171,7 +171,7 @@ const AdminOrdersPage = () => {
           </div>
         )}
 
-        <div className="surface-panel ui-fade-up p-4">
+        <div className="luxe-panel section-reveal p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             type="text"
@@ -285,7 +285,7 @@ const AdminOrdersPage = () => {
         <Stat label="Avg Order Value" value={`$${avgOrderValue.toFixed(2)}`} />
       </div>
 
-      <div className="surface-panel ui-fade-up overflow-hidden">
+      <div className="luxe-panel section-reveal overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b bg-slate-50/80 dark:bg-slate-950/60 dark:border-slate-800 sticky top-0">
@@ -317,7 +317,7 @@ const AdminOrdersPage = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.02 }}
-                  className={`transition-colors hover:bg-gray-50 dark:hover:bg-slate-800/60 ${index % 2 === 1 ? 'bg-slate-50/40 dark:bg-slate-950/20' : ''} ${recentOrderId === order.id ? 'ring-2 ring-amber-300/60' : ''}`}
+                  className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-slate-800/60 ${index % 2 === 1 ? 'bg-slate-50/25 dark:bg-slate-950/20' : ''} ${recentOrderId === order.id ? 'ring-2 ring-amber-300/60' : ''}`}
                 >
                   <td className={`px-6 ${densityPad} whitespace-nowrap text-sm text-gray-500 dark:text-slate-500`}>#{index + 1}</td>
                   <td className={`px-6 ${densityPad} whitespace-nowrap`}><span className="text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">{order.id.slice(-8).toUpperCase()}</span></td>
@@ -351,7 +351,7 @@ const AdminOrdersPage = () => {
                     {canManagePayouts && order.status === 'PENDING' ? (
                       <button
                         onClick={() => setUpdatingOrder(order)}
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 hover:border-amber-300 hover:text-amber-300 transition-colors dark:border-slate-800"
+                        className="metal-button inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
                         title="Update Status"
                         aria-label="Update order status"
                       >
@@ -407,7 +407,7 @@ const Stat = ({
   <button
     type="button"
     onClick={onClick}
-    className={`surface-card p-4 text-left ${
+    className={`rounded-2xl border border-slate-200/50 bg-white/45 p-4 text-left backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/35 ${
       active ? 'ring-2 ring-amber-300/70 dark:ring-amber-400/40' : ''
     } ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
   >

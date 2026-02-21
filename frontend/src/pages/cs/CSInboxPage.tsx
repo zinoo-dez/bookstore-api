@@ -201,7 +201,7 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
 
   return (
     <div className="space-y-12">
-      <section className="cs-card rounded-2xl p-7">
+      <section className="luxe-panel section-reveal rounded-2xl p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7f7465] dark:text-slate-400">
@@ -296,7 +296,7 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
         </div>
       </section>
 
-      <section className="cs-card rounded-2xl p-7">
+      <section className="section-reveal rounded-2xl p-2">
         {isLoading ? (
           <div className="rounded-xl border border-dashed border-[#ddd0bf] p-7 text-center text-sm text-[#7c7162] dark:border-slate-600 dark:text-slate-400">
             Loading inquiries...
@@ -315,7 +315,7 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
                   <Link
                     key={item.id}
                     to={`/cs/inquiries/${item.id}`}
-                    className="block rounded-xl border border-[#e6dbcb] bg-[#fffdf9]/95 p-6 shadow-[0_16px_44px_-38px_rgba(35,30,23,0.35)] transition hover:border-[#d4c5b1] dark:border-white/10 dark:bg-white/[0.04]"
+                    className="block rounded-2xl border border-transparent bg-white/50 p-6 shadow-[0_10px_34px_-30px_rgba(35,30,23,0.22)] backdrop-blur-sm transition hover:border-[#d4c5b1]/60 hover:bg-[#fffdf9]/70 dark:bg-white/[0.02] dark:hover:border-slate-600"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
@@ -364,7 +364,7 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
                   type="button"
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage <= 1 || isLoading}
-                  className="rounded-xl border border-[#dfd3c3] bg-[#fffdf9] px-3 py-1.5 text-sm text-[#5f5548] transition hover:border-[#d4c5b1] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-white/5"
+                  className="metal-button rounded-xl px-3 py-1.5 text-sm text-[#5f5548] transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-white/5"
                 >
                   Previous
                 </button>
@@ -375,7 +375,7 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
                   type="button"
                   onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage >= totalPages || isLoading}
-                  className="rounded-xl border border-[#dfd3c3] bg-[#fffdf9] px-3 py-1.5 text-sm text-[#5f5548] transition hover:border-[#d4c5b1] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-white/5"
+                  className="metal-button rounded-xl px-3 py-1.5 text-sm text-[#5f5548] transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-white/5"
                 >
                   Next
                 </button>

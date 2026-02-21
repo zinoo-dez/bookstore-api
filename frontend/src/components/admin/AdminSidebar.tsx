@@ -120,8 +120,8 @@ const AdminSidebar = () => {
           : 'Manage your store'
 
   return (
-    <div 
-      className={`${isCollapsed ? 'w-16' : 'w-[13.25rem]'} border-r border-slate-200/70 bg-white/85 backdrop-blur h-screen sticky top-0 flex flex-col transition-all duration-200 dark:bg-slate-900/88 dark:border-slate-800/80`}
+    <div
+      className={`luxe-panel ${isCollapsed ? 'w-16' : 'w-[13.25rem]'} h-[calc(100vh-1.5rem)] sticky top-3 ml-3 flex flex-col transition-all duration-200`}
     >
       {/* Logo/Title & Toggle */}
       <div className="p-4 border-b border-slate-200/70 flex items-center justify-between dark:border-slate-800/80">
@@ -133,7 +133,7 @@ const AdminSidebar = () => {
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors dark:hover:bg-slate-800"
+          className="metal-button p-2 rounded-lg transition-colors"
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <span className="text-base">{isCollapsed ? '→' : '←'}</span>
@@ -161,7 +161,7 @@ const AdminSidebar = () => {
                 className={`relative flex items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-1.5 transition-all duration-150
                   before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-r before:transition-colors
                   ${isActive
-                    ? "bg-[var(--admin-accent-soft)] text-[var(--admin-accent)] before:bg-[var(--admin-accent)]"
+                    ? "luxe-card bg-[var(--admin-accent-soft)] text-[var(--admin-accent)] before:bg-[var(--admin-accent)]"
                     : "text-gray-700 hover:bg-slate-100/80 hover:text-[var(--admin-accent)] before:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-[var(--admin-accent)]"
                   }
                   ${isCollapsed ? "justify-center" : ""}
@@ -188,7 +188,7 @@ const AdminSidebar = () => {
       </nav>
 
       {/* Bottom Section */}
-      <div className={`p-3 border-t border-slate-200/70 bg-slate-50/60 ${isCollapsed ? 'text-center' : ''} dark:border-slate-800/80 dark:bg-slate-950/70`}>
+      <div className={`p-3 border-t border-slate-200/70 bg-white/30 ${isCollapsed ? 'text-center' : ''} dark:border-slate-800/80 dark:bg-slate-950/30`}>
         <div className="text-xs text-gray-500 dark:text-slate-500">
           <p>{isCollapsed ? 'v1.0' : 'Admin v1.0'}</p>
           {!isCollapsed && user && (
