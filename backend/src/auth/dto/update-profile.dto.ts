@@ -38,4 +38,44 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   backgroundColor?: string;
+
+  @ApiPropertyOptional({
+    description: 'Pronouns shown on profile',
+    example: 'she/her',
+    maxLength: 30,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  pronouns?: string;
+
+  @ApiPropertyOptional({
+    description: 'Short bio shown on profile cards',
+    example: 'Reader, writer, and software engineer.',
+    maxLength: 160,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  shortBio?: string;
+
+  @ApiPropertyOptional({
+    description: 'Long-form about section',
+    example: 'I write about books, product design, and developer life.',
+    maxLength: 4000,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  about?: string;
+
+  @ApiPropertyOptional({
+    description: 'Profile cover image URL',
+    example: 'https://images.example.com/covers/user-1.jpg',
+    maxLength: 2048,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  coverImage?: string;
 }

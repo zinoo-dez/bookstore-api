@@ -6,12 +6,16 @@ import * as fc from 'fast-check';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
 import { RegisterDto } from './dto/register.dto';
+import { resolveUserPermissionKeys } from './permission-resolution';
+
+jest.mock('./permission-resolution', () => ({
+  resolveUserPermissionKeys: jest.fn().mockResolvedValue(new Set<string>()),
+}));
 
 describe('AuthService', () => {
   let service: AuthService;
   let prismaService: PrismaService;
   let jwtService: JwtService;
-  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -53,7 +57,10 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
     prismaService = module.get<PrismaService>(PrismaService);
     jwtService = module.get<JwtService>(JwtService);
-    configService = module.get<ConfigService>(ConfigService);
+    const mockedResolvePermissions = resolveUserPermissionKeys as jest.MockedFunction<
+      typeof resolveUserPermissionKeys
+    >;
+    mockedResolvePermissions.mockResolvedValue(new Set<string>());
 
     // Reset mocks before each test
     jest.clearAllMocks();
@@ -111,6 +118,13 @@ describe('AuthService', () => {
                 email: true,
                 name: true,
                 role: true,
+                avatarType: true,
+                avatarValue: true,
+                backgroundColor: true,
+                pronouns: true,
+                shortBio: true,
+                about: true,
+                coverImage: true,
                 createdAt: true,
               },
             });
@@ -142,6 +156,14 @@ describe('AuthService', () => {
               name: 'Test User',
               password: hashedPassword,
               role: 'USER' as const,
+              avatarType: null,
+              avatarValue: null,
+              backgroundColor: null,
+              pronouns: null,
+              shortBio: null,
+              about: null,
+              coverImage: null,
+              staffProfile: null,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
@@ -161,18 +183,23 @@ describe('AuthService', () => {
             const result = await service.login(loginData);
 
             // Assert: JWT token is returned
-            expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-              where: { email: loginData.email },
-            });
+            expect(prismaService.user.findUnique).toHaveBeenCalledWith(
+              expect.objectContaining({
+                where: { email: loginData.email },
+              }),
+            );
             expect(bcrypt.compare).toHaveBeenCalledWith(
               loginData.password,
               hashedPassword,
             );
-            expect(jwtService.signAsync).toHaveBeenCalledWith({
-              sub: mockUser.id,
-              email: mockUser.email,
-              role: mockUser.role,
-            });
+            expect(jwtService.signAsync).toHaveBeenCalledWith(
+              expect.objectContaining({
+                sub: mockUser.id,
+                email: mockUser.email,
+                role: mockUser.role,
+                permissions: [],
+              }),
+            );
             expect(result).toEqual({
               access_token: mockToken,
             });
@@ -202,6 +229,14 @@ describe('AuthService', () => {
               name: 'Test User',
               password: hashedPassword,
               role: 'USER' as const,
+              avatarType: null,
+              avatarValue: null,
+              backgroundColor: null,
+              pronouns: null,
+              shortBio: null,
+              about: null,
+              coverImage: null,
+              staffProfile: null,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
@@ -216,12 +251,14 @@ describe('AuthService', () => {
 
             // Act & Assert: Login should be rejected
             await expect(service.login(loginData)).rejects.toThrow(
-              'Invalid credentials',
+              'Incorrect password',
             );
 
-            expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-              where: { email: loginData.email },
-            });
+            expect(prismaService.user.findUnique).toHaveBeenCalledWith(
+              expect.objectContaining({
+                where: { email: loginData.email },
+              }),
+            );
             expect(bcrypt.compare).toHaveBeenCalledWith(
               loginData.password,
               hashedPassword,
@@ -284,6 +321,13 @@ describe('AuthService', () => {
                 email: true,
                 name: true,
                 role: true,
+                avatarType: true,
+                avatarValue: true,
+                backgroundColor: true,
+                pronouns: true,
+                shortBio: true,
+                about: true,
+                coverImage: true,
                 createdAt: true,
               },
             });
@@ -383,6 +427,13 @@ describe('AuthService', () => {
             email: true,
             name: true,
             role: true,
+            avatarType: true,
+            avatarValue: true,
+            backgroundColor: true,
+            pronouns: true,
+            shortBio: true,
+            about: true,
+            coverImage: true,
             createdAt: true,
           },
         });
@@ -432,6 +483,14 @@ describe('AuthService', () => {
           name: 'Test User',
           password: '$2b$10$hashedPassword',
           role: 'USER' as const,
+          avatarType: null,
+          avatarValue: null,
+          backgroundColor: null,
+          pronouns: null,
+          shortBio: null,
+          about: null,
+          coverImage: null,
+          staffProfile: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -451,14 +510,19 @@ describe('AuthService', () => {
 
         // Assert
         expect(result).toEqual({ access_token: mockToken });
-        expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-          where: { email: loginDto.email },
-        });
-        expect(jwtService.signAsync).toHaveBeenCalledWith({
-          sub: mockUser.id,
-          email: mockUser.email,
-          role: mockUser.role,
-        });
+        expect(prismaService.user.findUnique).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { email: loginDto.email },
+          }),
+        );
+        expect(jwtService.signAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            sub: mockUser.id,
+            email: mockUser.email,
+            role: mockUser.role,
+            permissions: [],
+          }),
+        );
       });
 
       it('should throw UnauthorizedException for non-existent user', async () => {
@@ -472,7 +536,7 @@ describe('AuthService', () => {
 
         // Act & Assert
         await expect(service.login(loginDto)).rejects.toThrow(
-          'Invalid credentials',
+          'No account found with this email address',
         );
         expect(jwtService.signAsync).not.toHaveBeenCalled();
       });
@@ -490,6 +554,14 @@ describe('AuthService', () => {
           name: 'Test User',
           password: '$2b$10$hashedPassword',
           role: 'USER' as const,
+          avatarType: null,
+          avatarValue: null,
+          backgroundColor: null,
+          pronouns: null,
+          shortBio: null,
+          about: null,
+          coverImage: null,
+          staffProfile: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -503,7 +575,7 @@ describe('AuthService', () => {
 
         // Act & Assert
         await expect(service.login(loginDto)).rejects.toThrow(
-          'Invalid credentials',
+          'Incorrect password',
         );
         expect(jwtService.signAsync).not.toHaveBeenCalled();
       });

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { CSVLink } from 'react-csv'
 import { Pencil, Trash2 } from 'lucide-react'
 import {
   useBooks,
@@ -11,7 +10,6 @@ import {
 import { type Book } from '@/lib/schemas'
 import Skeleton from '@/components/ui/Skeleton'
 import Button from '@/components/ui/Button'
-import Pagination from '@/components/ui/Pagination'
 import BookFormModal from '@/components/admin/BookFormModal'
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal'
 import BulkStockUpdateModal from '@/components/admin/BulkStockUpdateModal'
@@ -24,8 +22,9 @@ const AdminBooksPage = () => {
   const [stockFilter, setStockFilter] = useState<'ALL' | 'IN' | 'LOW' | 'OUT'>(
     'ALL'
   )
+  const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [page, setPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE)
+  const itemsPerPage = ITEMS_PER_PAGE
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingBook, setEditingBook] = useState<Book | null>(null)
@@ -37,6 +36,7 @@ const AdminBooksPage = () => {
   const [sortKey, setSortKey] = useState<'title' | 'author' | 'isbn' | 'price' | 'stock' | 'createdAt'>('title')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [recentBookId, setRecentBookId] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState('')
 
   const { data: booksData, isLoading } = useBooks({ limit: 100 })
   const createBook = useCreateBook()
@@ -44,6 +44,11 @@ const AdminBooksPage = () => {
   const deleteBook = useDeleteBook()
 
   const books = booksData?.books || []
+
+  const showActionMessage = (text: string) => {
+    setActionMessage(text)
+    window.setTimeout(() => setActionMessage(''), 3400)
+  }
 
   // 🔍 Filter logic
   const filteredBooks = books.filter(book => {
@@ -57,8 +62,15 @@ const AdminBooksPage = () => {
     if (stockFilter === 'LOW') matchesStock = book.stock > 0 && book.stock <= 10
     if (stockFilter === 'OUT') matchesStock = book.stock === 0
 
-    return matchesSearch && matchesStock
+    const matchesCategory =
+      categoryFilter === 'ALL' || (book.categories || []).includes(categoryFilter)
+
+    return matchesSearch && matchesStock && matchesCategory
   })
+
+  const allCategories = Array.from(
+    new Set(books.flatMap((book) => book.categories || [])),
+  ).sort((a, b) => a.localeCompare(b))
 
   const sortedBooks = [...filteredBooks].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1
@@ -95,13 +107,19 @@ const AdminBooksPage = () => {
     setPage(1)
   }
 
+  const handleCategoryChange = (value: string) => {
+    setCategoryFilter(value)
+    setPage(1)
+  }
+
   // CRUD handlers
   const handleAddBook = async (data: any) => {
     try {
       await createBook.mutateAsync(data)
       setIsAddModalOpen(false)
+      showActionMessage('Book created.')
     } catch (err) {
-      console.error('Failed to create book:', getErrorMessage(err))
+      showActionMessage(getErrorMessage(err))
     }
   }
 
@@ -112,8 +130,9 @@ const AdminBooksPage = () => {
       await updateBook.mutateAsync({ id: editingBook.id, data })
       setRecentBookId(editedId)
       setEditingBook(null)
+      showActionMessage('Book updated.')
     } catch (err) {
-      console.error('Failed to update book:', getErrorMessage(err))
+      showActionMessage(getErrorMessage(err))
     }
   }
 
@@ -122,8 +141,9 @@ const AdminBooksPage = () => {
     try {
       await deleteBook.mutateAsync(deletingBook.id)
       setDeletingBook(null)
+      showActionMessage('Book deleted.')
     } catch (err) {
-      console.error('Failed to delete book:', getErrorMessage(err))
+      showActionMessage(getErrorMessage(err))
     }
   }
 
@@ -150,12 +170,22 @@ const AdminBooksPage = () => {
     if (selectedBooks.size === 0) return
     setIsBulkDeleting(true)
     try {
-      await Promise.all(
-        Array.from(selectedBooks).map(id => deleteBook.mutateAsync(id))
+      const results = await Promise.allSettled(
+        Array.from(selectedBooks).map((id) => deleteBook.mutateAsync(id)),
       )
+      const failed = results.filter((result) => result.status === 'rejected')
+      const succeeded = results.length - failed.length
       setSelectedBooks(new Set())
+      if (failed.length > 0) {
+        const firstError = failed[0] as PromiseRejectedResult
+        showActionMessage(
+          `${succeeded} deleted, ${failed.length} failed: ${getErrorMessage(firstError.reason)}`,
+        )
+        return
+      }
+      showActionMessage(`${succeeded} books deleted.`)
     } catch (err) {
-      console.error('Failed to delete books:', getErrorMessage(err))
+      showActionMessage(getErrorMessage(err))
     } finally {
       setIsBulkDeleting(false)
     }
@@ -175,8 +205,9 @@ const AdminBooksPage = () => {
       )
       setSelectedBooks(new Set())
       setIsBulkStockModalOpen(false)
+      showActionMessage('Stock updated for selected books.')
     } catch (err) {
-      console.error('Failed to update stock:', getErrorMessage(err))
+      showActionMessage(getErrorMessage(err))
     }
   }
 
@@ -207,6 +238,25 @@ const AdminBooksPage = () => {
     Categories: book.categories?.join(', ') || '',
     Description: book.description || '',
   }))
+
+  const handleExportCsv = () => {
+    if (csvData.length === 0) return
+
+    const headers = Object.keys(csvData[0])
+    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`
+    const rows = csvData.map((row) => headers.map((header) => escapeCsv(row[header as keyof typeof row])).join(','))
+    const csv = [headers.join(','), ...rows].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `books-export-${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
 
   if (isLoading) {
     return (
@@ -252,8 +302,14 @@ const AdminBooksPage = () => {
         <Button onClick={() => setIsAddModalOpen(true)}>➕ Add New Book</Button>
       </div>
 
+      {actionMessage && (
+        <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+          {actionMessage}
+        </div>
+      )}
+
       {/* Search & Filter */}
-      <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-[1fr_200px_auto]">
+      <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-[1fr_200px_220px_auto]">
         <input
           className="flex-1 px-4 py-2 border rounded-lg dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
           placeholder="Search by title, author, or ISBN..."
@@ -270,6 +326,19 @@ const AdminBooksPage = () => {
           <option value="IN">In Stock</option>
           <option value="LOW">Low Stock</option>
           <option value="OUT">Out of Stock</option>
+        </select>
+
+        <select
+          value={categoryFilter}
+          onChange={(e) => handleCategoryChange(e.target.value)}
+          className="px-4 py-2 border rounded-lg dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+        >
+          <option value="ALL">All Categories</option>
+          {allCategories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
         </select>
 
         <div className="flex items-center gap-2">
@@ -339,13 +408,14 @@ const AdminBooksPage = () => {
 
       {/* Export Button */}
       <div className="mb-4 flex justify-end">
-        <CSVLink
-          data={csvData}
-          filename={`books-export-${new Date().toISOString().split('T')[0]}.csv`}
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          disabled={csvData.length === 0}
           className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:text-amber-300 dark:hover:border-amber-300"
         >
           📥 Export to CSV
-        </CSVLink>
+        </button>
       </div>
 
       {/* Table */}

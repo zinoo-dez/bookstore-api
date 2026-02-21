@@ -1,19 +1,30 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { ChevronDown } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '@/store/auth.store'
 import { useCart } from '@/services/cart'
 import { useLogout } from '@/services/auth'
+import { canAccessAdmin } from '@/lib/permissions'
 import Logo from "@/components/ui/Logo";
 import Avatar from '@/components/user/Avatar'
 import { useTheme } from '@/hooks/useTheme'
+import NotificationBell from './NotificationBell'
 
 const Navbar = () => {
   const { user, isAuthenticated } = useAuthStore()
+  const canUseAdmin = canAccessAdmin(user?.role, user?.permissions)
   const { data: cartData } = useCart()
   const location = useLocation()
   const navigate = useNavigate()
   const logoutMutation = useLogout()
   const { theme, toggleTheme } = useTheme()
+  const [isLibraryMenuOpen, setIsLibraryMenuOpen] = useState(false)
+  const [isBookstoreMenuOpen, setIsBookstoreMenuOpen] = useState(false)
+  const [isNavbarVisible, setIsNavbarVisible] = useState(true)
+  const libraryMenuCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bookstoreMenuCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastScrollY = useRef(0)
 
   const totalItems = cartData?.reduce((sum, item) => sum + item.quantity, 0) || 0
 
@@ -24,6 +35,90 @@ const Navbar = () => {
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`)
+
+  const isLibrarySectionActive = isActive('/library') || isActive('/reading-insights')
+  const isBookstoreSectionActive = isActive('/books') || isActive('/orders') || isActive('/cart')
+
+  const openLibraryMenu = () => {
+    if (libraryMenuCloseTimeout.current) {
+      clearTimeout(libraryMenuCloseTimeout.current)
+      libraryMenuCloseTimeout.current = null
+    }
+    setIsLibraryMenuOpen(true)
+  }
+
+  const closeLibraryMenuWithDelay = () => {
+    if (libraryMenuCloseTimeout.current) {
+      clearTimeout(libraryMenuCloseTimeout.current)
+    }
+    libraryMenuCloseTimeout.current = setTimeout(() => {
+      setIsLibraryMenuOpen(false)
+    }, 200)
+  }
+
+  const openBookstoreMenu = () => {
+    if (bookstoreMenuCloseTimeout.current) {
+      clearTimeout(bookstoreMenuCloseTimeout.current)
+      bookstoreMenuCloseTimeout.current = null
+    }
+    setIsBookstoreMenuOpen(true)
+  }
+
+  const closeBookstoreMenuWithDelay = () => {
+    if (bookstoreMenuCloseTimeout.current) {
+      clearTimeout(bookstoreMenuCloseTimeout.current)
+    }
+    bookstoreMenuCloseTimeout.current = setTimeout(() => {
+      setIsBookstoreMenuOpen(false)
+    }, 200)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (libraryMenuCloseTimeout.current) {
+        clearTimeout(libraryMenuCloseTimeout.current)
+      }
+      if (bookstoreMenuCloseTimeout.current) {
+        clearTimeout(bookstoreMenuCloseTimeout.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    lastScrollY.current = window.scrollY
+
+    const handleScroll = () => {
+      const currentY = window.scrollY
+      const delta = currentY - lastScrollY.current
+
+      if (Math.abs(delta) < 6) return
+
+      if (currentY <= 24) {
+        setIsNavbarVisible(true)
+        lastScrollY.current = currentY
+        return
+      }
+
+      if (delta > 0 && currentY > 80) {
+        setIsNavbarVisible(false)
+        setIsLibraryMenuOpen(false)
+        setIsBookstoreMenuOpen(false)
+      } else if (delta < 0) {
+        setIsNavbarVisible(true)
+      }
+
+      lastScrollY.current = currentY
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    setIsNavbarVisible(true)
+  }, [location.pathname])
 
   const navLinkClass = (path: string) =>
     isActive(path)
@@ -45,7 +140,14 @@ const Navbar = () => {
       `
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">
+    <header
+      className={`
+        sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur
+        transition-transform duration-300
+        dark:border-slate-800/70 dark:bg-slate-950/80
+        ${isNavbarVisible ? 'translate-y-0' : '-translate-y-full'}
+      `}
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -66,27 +168,169 @@ const Navbar = () => {
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {/* Only show user navigation if not admin */}
-            {user?.role !== 'ADMIN' && (
+            {!canUseAdmin && (
               <>
-                <Link
-                  to="/books"
-                  className={navLinkClass('/books')}
+                <div
+                  className="relative"
+                  onMouseEnter={openBookstoreMenu}
+                  onMouseLeave={closeBookstoreMenuWithDelay}
                 >
-                  Books
+                  <Link
+                    to="/books"
+                    className={
+                      isBookstoreSectionActive
+                        ? `
+                          inline-flex items-center gap-1 text-sm font-bold
+                          text-slate-900 dark:text-slate-100
+                          relative
+                          after:absolute after:-bottom-2 after:left-0
+                          after:h-0.5 after:w-full
+                          after:bg-primary-600
+                          dark:after:bg-[#E6B65C]
+                        `
+                        : `
+                          inline-flex items-center gap-1 text-sm font-semibold
+                          text-slate-700 dark:text-slate-300
+                          hover:text-primary-600 dark:hover:text-[#E6B65C]
+                          transition-colors
+                        `
+                    }
+                  >
+                    Bookstore
+                    <ChevronDown className="h-4 w-4" />
+                  </Link>
+
+                  <div
+                    className={`
+                      absolute left-0 top-full z-40 mt-2 w-52 rounded-xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur transition-all duration-200 dark:border-slate-700/80 dark:bg-slate-900/95
+                      ${isBookstoreMenuOpen ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}
+                    `}
+                  >
+                    <Link
+                      to="/books"
+                      className={`
+                        block rounded-lg px-3 py-2 text-sm transition-colors
+                        ${isActive('/books')
+                          ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                        }
+                      `}
+                    >
+                      Browse Books
+                    </Link>
+
+                    {isAuthenticated && (
+                      <Link
+                        to="/orders"
+                        className={`
+                          mt-1 block rounded-lg px-3 py-2 text-sm transition-colors
+                          ${isActive('/orders')
+                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                          }
+                        `}
+                      >
+                        Orders
+                      </Link>
+                    )}
+
+                    {isAuthenticated && (
+                      <Link
+                        to="/cart"
+                        className={`
+                          mt-1 block rounded-lg px-3 py-2 text-sm transition-colors
+                          ${isActive('/cart')
+                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                          }
+                        `}
+                      >
+                        Cart
+                      </Link>
+                    )}
+                  </div>
+                </div>
+                <Link
+                  to="/contact"
+                  className={navLinkClass('/contact')}
+                >
+                  Contact
+                </Link>
+                <Link
+                  to="/blogs"
+                  className={navLinkClass('/blogs')}
+                >
+                  Blogs
                 </Link>
                 {isAuthenticated && (
-                  <Link
-                    to="/orders"
-                    className={navLinkClass('/orders')}
+                  <div
+                    className="relative"
+                    onMouseEnter={openLibraryMenu}
+                    onMouseLeave={closeLibraryMenuWithDelay}
                   >
-                    Orders
-                  </Link>
+                    <Link
+                      to="/library"
+                      className={
+                        isLibrarySectionActive
+                          ? `
+                            inline-flex items-center gap-1 text-sm font-bold
+                            text-slate-900 dark:text-slate-100
+                            relative
+                            after:absolute after:-bottom-2 after:left-0
+                            after:h-0.5 after:w-full
+                            after:bg-primary-600
+                            dark:after:bg-[#E6B65C]
+                          `
+                          : `
+                            inline-flex items-center gap-1 text-sm font-semibold
+                            text-slate-700 dark:text-slate-300
+                            hover:text-primary-600 dark:hover:text-[#E6B65C]
+                            transition-colors
+                          `
+                      }
+                    >
+                      Library
+                      <ChevronDown className="h-4 w-4" />
+                    </Link>
+
+                    <div
+                      className={`
+                        absolute left-0 top-full z-40 mt-2 w-52 rounded-xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur transition-all duration-200 dark:border-slate-700/80 dark:bg-slate-900/95
+                        ${isLibraryMenuOpen ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}
+                      `}
+                    >
+                      <Link
+                        to="/library"
+                        className={`
+                          block rounded-lg px-3 py-2 text-sm transition-colors
+                          ${isActive('/library')
+                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                          }
+                        `}
+                      >
+                        Open Library
+                      </Link>
+                      <Link
+                        to="/reading-insights"
+                        className={`
+                          mt-1 block rounded-lg px-3 py-2 text-sm transition-colors
+                          ${isActive('/reading-insights')
+                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                          }
+                        `}
+                      >
+                        Reading Insights
+                      </Link>
+                    </div>
+                  </div>
                 )}
               </>
             )}
 
             {/* Show Admin link for admins */}
-            {user?.role === 'ADMIN' && (
+            {canUseAdmin && (
               <Link
                 to="/admin"
                 className={navLinkClass('/admin')}
@@ -168,7 +412,7 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 {/* Cart - Only show for regular users, not admins */}
-                {user?.role !== 'ADMIN' && (
+                {!canUseAdmin && (
                   <Link to="/cart" className="relative">
                     <motion.div
                       whileHover={{ scale: 1.1 }}
@@ -199,13 +443,15 @@ const Navbar = () => {
                   </Link>
                 )}
 
+                <NotificationBell />
+
                 {/* User menu */}
                 <div className="flex items-center space-x-3">
                   <Link to="/profile">
                     <Avatar
                       avatarType={user?.avatarType}
-                      avatarValue={user?.avatarValue}
-                      backgroundColor={user?.backgroundColor}
+                      avatarValue={user?.avatarValue ?? undefined}
+                      backgroundColor={user?.backgroundColor ?? undefined}
                       size="md"
                       className="
                         cursor-pointer

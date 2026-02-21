@@ -1,10 +1,16 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { useBooks } from '@/services/books'
 import { useFilterStore } from '@/store/filter.store'
 import BookCard from '@/components/books/BookCard'
 import FilterSidebar from '@/components/books/FilterSidebar'
+import BookCover from '@/components/ui/BookCover'
+import BookCornerRibbon from '@/components/ui/BookCornerRibbon'
+import PromoTicker from '@/components/ui/PromoTicker'
+import PromoShowcase from '@/components/ui/PromoShowcase'
 import { cn } from '@/lib/utils'
+import { isBestSellerBook } from '@/lib/books'
 
 const BooksPage = () => {
   const {
@@ -14,15 +20,18 @@ const BooksPage = () => {
     setTitle,
     setAuthor,
     setCategory,
+    setGenre,
     setPriceRange,
     setMinRating,
     setInStockOnly,
     setPage,
+    applyPresetFilters,
     toggleMobileSidebar,
     resetFilters
   } = useFilterStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Construct search params for the API using appliedFilters
   const searchParams = {
@@ -31,6 +40,7 @@ const BooksPage = () => {
     title: appliedFilters.title,
     author: appliedFilters.author,
     category: appliedFilters.category,
+    genre: appliedFilters.genre,
     minPrice: appliedFilters.minPrice ?? undefined,
     maxPrice: appliedFilters.maxPrice ?? undefined,
     minRating: appliedFilters.minRating ?? undefined,
@@ -50,6 +60,7 @@ const BooksPage = () => {
     { id: 'title', label: `Title: ${appliedFilters.title}`, active: !!appliedFilters.title, reset: () => { setTitle(''); } },
     { id: 'author', label: `Author: ${appliedFilters.author}`, active: !!appliedFilters.author, reset: () => { setAuthor(''); } },
     { id: 'category', label: `Category: ${appliedFilters.category}`, active: !!appliedFilters.category, reset: () => { setCategory(''); } },
+    { id: 'genre', label: `Genre: ${appliedFilters.genre}`, active: !!appliedFilters.genre, reset: () => { setGenre(''); } },
     { id: 'price', label: `Price: $${appliedFilters.minPrice || 0} - $${appliedFilters.maxPrice || '∞'}`, active: appliedFilters.minPrice !== null || appliedFilters.maxPrice !== null, reset: () => { setPriceRange(null, null); } },
     { id: 'rating', label: `${appliedFilters.minRating} Stars & Up`, active: !!appliedFilters.minRating, reset: () => { setMinRating(null); } },
     { id: 'stock', label: 'In Stock Only', active: appliedFilters.inStockOnly, reset: () => { setInStockOnly(false); } },
@@ -60,17 +71,48 @@ const BooksPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const applyAuthorQuickFilter = (author: string) => {
+    applyPresetFilters({
+      title: '',
+      author,
+      category: '',
+      genre: '',
+      minPrice: null,
+      maxPrice: null,
+      minRating: null,
+      inStockOnly: false,
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const applyCategoryQuickFilter = (category: string) => {
+    applyPresetFilters({
+      title: '',
+      author: '',
+      category,
+      genre: '',
+      minPrice: null,
+      maxPrice: null,
+      minRating: null,
+      inStockOnly: false,
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex flex-col lg:flex-row gap-10">
+    <div className="min-h-screen bg-gray-50/40 dark:bg-slate-950">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="flex flex-col lg:flex-row gap-8">
 
           {/* Sidebar */}
           <FilterSidebar className="w-full lg:w-auto" />
 
           {/* Main Content */}
           <div className="flex-1 min-w-0" ref={scrollRef}>
-            <header className="mb-10">
+            <PromoTicker className="mb-4 opacity-90" />
+            <PromoShowcase compact className="mb-6" />
+
+            <header className="mb-8">
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                   <motion.h1
@@ -84,6 +126,34 @@ const BooksPage = () => {
                     Discover your next favorite story among {total} curated books
                   </p>
                 </div>
+                <div className="flex items-center gap-2 rounded-full border border-gray-200/70 bg-white/70 p-1 dark:border-slate-800 dark:bg-slate-900/70">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-full transition",
+                      viewMode === 'list' ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "text-gray-500 hover:bg-gray-50 dark:text-slate-400 dark:hover:bg-slate-800"
+                    )}
+                    aria-label="List view"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-full transition",
+                      viewMode === 'grid' ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "text-gray-500 hover:bg-gray-50 dark:text-slate-400 dark:hover:bg-slate-800"
+                    )}
+                    aria-label="Grid view"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Active Filter Chips */}
@@ -93,7 +163,7 @@ const BooksPage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="flex flex-wrap items-center gap-2 mt-8"
+                    className="flex flex-wrap items-center gap-2 mt-6"
                   >
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mr-2 dark:text-slate-500">Active Filters:</span>
                     {activeFilters.map(filter => (
@@ -104,7 +174,7 @@ const BooksPage = () => {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.8, opacity: 0 }}
                         onClick={filter.reset}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm hover:shadow-md hover:border-primary-100 group transition-all dark:bg-slate-900 dark:border-slate-800"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white/75 border border-gray-200/70 rounded-full hover:border-primary-100 group transition-all dark:bg-slate-900/70 dark:border-slate-800"
                       >
                         <span className="text-xs font-bold text-gray-700 group-hover:text-primary-700 dark:text-slate-200">{filter.label}</span>
                         <div className="w-4 h-4 rounded-full bg-gray-100 group-hover:bg-primary-100 flex items-center justify-center transition-colors dark:bg-slate-800">
@@ -127,33 +197,115 @@ const BooksPage = () => {
 
             {/* Books Grid */}
             {(isLoading || (isFetching && books.length === 0)) ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
+              <div className={cn(
+                "gap-6",
+                viewMode === 'grid'
+                  ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                  : "space-y-4"
+              )}>
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-6 animate-pulse dark:bg-slate-900 dark:border-slate-800">
-                    <div className="aspect-[3/4] bg-gray-100 rounded-xl dark:bg-slate-800"></div>
-                    <div className="space-y-3">
-                      <div className="h-5 bg-gray-100 rounded-full w-3/4 dark:bg-slate-800"></div>
-                      <div className="h-4 bg-gray-100 rounded-full w-1/2 dark:bg-slate-800"></div>
-                    </div>
-                    <div className="flex justify-between items-center pt-2">
-                      <div className="h-8 bg-gray-100 rounded-full w-20 dark:bg-slate-800"></div>
-                      <div className="h-6 bg-gray-100 rounded-full w-16 dark:bg-slate-800"></div>
-                    </div>
+                  <div key={i} className={cn(
+                    "bg-white/75 rounded-2xl border border-gray-200/70 p-5 animate-pulse dark:bg-slate-900/70 dark:border-slate-800",
+                    viewMode === 'grid' ? "space-y-6" : "flex items-center gap-4"
+                  )}>
+                    <div className={cn(
+                      "bg-gray-100 rounded-xl dark:bg-slate-800",
+                      viewMode === 'grid' ? "aspect-[2/3]" : "h-24 w-16"
+                    )}></div>
+                    {viewMode === 'grid' ? (
+                      <div className="space-y-3">
+                        <div className="h-5 bg-gray-100 rounded-full w-3/4 dark:bg-slate-800"></div>
+                        <div className="h-4 bg-gray-100 rounded-full w-1/2 dark:bg-slate-800"></div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-100 rounded-full w-2/3 dark:bg-slate-800"></div>
+                        <div className="h-3 bg-gray-100 rounded-full w-1/3 dark:bg-slate-800"></div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             ) : books.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
-                  {books.map((book, index) => (
-                    <BookCard key={book.id} book={book} index={index} />
-                  ))}
-                </div>
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    {books.map((book) => (
+                      <BookCard
+                        key={book.id}
+                        book={book}
+                        onAuthorClick={applyAuthorQuickFilter}
+                        onCategoryClick={applyCategoryQuickFilter}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {books.map((book) => (
+                      <Link
+                        key={book.id}
+                        to={`/books/${book.id}`}
+                        className="group flex items-center gap-4 rounded-2xl border border-gray-200/70 bg-white/80 p-4 transition hover:-translate-y-0.5 dark:bg-slate-900/70 dark:border-slate-800"
+                      >
+                        <div className="relative h-24 w-16 overflow-hidden rounded-xl border border-gray-100 dark:border-slate-800">
+                          {isBestSellerBook(book) && <BookCornerRibbon className="h-16 w-16" />}
+                          <BookCover
+                            src={book.coverImage}
+                            alt={book.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-base font-semibold text-gray-900 dark:text-slate-100">
+                            {book.title}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              applyAuthorQuickFilter(book.author)
+                            }}
+                            className="text-sm text-gray-500 transition hover:text-primary-600 dark:text-slate-400 dark:hover:text-amber-300"
+                          >
+                            by {book.author}
+                          </button>
+                          <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                            {(book.categories || []).slice(0, 2).map((cat, idx) => (
+                              <button
+                                key={`cat-${idx}`}
+                                type="button"
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  applyCategoryQuickFilter(cat)
+                                }}
+                                className="rounded-full bg-gray-100/80 px-2 py-0.5 transition hover:text-primary-700 dark:bg-slate-800 dark:hover:text-amber-300"
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                            {(book.genres || []).slice(0, 2).map((genre, idx) => (
+                              <span key={`genre-${idx}`} className="rounded-full bg-gray-100/80 px-2 py-0.5 dark:bg-slate-800">
+                                {genre}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        {(book.rating ?? 0) > 0 && (
+                          <div className="text-xs font-bold text-gray-600 dark:text-slate-300">
+                            ★ {book.rating?.toFixed(1)}
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <footer className="mt-16 flex flex-col items-center gap-8">
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-gray-100 dark:bg-slate-900 dark:border-slate-800">
+                  <footer className="mt-12 flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-white/75 p-2 dark:border-slate-800 dark:bg-slate-900/70">
                       <button
                         onClick={() => handlePageChange(Math.max(1, page - 1))}
                         disabled={page === 1}
@@ -223,7 +375,7 @@ const BooksPage = () => {
                       </button>
                     </div>
 
-                    <div className="px-6 py-2 bg-gray-50 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400 dark:bg-slate-900 dark:text-slate-500">
+                    <div className="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">
                       Page {page} of {totalPages} • {total} total books
                     </div>
                   </footer>
@@ -233,7 +385,7 @@ const BooksPage = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 dark:bg-slate-900 dark:border-slate-800"
+                className="flex flex-col items-center justify-center rounded-3xl bg-white/70 py-20 dark:bg-slate-900/60"
               >
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 dark:bg-slate-800">
                   <span className="text-4xl">📚</span>

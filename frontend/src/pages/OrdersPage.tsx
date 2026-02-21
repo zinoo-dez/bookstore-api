@@ -64,6 +64,8 @@ const OrdersPage = () => {
     switch (status) {
       case 'COMPLETED':
         return 'bg-green-100 text-green-800 dark:bg-emerald-900/40 dark:text-emerald-200'
+      case 'CONFIRMED':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
       case 'PENDING':
         return 'bg-yellow-100 text-yellow-800 dark:bg-amber-900/40 dark:text-amber-200'
       case 'CANCELLED':
@@ -110,6 +112,20 @@ const OrdersPage = () => {
       animate={{ opacity: 1 }}
       className="max-w-6xl mx-auto px-4 py-8 dark:text-slate-100"
     >
+      <nav className="mb-6 text-xs font-semibold uppercase tracking-widest text-slate-500">
+        <Link to="/" className="hover:text-primary-600">Home</Link>
+        <span className="mx-2 text-slate-300">/</span>
+        <span className="text-slate-700 dark:text-slate-300">Orders</span>
+      </nav>
+      <Link
+        to="/"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-primary-600"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Back to Home
+      </Link>
       <h1 className="text-3xl font-bold mb-8">My Orders</h1>
 
       <div className="space-y-6">

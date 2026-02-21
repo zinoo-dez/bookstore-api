@@ -11,13 +11,14 @@ import {
 } from '@/lib/schemas'
 import { z } from 'zod'
 
-export const useBooks = (params: SearchBooksData = {}) => {
+export const useBooks = (params: SearchBooksData = {}, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['books',params],
     queryFn: async (): Promise<BooksResponse> => {
       const response = await api.get('/books', { params })
       return booksResponseSchema.parse(response.data)
     },
+    enabled: options?.enabled ?? true,
   })
 }
 

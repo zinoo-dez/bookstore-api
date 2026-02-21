@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsNumber, Min, Max, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  Min,
+  Max,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -34,6 +41,14 @@ export class SearchBooksDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter books by genre',
+    example: 'Thriller',
+  })
+  @IsOptional()
+  @IsString()
+  genre?: string;
 
   @ApiPropertyOptional({
     description: 'Minimum price filter',

@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Patch,
-  UseGuards,
-  Request,
-} from '@nestjs/common';
+import { Controller, Post, Body, Patch, Get, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -18,11 +11,13 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './jwt.guard';
-import { Req } from '@nestjs/common'
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Req } from '@nestjs/common';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -71,6 +66,52 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('me/permissions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get effective permissions for current session' })
+  @ApiResponse({
+    status: 200,
+    description: 'Effective permissions for current user',
+    schema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string' },
+        email: { type: 'string' },
+        role: { type: 'string', enum: ['USER', 'ADMIN'] },
+        permissions: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+      },
+    },
+  })
+  getMyPermissions(@Req() req: any) {
+    return this.authService.getMyPermissions(req.user.sub);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request password reset token' })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Password reset token request accepted',
+  })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Password reset successfully',
+  })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Patch('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user profile' })
@@ -91,10 +132,7 @@ export class AuthController {
       },
     },
   })
-  async updateProfile(
-    @Req() req: any,
-    @Body() dto: UpdateProfileDto,
-  ) {
-    return this.authService.updateProfile(req.user.sub, dto)
+  async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.sub, dto);
   }
 }

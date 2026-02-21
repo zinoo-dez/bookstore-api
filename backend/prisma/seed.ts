@@ -1,27 +1,56 @@
 import 'dotenv/config';
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient, Role, NotificationType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 const coverFromIsbn = (isbn: string) =>
   `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`;
+const daysAgo = (days: number, hour = 10) => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(hour, 0, 0, 0);
+  return date;
+};
 
 async function main() {
   console.log('🌱 Starting database seed...');
 
   // Clear existing data
   console.log('🧹 Clearing existing data...');
+  await prisma.purchaseOrderItem.deleteMany();
+  await prisma.purchaseOrder.deleteMany();
+  await prisma.vendor.deleteMany();
+  await prisma.purchaseRequest.deleteMany();
+  await prisma.warehouseAlert.deleteMany();
+  await prisma.warehouseTransfer.deleteMany();
+  await prisma.warehouseStock.deleteMany();
+  await prisma.warehouse.deleteMany();
+  await prisma.staffTask.deleteMany();
+  await prisma.staffAuditLog.deleteMany();
+  await prisma.inquiryInternalNote.deleteMany();
+  await prisma.inquiryMessage.deleteMany();
+  await prisma.inquiryAudit.deleteMany();
+  await prisma.inquiry.deleteMany();
+  await prisma.staffAssignment.deleteMany();
+  await prisma.staffRolePermission.deleteMany();
+  await prisma.staffRole.deleteMany();
+  await prisma.staffPermission.deleteMany();
+  await prisma.staffProfile.deleteMany();
+  await prisma.department.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.promotionCode.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.cartItem.deleteMany();
+  await prisma.review.deleteMany();
   await prisma.book.deleteMany();
   await prisma.user.deleteMany();
 
   // Create admin user
   console.log('👤 Creating admin user...');
   const adminPassword = await bcrypt.hash('admin123', 10);
-  await prisma.user.create({
+  const adminUser = await prisma.user.create({
     data: {
       email: 'admin@bookstore.com',
       password: adminPassword,
@@ -98,6 +127,528 @@ async function main() {
   );
 
   const users = [...coreUsers, ...extraUsers];
+
+  console.log('🔔 Creating sample notifications...');
+  const notificationTemplates: Array<{
+    type: NotificationType;
+    title: string;
+    message: string;
+    link?: string;
+  }> = [
+    {
+      type: 'support_reply',
+      title: 'Staff replied to your inquiry',
+      message: 'Our support team replied to your latest message.',
+      link: '/contact/support',
+    },
+    {
+      type: 'announcement',
+      title: 'Weekend flash sale is live',
+      message: 'Save up to 35% on selected bestsellers this weekend.',
+      link: '/books',
+    },
+    {
+      type: 'inquiry_update',
+      title: 'Your inquiry was updated',
+      message: 'Your business inquiry status changed. Please review the latest update.',
+      link: '/contact/business',
+    },
+    {
+      type: 'system',
+      title: 'Library tips available',
+      message: 'Track reading progress and set a daily goal from your library.',
+      link: '/library',
+    },
+  ];
+
+  const notificationSeedData = users.slice(0, 10).flatMap((user, index) =>
+    notificationTemplates.map((template, innerIndex) => ({
+      userId: user.id,
+      type: template.type,
+      title: template.title,
+      message: template.message,
+      link: template.link,
+      isRead: (index + innerIndex) % 3 === 0,
+    })),
+  );
+  if (notificationSeedData.length > 0) {
+    await prisma.notification.createMany({
+      data: notificationSeedData,
+    });
+  }
+
+  await prisma.promotionCode.createMany({
+    data: [
+      {
+        code: 'BOOKLOVER10',
+        name: '10% off orders over $30',
+        description: 'Core loyalty discount for everyday readers.',
+        discountType: 'PERCENT',
+        discountValue: 10,
+        minSubtotal: 30,
+        maxDiscountAmount: 25,
+        isActive: true,
+      },
+      {
+        code: 'WELCOME15',
+        name: '$15 off orders over $80',
+        description: 'Intro offer for larger first orders.',
+        discountType: 'FIXED',
+        discountValue: 15,
+        minSubtotal: 80,
+        isActive: true,
+      },
+      {
+        code: 'SPRINGREADS20',
+        name: 'Spring campaign 20%',
+        description: 'Seasonal promotion for selected collections.',
+        discountType: 'PERCENT',
+        discountValue: 20,
+        minSubtotal: 50,
+        maxDiscountAmount: 40,
+        startsAt: new Date('2026-03-01T00:00:00.000Z'),
+        endsAt: new Date('2026-04-15T23:59:59.000Z'),
+        isActive: true,
+      },
+    ],
+  });
+
+  console.log('🏢 Seeding staff departments and permissions...');
+  const departments = await Promise.all([
+    prisma.department.upsert({
+      where: { code: 'HR' },
+      update: { name: 'HR', description: 'Hiring, onboarding, and performance.' },
+      create: {
+        code: 'HR',
+        name: 'HR',
+        description: 'Hiring, onboarding, and performance.',
+        isActive: true,
+      },
+    }),
+    prisma.department.upsert({
+      where: { code: 'CS' },
+      update: {
+        name: 'Customer Service',
+        description: 'Customer inquiry and ticket resolution.',
+      },
+      create: {
+        code: 'CS',
+        name: 'Customer Service',
+        description: 'Customer inquiry and ticket resolution.',
+        isActive: true,
+      },
+    }),
+    prisma.department.upsert({
+      where: { code: 'STOCK' },
+      update: {
+        name: 'Stock Management',
+        description: 'Warehouse stock updates and transfers.',
+      },
+      create: {
+        code: 'STOCK',
+        name: 'Stock Management',
+        description: 'Warehouse stock updates and transfers.',
+        isActive: true,
+      },
+    }),
+    prisma.department.upsert({
+      where: { code: 'FIN' },
+      update: {
+        name: 'Finance',
+        description: 'Reports, refunds, and payouts.',
+      },
+      create: {
+        code: 'FIN',
+        name: 'Finance',
+        description: 'Reports, refunds, and payouts.',
+        isActive: true,
+      },
+    }),
+    prisma.department.upsert({
+      where: { code: 'MKT' },
+      update: {
+        name: 'Marketing',
+        description: 'Campaigns, sponsored placements, and promotions.',
+      },
+      create: {
+        code: 'MKT',
+        name: 'Marketing',
+        description: 'Campaigns, sponsored placements, and promotions.',
+        isActive: true,
+      },
+    }),
+  ]);
+
+  const permissionKeys = [
+    'inquiries.create',
+    'inquiries.view',
+    'support.inquiries.view',
+    'support.inquiries.reply',
+    'support.inquiries.assign',
+    'support.inquiries.escalate',
+    'finance.inquiries.view',
+    'finance.inquiries.reply',
+    'finance.inquiries.manage',
+    'marketing.inquiries.view',
+    'marketing.inquiries.reply',
+    'marketing.inquiries.manage',
+    'department.inquiries.view',
+    'department.inquiries.reply',
+    'staff.view',
+    'staff.manage',
+    'warehouse.view',
+    'warehouse.stock.update',
+    'warehouse.transfer',
+    'warehouse.purchase_request.create',
+    'warehouse.purchase_request.view',
+    'warehouse.purchase_request.complete',
+    'warehouse.vendor.manage',
+    'warehouse.purchase_order.view',
+    'warehouse.purchase_order.create',
+    'warehouse.purchase_order.receive',
+    'support.messages.view',
+    'support.messages.reply',
+    'support.messages.resolve',
+    'finance.reports.view',
+    'finance.refund.approve',
+    'finance.payout.manage',
+    'finance.purchase_request.review',
+    'finance.purchase_request.approve',
+    'finance.purchase_request.reject',
+    'finance.purchase_order.view',
+    'hr.staff.create',
+    'hr.staff.update',
+    'hr.performance.manage',
+  ];
+
+  const permissions = await Promise.all(
+    permissionKeys.map((key) =>
+      prisma.staffPermission.upsert({
+        where: { key },
+        update: {},
+        create: { key },
+      }),
+    ),
+  );
+
+  const permissionsByKey = new Map(permissions.map((permission) => [permission.key, permission]));
+  const departmentsByCode = new Map(departments.map((department) => [department.code, department]));
+
+  const hrManagerRole = await prisma.staffRole.upsert({
+    where: {
+      name_departmentId: {
+        name: 'HR Manager',
+        departmentId: departmentsByCode.get('HR')!.id,
+      },
+    },
+    update: { code: 'HR_MANAGER' },
+    create: {
+      code: 'HR_MANAGER',
+      name: 'HR Manager',
+      departmentId: departmentsByCode.get('HR')!.id,
+      isSystem: true,
+    },
+  });
+
+  const warehouseSupervisorRole = await prisma.staffRole.upsert({
+    where: {
+      name_departmentId: {
+        name: 'Warehouse Supervisor',
+        departmentId: departmentsByCode.get('STOCK')!.id,
+      },
+    },
+    update: { code: 'STOCK_WAREHOUSE_SUPERVISOR' },
+    create: {
+      code: 'STOCK_WAREHOUSE_SUPERVISOR',
+      name: 'Warehouse Supervisor',
+      departmentId: departmentsByCode.get('STOCK')!.id,
+      isSystem: true,
+    },
+  });
+
+  const financeApproverRole = await prisma.staffRole.upsert({
+    where: {
+      name_departmentId: {
+        name: 'Finance Approver',
+        departmentId: departmentsByCode.get('FIN')!.id,
+      },
+    },
+    update: { code: 'FIN_FINANCE_APPROVER' },
+    create: {
+      code: 'FIN_FINANCE_APPROVER',
+      name: 'Finance Approver',
+      departmentId: departmentsByCode.get('FIN')!.id,
+      isSystem: true,
+    },
+  });
+
+  const supportAgentRole = await prisma.staffRole.upsert({
+    where: {
+      name_departmentId: {
+        name: 'Support Agent',
+        departmentId: departmentsByCode.get('CS')!.id,
+      },
+    },
+    update: { code: 'CS_SUPPORT_AGENT' },
+    create: {
+      code: 'CS_SUPPORT_AGENT',
+      name: 'Support Agent',
+      departmentId: departmentsByCode.get('CS')!.id,
+      isSystem: true,
+    },
+  });
+
+  const marketingManagerRole = await prisma.staffRole.upsert({
+    where: {
+      name_departmentId: {
+        name: 'Marketing Manager',
+        departmentId: departmentsByCode.get('MKT')!.id,
+      },
+    },
+    update: { code: 'MKT_MARKETING_MANAGER' },
+    create: {
+      code: 'MKT_MARKETING_MANAGER',
+      name: 'Marketing Manager',
+      departmentId: departmentsByCode.get('MKT')!.id,
+      isSystem: true,
+    },
+  });
+
+  await prisma.staffRolePermission.deleteMany({
+    where: {
+      roleId: {
+        in: [hrManagerRole.id, warehouseSupervisorRole.id, financeApproverRole.id, supportAgentRole.id, marketingManagerRole.id],
+      },
+    },
+  });
+
+  await prisma.staffRolePermission.createMany({
+    data: [
+      ...['staff.view', 'staff.manage', 'hr.staff.create', 'hr.staff.update', 'hr.performance.manage'].map((key) => ({
+        roleId: hrManagerRole.id,
+        permissionId: permissionsByKey.get(key)!.id,
+      })),
+      ...[
+        'warehouse.view',
+        'warehouse.stock.update',
+        'warehouse.transfer',
+        'warehouse.purchase_request.create',
+        'warehouse.purchase_request.view',
+        'warehouse.purchase_request.complete',
+        'warehouse.purchase_order.view',
+        'warehouse.purchase_order.create',
+        'warehouse.purchase_order.receive',
+        'department.inquiries.view',
+        'department.inquiries.reply',
+      ].map((key) => ({
+        roleId: warehouseSupervisorRole.id,
+        permissionId: permissionsByKey.get(key)!.id,
+      })),
+      ...[
+        'finance.reports.view',
+        'finance.refund.approve',
+        'finance.payout.manage',
+        'warehouse.purchase_request.view',
+        'warehouse.purchase_order.view',
+        'finance.purchase_request.review',
+        'finance.purchase_request.approve',
+        'finance.purchase_request.reject',
+        'finance.inquiries.view',
+        'finance.inquiries.reply',
+        'finance.inquiries.manage',
+      ].map((key) => ({
+        roleId: financeApproverRole.id,
+        permissionId: permissionsByKey.get(key)!.id,
+      })),
+      ...[
+        'support.messages.view',
+        'support.messages.reply',
+        'support.messages.resolve',
+        'support.inquiries.view',
+        'support.inquiries.reply',
+        'support.inquiries.assign',
+        'support.inquiries.escalate',
+      ].map((key) => ({
+        roleId: supportAgentRole.id,
+        permissionId: permissionsByKey.get(key)!.id,
+      })),
+      ...[
+        'marketing.inquiries.view',
+        'marketing.inquiries.reply',
+        'marketing.inquiries.manage',
+      ].map((key) => ({
+        roleId: marketingManagerRole.id,
+        permissionId: permissionsByKey.get(key)!.id,
+      })),
+    ],
+  });
+
+  const staffSeedUsers = [users[0], users[1], users[2], users[3], users[4], users[5], users[6], users[7]];
+  const staffProfiles = await Promise.all([
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[0].id,
+        departmentId: departmentsByCode.get('HR')!.id,
+        employeeCode: 'EMP-1001',
+        title: 'HR Manager',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[4].id,
+        departmentId: departmentsByCode.get('HR')!.id,
+        employeeCode: 'EMP-1002',
+        title: 'HR Coordinator',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[1].id,
+        departmentId: departmentsByCode.get('STOCK')!.id,
+        employeeCode: 'EMP-1101',
+        title: 'Warehouse Supervisor',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[5].id,
+        departmentId: departmentsByCode.get('STOCK')!.id,
+        employeeCode: 'EMP-1102',
+        title: 'Inventory Controller',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[2].id,
+        departmentId: departmentsByCode.get('FIN')!.id,
+        employeeCode: 'EMP-1201',
+        title: 'Finance Analyst',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[6].id,
+        departmentId: departmentsByCode.get('FIN')!.id,
+        employeeCode: 'EMP-1202',
+        title: 'Finance Associate',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[3].id,
+        departmentId: departmentsByCode.get('CS')!.id,
+        employeeCode: 'EMP-1301',
+        title: 'Support Agent',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.staffProfile.create({
+      data: {
+        userId: staffSeedUsers[7].id,
+        departmentId: departmentsByCode.get('CS')!.id,
+        employeeCode: 'EMP-1302',
+        title: 'Customer Support Specialist',
+        status: 'ACTIVE',
+      },
+    }),
+  ]);
+
+  await prisma.staffAssignment.createMany({
+    data: [
+      {
+        staffId: staffProfiles[0].id,
+        roleId: hrManagerRole.id,
+        effectiveFrom: daysAgo(180),
+      },
+      {
+        staffId: staffProfiles[1].id,
+        roleId: hrManagerRole.id,
+        effectiveFrom: daysAgo(170),
+      },
+      {
+        staffId: staffProfiles[2].id,
+        roleId: warehouseSupervisorRole.id,
+        effectiveFrom: daysAgo(220),
+      },
+      {
+        staffId: staffProfiles[3].id,
+        roleId: warehouseSupervisorRole.id,
+        effectiveFrom: daysAgo(210),
+      },
+      {
+        staffId: staffProfiles[4].id,
+        roleId: financeApproverRole.id,
+        effectiveFrom: daysAgo(200),
+      },
+      {
+        staffId: staffProfiles[5].id,
+        roleId: financeApproverRole.id,
+        effectiveFrom: daysAgo(190),
+      },
+      {
+        staffId: staffProfiles[6].id,
+        roleId: supportAgentRole.id,
+        effectiveFrom: daysAgo(160),
+      },
+      {
+        staffId: staffProfiles[7].id,
+        roleId: supportAgentRole.id,
+        effectiveFrom: daysAgo(150),
+      },
+      {
+        staffId: staffProfiles[6].id,
+        roleId: supportAgentRole.id,
+        effectiveFrom: daysAgo(320),
+        effectiveTo: daysAgo(161),
+      },
+    ],
+  });
+
+  await prisma.staffProfile.update({
+    where: { id: staffProfiles[2].id },
+    data: {
+      managerId: staffProfiles[0].id,
+      title: 'Warehouse Operations Lead',
+    },
+  });
+  await prisma.staffProfile.update({
+    where: { id: staffProfiles[3].id },
+    data: {
+      managerId: staffProfiles[0].id,
+      title: 'Senior Inventory Controller',
+    },
+  });
+  await prisma.staffProfile.update({
+    where: { id: staffProfiles[4].id },
+    data: {
+      managerId: staffProfiles[0].id,
+      title: 'Senior Finance Analyst',
+    },
+  });
+  await prisma.staffProfile.update({
+    where: { id: staffProfiles[5].id },
+    data: {
+      managerId: staffProfiles[0].id,
+    },
+  });
+  await prisma.staffProfile.update({
+    where: { id: staffProfiles[6].id },
+    data: {
+      managerId: staffProfiles[0].id,
+    },
+  });
+  await prisma.staffProfile.update({
+    where: { id: staffProfiles[7].id },
+    data: {
+      managerId: staffProfiles[0].id,
+    },
+  });
 
   // Create sample books
   console.log('📚 Creating sample books...');
@@ -1049,6 +1600,36 @@ async function main() {
     ),
   );
 
+  // Ensure all books have genre tags
+  console.log('🏷️  Ensuring genre tags...');
+  const booksForGenres = await prisma.book.findMany({
+    select: { id: true, categories: true, genres: true },
+  });
+  await Promise.all(
+    booksForGenres.map((book) => {
+      if (book.genres.length > 0) {
+        return Promise.resolve(null);
+      }
+      const fallbackGenres = [...new Set(book.categories)].slice(0, 3);
+      return prisma.book.update({
+        where: { id: book.id },
+        data: {
+          genres: fallbackGenres.length > 0 ? fallbackGenres : ['General'],
+        },
+      });
+    }),
+  );
+
+  // Ensure there are books by the same authors
+  const booksByAuthor = await prisma.book.groupBy({
+    by: ['author'],
+    _count: { _all: true },
+  });
+  const repeatedAuthors = booksByAuthor.filter((entry) => entry._count._all > 1);
+  if (repeatedAuthors.length === 0) {
+    throw new Error('Seed invariant failed: no author has multiple books');
+  }
+
   // Create some sample cart items for users
   console.log('🛒 Creating sample cart items...');
   await Promise.all([
@@ -1097,32 +1678,32 @@ async function main() {
     'Good value for the price.',
   ];
 
-  const reviewCreates = users.flatMap((user, index) => {
-    const firstBookIndex = (index * 2) % books.length;
-    const secondBookIndex = (index * 2 + 7) % books.length;
-    const rating1 = 3 + (index % 3); // 3-5
-    const rating2 = 4 + (index % 2); // 4-5
-    return [
-      prisma.review.create({
-        data: {
-          userId: user.id,
-          bookId: books[firstBookIndex].id,
-          rating: rating1,
-          comment: reviewComments[index % reviewComments.length],
-        },
-      }),
-      prisma.review.create({
-        data: {
-          userId: user.id,
-          bookId: books[secondBookIndex].id,
-          rating: rating2,
-          comment: reviewComments[(index + 3) % reviewComments.length],
-        },
-      }),
-    ];
-  });
+  // Guarantee every book has at least one review
+  const baseReviewCreates = books.map((book, index) =>
+    prisma.review.create({
+      data: {
+        userId: users[index % users.length].id,
+        bookId: book.id,
+        rating: 3 + (index % 3), // 3-5
+        comment: reviewComments[index % reviewComments.length],
+      },
+    }),
+  );
 
-  await Promise.all(reviewCreates);
+  // Add extra reviews for richer rating distribution
+  const bonusReviewCreates = users.map((user, index) =>
+    prisma.review.create({
+      data: {
+        userId: user.id,
+        bookId: books[(index * 5 + 3) % books.length].id,
+        rating: 4 + (index % 2), // 4-5
+        comment: reviewComments[(index + 4) % reviewComments.length],
+      },
+    }),
+  );
+
+  await Promise.all([...baseReviewCreates, ...bonusReviewCreates]);
+  const totalReviewsCreated = baseReviewCreates.length + bonusReviewCreates.length;
 
   const ratingAverages = await prisma.review.groupBy({
     by: ['bookId'],
@@ -1137,50 +1718,567 @@ async function main() {
     ),
   );
 
-  // Create some sample orders
+  // Verify quality invariants for testing data
+  const booksMissingGenres = await prisma.book.count({
+    where: { genres: { isEmpty: true } },
+  });
+  const booksMissingReviews = await prisma.book.count({
+    where: { reviews: { none: {} } },
+  });
+  const booksMissingRatings = await prisma.book.count({
+    where: {
+      OR: [{ rating: null }, { rating: { lte: 0 } }],
+    },
+  });
+
+  if (booksMissingGenres > 0 || booksMissingReviews > 0 || booksMissingRatings > 0) {
+    throw new Error(
+      `Seed invariant failed: missing genres=${booksMissingGenres}, missing reviews=${booksMissingReviews}, missing ratings=${booksMissingRatings}`,
+    );
+  }
+
+  // Create sample orders for admin transaction UIs
   console.log('📦 Creating sample orders...');
-  const order1 = await prisma.order.create({
-    data: {
-      userId: users[2].id,
-      totalPrice: 26.98,
-      status: 'COMPLETED',
+  const paymentProviders = ['KPAY', 'WAVEPAY', 'MPU'] as const;
+  const orderStatuses = ['COMPLETED', 'PENDING', 'CANCELLED'] as const;
+  const cityStateCountry = [
+    { city: 'San Francisco', state: 'CA', country: 'USA', zip: '94105' },
+    { city: 'New York', state: 'NY', country: 'USA', zip: '10001' },
+    { city: 'Austin', state: 'TX', country: 'USA', zip: '73301' },
+    { city: 'Seattle', state: 'WA', country: 'USA', zip: '98101' },
+    { city: 'Chicago', state: 'IL', country: 'USA', zip: '60601' },
+    { city: 'Boston', state: 'MA', country: 'USA', zip: '02108' },
+  ];
+
+  const createdOrders: Array<{ id: string; status: string }> = [];
+  let createdOrderItemsCount = 0;
+  for (let i = 0; i < 16; i += 1) {
+    const buyer = users[i % users.length];
+    const location = cityStateCountry[i % cityStateCountry.length];
+    const status = orderStatuses[i % orderStatuses.length];
+    const itemCount = 1 + (i % 3);
+    const pickedBooks = Array.from({ length: itemCount }, (_, idx) => books[(i * 3 + idx) % books.length]);
+    const quantities = pickedBooks.map((_book, idx) => ((i + idx) % 2) + 1);
+    const totalPrice = pickedBooks.reduce(
+      (sum, book, idx) => sum + Number(book.price) * quantities[idx],
+      0,
+    );
+
+    const createdOrder = await prisma.order.create({
+      data: {
+        userId: buyer.id,
+        status,
+        subtotalPrice: totalPrice,
+        discountAmount: 0,
+        totalPrice,
+        shippingFullName: buyer.name,
+        shippingEmail: buyer.email,
+        shippingPhone: `+1-555-01${String(i).padStart(2, '0')}`,
+        shippingAddress: `${100 + i} Market Street`,
+        shippingCity: location.city,
+        shippingState: location.state,
+        shippingZipCode: location.zip,
+        shippingCountry: location.country,
+        paymentProvider: paymentProviders[i % paymentProviders.length],
+        paymentReceiptUrl: `https://example.com/receipts/order-${i + 1}.png`,
+        createdAt: daysAgo(45 - i, 9 + (i % 7)),
+      },
+    });
+
+    await prisma.orderItem.createMany({
+      data: pickedBooks.map((book, idx) => ({
+        orderId: createdOrder.id,
+        bookId: book.id,
+        quantity: quantities[idx],
+        price: book.price,
+      })),
+    });
+
+    createdOrderItemsCount += pickedBooks.length;
+    createdOrders.push({ id: createdOrder.id, status });
+  }
+
+  // Create warehouses + stock distribution + transfers/alerts
+  console.log('🏬 Creating warehouse demo data...');
+  const warehouseSeeds = [
+    {
+      code: 'WH-SFO-01',
+      name: 'Bay Area Central Warehouse',
+      city: 'San Francisco',
+      state: 'CA',
+      address: '200 Harbor Way, San Francisco, CA',
+      isActive: true,
     },
+    {
+      code: 'WH-NYC-01',
+      name: 'Northeast Fulfillment Hub',
+      city: 'New York',
+      state: 'NY',
+      address: '85 Liberty Ave, New York, NY',
+      isActive: true,
+    },
+    {
+      code: 'WH-TX-01',
+      name: 'Southwest Distribution Center',
+      city: 'Austin',
+      state: 'TX',
+      address: '410 Industrial Dr, Austin, TX',
+      isActive: true,
+    },
+    {
+      code: 'WH-SEA-01',
+      name: 'Northwest Overflow Storage',
+      city: 'Seattle',
+      state: 'WA',
+      address: '19 Rainier Park, Seattle, WA',
+      isActive: false,
+    },
+  ];
+
+  const warehouses = await Promise.all(
+    warehouseSeeds.map((warehouse) =>
+      prisma.warehouse.upsert({
+        where: { code: warehouse.code },
+        update: warehouse,
+        create: warehouse,
+      }),
+    ),
+  );
+
+  const warehouseStockRows: Array<{
+    warehouseId: string;
+    bookId: string;
+    stock: number;
+    lowStockThreshold: number;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
+  for (let i = 0; i < 32; i += 1) {
+    const primaryWarehouse = warehouses[i % warehouses.length];
+    const book = books[i % books.length];
+    warehouseStockRows.push({
+      warehouseId: primaryWarehouse.id,
+      bookId: book.id,
+      stock: (i % 6 === 0 ? 2 : 8 + (i % 35)),
+      lowStockThreshold: 5 + (i % 4),
+      createdAt: daysAgo(60 - i, 8),
+      updatedAt: daysAgo((60 - i) % 30, 12),
+    });
+
+    if (i % 2 === 0) {
+      const secondaryWarehouse = warehouses[(i + 1) % warehouses.length];
+      warehouseStockRows.push({
+        warehouseId: secondaryWarehouse.id,
+        bookId: book.id,
+        stock: 3 + (i % 18),
+        lowStockThreshold: 4 + (i % 3),
+        createdAt: daysAgo(55 - i, 9),
+        updatedAt: daysAgo((55 - i) % 28, 14),
+      });
+    }
+  }
+
+  await prisma.warehouseStock.createMany({
+    data: warehouseStockRows,
+    skipDuplicates: true,
   });
 
-  await Promise.all([
-    prisma.orderItem.create({
-      data: {
-        orderId: order1.id,
-        bookId: books[1].id,
-        quantity: 1,
-        price: 14.99,
-      },
-    }),
-    prisma.orderItem.create({
-      data: {
-        orderId: order1.id,
-        bookId: books[4].id,
-        quantity: 1,
-        price: 11.99,
-      },
-    }),
-  ]);
-
-  const order2 = await prisma.order.create({
-    data: {
-      userId: users[0].id,
-      totalPrice: 42.99,
-      status: 'PENDING',
-    },
+  const transferInputs = Array.from({ length: 12 }, (_, i) => {
+    const fromWarehouse = warehouses[i % warehouses.length];
+    const toWarehouse = warehouses[(i + 1) % warehouses.length];
+    const transferBook = books[(i * 4 + 2) % books.length];
+    return {
+      bookId: transferBook.id,
+      fromWarehouseId: fromWarehouse.id,
+      toWarehouseId: toWarehouse.id,
+      quantity: 2 + (i % 7),
+      note: i % 3 === 0 ? 'Rebalance high-demand titles' : 'Routine transfer',
+      createdByUserId: staffSeedUsers[1].id,
+      createdAt: daysAgo(24 - i, 10 + (i % 5)),
+    };
   });
 
-  await prisma.orderItem.create({
-    data: {
-      orderId: order2.id,
-      bookId: books[5].id,
-      quantity: 1,
-      price: 42.99,
+  const createdTransfers = await Promise.all(
+    transferInputs.map((input) =>
+      prisma.warehouseTransfer.create({
+        data: input,
+      }),
+    ),
+  );
+
+  const alertInputs = Array.from({ length: 10 }, (_, i) => {
+    const warehouse = warehouses[i % warehouses.length];
+    const alertBook = books[(i * 5 + 1) % books.length];
+    const isResolved = i % 4 === 0;
+    return {
+      warehouseId: warehouse.id,
+      bookId: alertBook.id,
+      stock: i % 3,
+      threshold: 5 + (i % 3),
+      status: isResolved ? 'RESOLVED' : 'OPEN',
+      createdAt: daysAgo(20 - i, 8 + (i % 4)),
+      resolvedAt: isResolved ? daysAgo(18 - i, 15) : null,
+    } as const;
+  });
+
+  await prisma.warehouseAlert.createMany({
+    data: alertInputs,
+  });
+
+  const vendorSeeds = [
+    {
+      code: 'PENGUIN-RH',
+      name: 'Penguin Random House Distribution',
+      contactName: 'B2B Supply Team',
+      email: 'supply@penguinrh.example',
+      phone: '+1-212-555-0190',
+      address: '1745 Broadway, New York, NY',
+      isActive: true,
     },
+    {
+      code: 'HARPERCOLLINS',
+      name: 'HarperCollins Wholesale',
+      contactName: 'Wholesale Desk',
+      email: 'wholesale@harpercollins.example',
+      phone: '+1-646-555-0123',
+      address: '195 Broadway, New York, NY',
+      isActive: true,
+    },
+    {
+      code: 'SIMON-SCHUSTER',
+      name: 'Simon & Schuster Trade Supply',
+      contactName: 'Vendor Operations',
+      email: 'ops@simon.example',
+      phone: '+1-917-555-0188',
+      address: '1230 Avenue of the Americas, New York, NY',
+      isActive: true,
+    },
+  ];
+
+  const vendors = await Promise.all(
+    vendorSeeds.map((vendor) =>
+      prisma.vendor.upsert({
+        where: { code: vendor.code },
+        update: vendor,
+        create: vendor,
+      }),
+    ),
+  );
+
+  const purchaseRequestSeeds = Array.from({ length: 6 }, (_, i) => {
+    const warehouse = warehouses[i % warehouses.length];
+    const book = books[(i * 3 + 7) % books.length];
+    const qty = 8 + (i * 3);
+    const estimatedCost = Number(book.price || 12) * qty;
+    const approved = i % 3 !== 1;
+    const completed = i % 3 === 0;
+    return {
+      bookId: book.id,
+      warehouseId: warehouse.id,
+      requestedByUserId: staffSeedUsers[1].id,
+      quantity: qty,
+      estimatedCost,
+      approvedQuantity: approved ? qty : null,
+      approvedCost: approved ? estimatedCost : null,
+      reviewNote: approved ? 'Approved for replenishment.' : 'Waiting for finance review.',
+      status: completed
+        ? 'COMPLETED'
+        : approved
+          ? 'APPROVED'
+          : 'PENDING_APPROVAL',
+      approvedByUserId: approved ? staffSeedUsers[6].id : null,
+      approvedAt: approved ? daysAgo(6 - i, 13) : null,
+      completedAt: completed ? daysAgo(4 - i, 16) : null,
+      createdAt: daysAgo(9 - i, 9 + i),
+      updatedAt: daysAgo(8 - i, 11 + i),
+    } as const;
+  });
+
+  const purchaseRequests = await Promise.all(
+    purchaseRequestSeeds.map((request) =>
+      prisma.purchaseRequest.create({
+        data: request,
+      }),
+    ),
+  );
+
+  for (let i = 0; i < purchaseRequests.length; i += 1) {
+    const request = purchaseRequests[i];
+    if (request.status === 'PENDING_APPROVAL') continue;
+
+    const vendor = vendors[i % vendors.length];
+    const order = await prisma.purchaseOrder.create({
+      data: {
+        vendorId: vendor.id,
+        warehouseId: request.warehouseId,
+        status: request.status === 'COMPLETED' ? 'CLOSED' : 'SENT',
+        createdByUserId: request.requestedByUserId,
+        approvedByUserId: request.approvedByUserId,
+        expectedAt: daysAgo(-(i + 2), 12),
+        sentAt: daysAgo(5 - i, 10),
+        receivedAt: request.status === 'COMPLETED' ? daysAgo(3 - i, 17) : null,
+        notes: 'Generated from approved purchase request seed.',
+        totalCost: request.approvedCost ?? request.estimatedCost,
+        items: {
+          create: {
+            bookId: request.bookId,
+            orderedQuantity: request.approvedQuantity ?? request.quantity,
+            receivedQuantity:
+              request.status === 'COMPLETED'
+                ? (request.approvedQuantity ?? request.quantity)
+                : 0,
+            unitCost:
+              request.approvedQuantity && request.approvedCost
+                ? Number(request.approvedCost) / request.approvedQuantity
+                : null,
+          },
+        },
+      },
+    });
+
+    await prisma.purchaseRequest.update({
+      where: { id: request.id },
+      data: { purchaseOrderId: order.id },
+    });
+  }
+
+  // Create staff tasks/history for management dashboards
+  console.log('🧾 Creating staff task and audit history...');
+  const taskTypes = ['ORDER_REVIEW', 'STOCK_CHECK', 'INQUIRY_REPLY', 'PAYOUT_APPROVAL', 'ROLE_AUDIT'];
+  const taskStatuses = ['TODO', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'] as const;
+  const taskPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+
+  const taskInputs = Array.from({ length: 22 }, (_, i) => {
+    const staff = staffProfiles[i % staffProfiles.length];
+    const createdAt = daysAgo(28 - i, 9 + (i % 6));
+    const status = taskStatuses[i % taskStatuses.length];
+    const completedAt = status === 'COMPLETED' ? daysAgo(27 - i, 18) : null;
+    return {
+      staffId: staff.id,
+      type: taskTypes[i % taskTypes.length],
+      status,
+      priority: taskPriorities[i % taskPriorities.length],
+      metadata: {
+        category: i % 2 === 0 ? 'Operations' : 'Governance',
+        source: i % 3 === 0 ? 'System' : 'Manager',
+        deadline: daysAgo(-(i % 9), 17).toISOString(),
+      },
+      createdAt,
+      completedAt,
+    };
+  });
+
+  await prisma.staffTask.createMany({
+    data: taskInputs,
+  });
+
+  const auditInputs = [
+    ...createdOrders.slice(0, 8).map((order, i) => ({
+      actorUserId: staffSeedUsers[2].id,
+      action: 'ORDER_STATUS_REVIEWED',
+      resource: 'Order',
+      resourceId: order.id,
+      changes: {
+        status: order.status,
+        decision: i % 2 === 0 ? 'approved' : 'flagged',
+      },
+      createdAt: daysAgo(14 - i, 11),
+    })),
+    ...createdTransfers.slice(0, 8).map((transfer, i) => ({
+      actorUserId: staffSeedUsers[1].id,
+      action: 'WAREHOUSE_TRANSFER_CREATED',
+      resource: 'WarehouseTransfer',
+      resourceId: transfer.id,
+      changes: {
+        quantity: transfer.quantity,
+        note: transfer.note,
+      },
+      createdAt: daysAgo(12 - i, 13),
+    })),
+    ...staffProfiles.map((profile, i) => ({
+      actorUserId: staffSeedUsers[0].id,
+      action: 'STAFF_PROFILE_UPDATED',
+      resource: 'StaffProfile',
+      resourceId: profile.id,
+      changes: {
+        title: profile.title,
+        status: profile.status,
+      },
+      createdAt: daysAgo(10 - i, 15),
+    })),
+    {
+      actorUserId: adminUser.id,
+      action: 'PERMISSION_MATRIX_SYNCED',
+      resource: 'StaffRolePermission',
+      resourceId: hrManagerRole.id,
+      changes: {
+        scope: 'DEPARTMENT',
+        version: 1,
+      },
+      createdAt: daysAgo(3, 16),
+    },
+  ];
+
+  await prisma.staffAuditLog.createMany({
+    data: auditInputs,
+  });
+
+  console.log('📨 Creating inquiries, thread messages, notes, and inquiry audits...');
+  const supportDepartment = departmentsByCode.get('CS')!;
+  const financeDepartment = departmentsByCode.get('FIN')!;
+  const warehouseDepartment = departmentsByCode.get('STOCK')!;
+
+  const inquiryInputs = [
+    {
+      type: 'payment' as const,
+      subject: 'Payment posted but order still pending',
+      priority: 'HIGH' as const,
+      createdByUserId: users[4].id,
+      departmentId: supportDepartment.id,
+      status: 'OPEN' as const,
+      createdAt: daysAgo(8, 9),
+    },
+    {
+      type: 'stock' as const,
+      subject: 'Missing item in package',
+      priority: 'URGENT' as const,
+      createdByUserId: users[5].id,
+      departmentId: supportDepartment.id,
+      status: 'ASSIGNED' as const,
+      assignedToStaffId: staffProfiles[3].id,
+      createdAt: daysAgo(6, 11),
+    },
+    {
+      type: 'order' as const,
+      subject: 'Address update request for shipped order',
+      priority: 'MEDIUM' as const,
+      createdByUserId: users[6].id,
+      departmentId: financeDepartment.id,
+      status: 'IN_PROGRESS' as const,
+      assignedToStaffId: staffProfiles[2].id,
+      createdAt: daysAgo(5, 10),
+    },
+    {
+      type: 'legal' as const,
+      subject: 'Invoice and tax compliance confirmation',
+      priority: 'LOW' as const,
+      createdByUserId: users[7].id,
+      departmentId: financeDepartment.id,
+      status: 'ESCALATED' as const,
+      createdAt: daysAgo(4, 13),
+    },
+    {
+      type: 'stock' as const,
+      subject: 'Book arrived damaged on delivery',
+      priority: 'HIGH' as const,
+      createdByUserId: users[8].id,
+      departmentId: warehouseDepartment.id,
+      status: 'RESOLVED' as const,
+      assignedToStaffId: staffProfiles[1].id,
+      createdAt: daysAgo(3, 12),
+    },
+    {
+      type: 'other' as const,
+      subject: 'Need duplicate receipt copy',
+      priority: 'LOW' as const,
+      createdByUserId: users[9].id,
+      departmentId: supportDepartment.id,
+      status: 'CLOSED' as const,
+      createdAt: daysAgo(2, 14),
+    },
+  ];
+
+  const createdInquiries = await Promise.all(
+    inquiryInputs.map((input, idx) =>
+      prisma.inquiry.create({
+        data: {
+          ...input,
+          updatedAt: daysAgo(Math.max(0, 8 - idx), 18),
+        },
+      }),
+    ),
+  );
+
+  await prisma.inquiryMessage.createMany({
+    data: createdInquiries.flatMap((inquiry, i) => [
+      {
+        inquiryId: inquiry.id,
+        senderId: inquiry.createdByUserId,
+        senderType: 'USER',
+        message: `Customer message: ${inquiry.subject}`,
+        createdAt: daysAgo(8 - i, 9),
+      },
+      {
+        inquiryId: inquiry.id,
+        senderId: staffSeedUsers[i % staffSeedUsers.length].id,
+        senderType: 'STAFF',
+        message: i % 2 === 0 ? 'We are reviewing your case now.' : 'Thanks, we have escalated this internally.',
+        createdAt: daysAgo(Math.max(0, 7 - i), 16),
+      },
+    ]),
+  });
+
+  await prisma.inquiryInternalNote.createMany({
+    data: createdInquiries.slice(0, 5).map((inquiry, i) => ({
+      inquiryId: inquiry.id,
+      staffId: staffProfiles[i % staffProfiles.length].id,
+      note: i % 2 === 0 ? 'Verify order timeline before response.' : 'Needs cross-team follow-up.',
+      createdAt: daysAgo(Math.max(0, 6 - i), 17),
+    })),
+  });
+
+  await prisma.inquiryAudit.createMany({
+    data: createdInquiries.flatMap((inquiry, i) => {
+      const base: Array<{
+        inquiryId: string;
+        action: 'CREATED' | 'ASSIGNED' | 'ESCALATED' | 'CLOSED';
+        fromDepartmentId: string | null;
+        toDepartmentId: string | null;
+        performedByUserId: string;
+        createdAt: Date;
+      }> = [
+        {
+          inquiryId: inquiry.id,
+          action: 'CREATED' as const,
+          fromDepartmentId: null,
+          toDepartmentId: inquiry.departmentId,
+          performedByUserId: inquiry.createdByUserId,
+          createdAt: daysAgo(8 - i, 9),
+        },
+      ];
+
+      if (i === 1 || i === 4) {
+        base.push({
+          inquiryId: inquiry.id,
+          action: 'ASSIGNED',
+          fromDepartmentId: inquiry.departmentId,
+          toDepartmentId: inquiry.departmentId,
+          performedByUserId: staffSeedUsers[0].id,
+          createdAt: daysAgo(7 - i, 11),
+        });
+      }
+      if (i === 3) {
+        base.push({
+          inquiryId: inquiry.id,
+          action: 'ESCALATED',
+          fromDepartmentId: supportDepartment.id,
+          toDepartmentId: financeDepartment.id,
+          performedByUserId: staffSeedUsers[3].id,
+          createdAt: daysAgo(3, 15),
+        });
+      }
+      if (i === 5) {
+        base.push({
+          inquiryId: inquiry.id,
+          action: 'CLOSED',
+          fromDepartmentId: inquiry.departmentId,
+          toDepartmentId: inquiry.departmentId,
+          performedByUserId: staffSeedUsers[0].id,
+          createdAt: daysAgo(1, 17),
+        });
+      }
+      return base;
+    }),
   });
 
   console.log('✅ Database seeded successfully!');
@@ -1189,8 +2287,17 @@ async function main() {
   console.log(`   - 23 regular users (password: user123)`);
   console.log(`   - 71 books (various genres and stock levels)`);
   console.log(`   - 4 cart items`);
-  console.log(`   - 2 orders with 3 order items`);
-  console.log(`   - ${users.length * 2} reviews`);
+  console.log(`   - ${createdOrders.length} orders with ${createdOrderItemsCount} order items`);
+  console.log(`   - ${warehouses.length} warehouses`);
+  console.log(`   - ${warehouseStockRows.length} warehouse stock rows`);
+  console.log(`   - ${createdTransfers.length} warehouse transfers`);
+  console.log(`   - ${alertInputs.length} warehouse alerts`);
+  console.log(`   - ${taskInputs.length} staff tasks`);
+  console.log(`   - ${auditInputs.length} staff audit logs`);
+  console.log(`   - ${createdInquiries.length} inquiries`);
+  console.log(`   - ${totalReviewsCreated} reviews`);
+  console.log(`   - ${notificationSeedData.length} user notifications`);
+  console.log(`   - ${repeatedAuthors.length} authors with multiple books`);
   console.log(`\n📚 Book Categories:`);
   console.log(`   - Fiction & Classics`);
   console.log(`   - Science Fiction & Fantasy`);

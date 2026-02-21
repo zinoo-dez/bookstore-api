@@ -62,7 +62,7 @@ export const useUpdateReview = () => {
     return useMutation({
         mutationFn: async ({
             reviewId,
-            bookId,
+            bookId: _bookId,
             rating,
             comment,
         }: {
@@ -89,7 +89,7 @@ export const useDeleteReview = () => {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: async ({ reviewId, bookId }: { reviewId: string; bookId: string }) => {
+        mutationFn: async ({ reviewId, bookId: _bookId }: { reviewId: string; bookId: string }) => {
             await api.delete(`/reviews/${reviewId}`)
         },
         onSuccess: (_, variables) => {

@@ -23,6 +23,7 @@ export const bookSchema = z.object({
   description: z.string().nullable(),
   coverImage: z.string().nullable(),
   categories: z.array(z.string()).nullable(),
+  genres: z.array(z.string()).optional().nullable(),
   rating: z.number().nullable(),
   inStock: z.boolean(),
   stockStatus: z.enum(['IN_STOCK', 'OUT_OF_STOCK', 'LOW_STOCK']),
@@ -39,6 +40,7 @@ export const createBookSchema = z.object({
   description: z.string().max(500).optional(),
   coverImage: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   categories: z.array(z.string()).optional(),
+  genres: z.array(z.string()).optional(),
 })
 
 export const searchBooksSchema = z.object({
@@ -47,6 +49,7 @@ export const searchBooksSchema = z.object({
   title: z.string().optional(),
   author: z.string().optional(),
   category: z.string().optional(),
+  genre: z.string().optional(),
   isbn: z.string().optional(),
   minPrice: z.number().min(0).optional(),
   maxPrice: z.number().min(0).optional(),
@@ -87,11 +90,26 @@ export const userSchema = z.object({
   id: z.string(),
   email: z.string(),
   name: z.string(),
-  role: z.enum(['USER', 'ADMIN']),
+  role: z.enum(['USER', 'ADMIN', 'SUPER_ADMIN']),
+  permissions: z.array(z.string()).optional().default([]),
+  staffRoles: z.array(z.object({
+    id: z.string().optional(),
+    name: z.string(),
+    code: z.string().nullable().optional(),
+  })).optional().default([]),
+  primaryStaffRoleName: z.string().nullable().optional(),
+  primaryStaffRoleCode: z.string().nullable().optional(),
+  staffTitle: z.string().nullable().optional(),
+  staffDepartmentName: z.string().nullable().optional(),
+  staffDepartmentCode: z.string().nullable().optional(),
   avatarType: z.enum(['emoji', 'upload']).optional().default('emoji'),
   avatarValue: z.string().nullable().optional(),
   // avatar: z.string().optional(), // Deprecated
   backgroundColor: z.string().nullable().optional(),
+  pronouns: z.string().nullable().optional(),
+  shortBio: z.string().nullable().optional(),
+  about: z.string().nullable().optional(),
+  coverImage: z.string().nullable().optional(),
   createdAt: z.string(),
 })
 

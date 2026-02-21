@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async findAll() {
     return this.prisma.user.findMany({
@@ -45,6 +51,109 @@ export class UsersService {
         createdAt: true,
       },
     });
+  }
+
+  async updateUser(
+    userId: string,
+    data: { name?: string; email?: string; role?: Role },
+    actor: { userId: string; role?: string },
+  ) {
+    if (!data.name && !data.email && !data.role) {
+      throw new BadRequestException('At least one field must be provided');
+    }
+
+    if (data.role && !['USER', 'ADMIN', 'SUPER_ADMIN'].includes(data.role)) {
+      throw new BadRequestException(
+        'Invalid role. Must be USER, ADMIN, or SUPER_ADMIN',
+      );
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (user.role === Role.SUPER_ADMIN && actor.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException('Only SUPER_ADMIN can modify SUPER_ADMIN');
+    }
+
+    if (
+      data.role &&
+      actor.role !== Role.SUPER_ADMIN &&
+      data.role === Role.SUPER_ADMIN
+    ) {
+      throw new ForbiddenException('Only SUPER_ADMIN can assign SUPER_ADMIN');
+    }
+
+    if (user.id === actor.userId && data.role && data.role !== user.role) {
+      throw new BadRequestException('You cannot change your own role');
+    }
+
+    try {
+      return await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(data.name ? { name: data.name.trim() } : {}),
+          ...(data.email ? { email: data.email.trim().toLowerCase() } : {}),
+          ...(data.role ? { role: data.role } : {}),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BadRequestException('Email already in use');
+      }
+      throw error;
+    }
+  }
+
+  async deleteUser(userId: string, actor: { userId: string; role?: string }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (user.id === actor.userId) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
+
+    if (user.role === Role.SUPER_ADMIN && actor.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException('Only SUPER_ADMIN can delete SUPER_ADMIN');
+    }
+
+    try {
+      await this.prisma.user.delete({
+        where: { id: userId },
+      });
+      return { success: true };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Cannot delete user with existing related records',
+        );
+      }
+      throw error;
+    }
   }
 
   async getUserStats(userId: string) {
@@ -90,9 +199,14 @@ export class UsersService {
     });
 
     const totalOrders = orders.length;
-    const totalSpent = orders.reduce((sum, order) => sum + Number(order.totalPrice), 0);
-    const completedOrders = orders.filter(o => o.status === 'COMPLETED').length;
-    const pendingOrders = orders.filter(o => o.status === 'PENDING').length;
+    const totalSpent = orders.reduce(
+      (sum, order) => sum + Number(order.totalPrice),
+      0,
+    );
+    const completedOrders = orders.filter(
+      (o) => o.status === 'COMPLETED',
+    ).length;
+    const pendingOrders = orders.filter((o) => o.status === 'PENDING').length;
 
     return {
       user,

@@ -3,12 +3,14 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../database/prisma.service';
 import { CartService } from '../cart/cart.service';
+import { StaffService } from '../staff/staff.service';
 import * as fc from 'fast-check';
 
 describe('OrdersService', () => {
   let service: OrdersService;
   let prismaService: any;
   let cartService: jest.Mocked<CartService>;
+  let staffService: jest.Mocked<StaffService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -42,12 +44,20 @@ describe('OrdersService', () => {
             getCart: jest.fn(),
           },
         },
+        {
+          provide: StaffService,
+          useValue: {
+            listTasks: jest.fn(),
+            completeTask: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
     prismaService = module.get(PrismaService);
     cartService = module.get(CartService);
+    staffService = module.get(StaffService);
   });
 
   it('should be defined', () => {
@@ -71,7 +81,7 @@ describe('OrdersService', () => {
         id: 'order1',
         userId,
         totalPrice: 21.98,
-        status: 'COMPLETED',
+        status: 'PENDING',
         orderItems: [
           {
             id: 'item1',
@@ -291,7 +301,7 @@ describe('OrdersService', () => {
                 id: 'order1',
                 userId,
                 totalPrice,
-                status: 'COMPLETED',
+                status: 'PENDING',
                 orderItems: cartItems.map((item, index) => ({
                   id: `item${index}`,
                   orderId: 'order1',
@@ -338,7 +348,7 @@ describe('OrdersService', () => {
 
               const result = await service.create(userId);
               expect(result.userId).toBe(userId);
-              expect(result.status).toBe('COMPLETED');
+              expect(result.status).toBe('PENDING');
               expect(result.totalPrice).toBe(totalPrice);
             },
           ),
@@ -480,8 +490,8 @@ describe('OrdersService', () => {
       });
     });
 
-    describe('Property 22: Order creation reduces stock', () => {
-      it('**Validates: Requirements 5.2**', async () => {
+    describe('Property 22: Order creation does not reduce stock at checkout', () => {
+      it('**Validates warehouse-based fulfillment behavior**', async () => {
         await fc.assert(
           fc.asyncProperty(
             fc.string({ minLength: 1 }),
@@ -511,7 +521,7 @@ describe('OrdersService', () => {
                 id: 'order1',
                 userId,
                 totalPrice,
-                status: 'COMPLETED',
+                status: 'PENDING',
                 orderItems: [],
               };
 
@@ -553,14 +563,8 @@ describe('OrdersService', () => {
 
               await service.create(userId);
 
-              // Verify stock was reduced for each item
-              expect(mockBookUpdate).toHaveBeenCalledTimes(cartItems.length);
-              cartItems.forEach((item) => {
-                expect(mockBookUpdate).toHaveBeenCalledWith({
-                  where: { id: item.bookId },
-                  data: { stock: { decrement: item.quantity } },
-                });
-              });
+              // Inventory is adjusted by warehouse workflow after checkout.
+              expect(mockBookUpdate).not.toHaveBeenCalled();
             },
           ),
           { numRuns: 20 },

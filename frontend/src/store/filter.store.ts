@@ -6,6 +6,7 @@ export interface FilterState {
     title: string
     author: string
     category: string
+    genre: string
     minPrice: number | null
     maxPrice: number | null
     minRating: number | null
@@ -20,6 +21,7 @@ export interface FilterState {
         title: string
         author: string
         category: string
+        genre: string
         minPrice: number | null
         maxPrice: number | null
         minRating: number | null
@@ -38,12 +40,28 @@ export interface FilterState {
     setTitle: (title: string) => void
     setAuthor: (author: string) => void
     setCategory: (category: string) => void
+    setGenre: (genre: string) => void
     setPriceRange: (min: number | null, max: number | null) => void
     setMinRating: (rating: number | null) => void
     setInStockOnly: (inStock: boolean) => void
     setSorting: (sortBy: string, sortOrder: 'asc' | 'desc') => void
     setPage: (page: number) => void
     applyFilters: () => void
+    applyPresetFilters: (
+        patch: Partial<{
+            title: string
+            author: string
+            category: string
+            genre: string
+            minPrice: number | null
+            maxPrice: number | null
+            minRating: number | null
+            inStockOnly: boolean
+            sortBy: string
+            sortOrder: 'asc' | 'desc'
+            limit: number
+        }>
+    ) => void
     toggleSidebar: () => void
     toggleMobileSidebar: () => void
     resetFilters: () => void
@@ -53,6 +71,7 @@ const initialFilters = {
     title: '',
     author: '',
     category: '',
+    genre: '',
     minPrice: null,
     maxPrice: null,
     minRating: null,
@@ -74,6 +93,7 @@ export const useFilterStore = create<FilterState>()(
             setTitle: (title) => set({ title }),
             setAuthor: (author) => set({ author }),
             setCategory: (category) => set({ category }),
+            setGenre: (genre) => set({ genre }),
             setPriceRange: (min, max) => set({ minPrice: min, maxPrice: max }),
             setMinRating: (rating) => set({ minRating: rating }),
             setInStockOnly: (inStock) => set({ inStockOnly: inStock }),
@@ -89,6 +109,7 @@ export const useFilterStore = create<FilterState>()(
                         title: state.title,
                         author: state.author,
                         category: state.category,
+                        genre: state.genre,
                         minPrice: state.minPrice,
                         maxPrice: state.maxPrice,
                         minRating: state.minRating,
@@ -99,6 +120,28 @@ export const useFilterStore = create<FilterState>()(
                         limit: state.limit,
                     },
                     page: 1, // Also reset the draft page
+                })
+            },
+            applyPresetFilters: (patch) => {
+                const state = get()
+                const next = {
+                    title: patch.title ?? '',
+                    author: patch.author ?? '',
+                    category: patch.category ?? '',
+                    genre: patch.genre ?? '',
+                    minPrice: patch.minPrice ?? null,
+                    maxPrice: patch.maxPrice ?? null,
+                    minRating: patch.minRating ?? null,
+                    inStockOnly: patch.inStockOnly ?? false,
+                    sortBy: patch.sortBy ?? state.sortBy,
+                    sortOrder: patch.sortOrder ?? state.sortOrder,
+                    page: 1,
+                    limit: patch.limit ?? state.limit,
+                }
+
+                set({
+                    ...next,
+                    appliedFilters: { ...next },
                 })
             },
             toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
@@ -117,6 +160,7 @@ export const useFilterStore = create<FilterState>()(
                 title: state.title,
                 author: state.author,
                 category: state.category,
+                genre: state.genre,
                 minPrice: state.minPrice,
                 maxPrice: state.maxPrice,
                 minRating: state.minRating,

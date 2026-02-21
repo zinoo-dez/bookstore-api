@@ -17,6 +17,9 @@ describe('CartService', () => {
         {
           provide: PrismaService,
           useValue: {
+            user: {
+              findUnique: jest.fn(),
+            },
             book: {
               findUnique: jest.fn(),
             },
@@ -37,6 +40,11 @@ describe('CartService', () => {
     prismaService = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+    (prismaService.user.findUnique as jest.Mock).mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({
+        id: where.id,
+      }),
+    );
   });
 
   it('should be defined', () => {

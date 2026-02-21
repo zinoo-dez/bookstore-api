@@ -17,6 +17,19 @@ const CATEGORIES = [
     'Technology'
 ]
 
+const GENRES = [
+    'Fantasy',
+    'Thriller',
+    'Romance',
+    'Mystery',
+    'Adventure',
+    'Historical',
+    'Young Adult',
+    'Horror',
+    'Literary',
+    'Science Fiction'
+]
+
 const SORT_OPTIONS = [
     { label: 'Title (A-Z)', value: 'title', order: 'asc' },
     { label: 'Price (Low to High)', value: 'price', order: 'asc' },
@@ -34,6 +47,7 @@ interface FilterContentProps {
     title: string
     author: string
     category: string
+    genre: string
     minPrice: number | null
     maxPrice: number | null
     minRating: number | null
@@ -43,6 +57,7 @@ interface FilterContentProps {
     setTitle: (title: string) => void
     setAuthor: (author: string) => void
     setCategory: (category: string) => void
+    setGenre: (genre: string) => void
     setPriceRange: (min: number | null, max: number | null) => void
     setMinRating: (rating: number | null) => void
     setInStockOnly: (inStock: boolean) => void
@@ -58,6 +73,7 @@ const FilterContent = ({
     title,
     author,
     category,
+    genre,
     minPrice,
     maxPrice,
     minRating,
@@ -67,6 +83,7 @@ const FilterContent = ({
     setTitle,
     setAuthor,
     setCategory,
+    setGenre,
     setPriceRange,
     setMinRating,
     setInStockOnly,
@@ -79,7 +96,7 @@ const FilterContent = ({
 }: FilterContentProps) => (
     <div className="space-y-4">
         {/* Search Section */}
-        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+        <div className="overflow-hidden rounded-2xl border border-gray-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/65">
             <button
                 onClick={() => toggleSection('search')}
                 className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
@@ -136,7 +153,7 @@ const FilterContent = ({
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+        <div className="overflow-hidden rounded-2xl border border-gray-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/65">
             <button
                 onClick={() => toggleSection('filters')}
                 className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
@@ -175,6 +192,21 @@ const FilterContent = ({
                                     <option value="">All Categories</option>
                                     {CATEGORIES.map(cat => (
                                         <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Genre */}
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Genre</label>
+                                <select
+                                    value={genre}
+                                    onChange={(e) => setGenre(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-sm appearance-none cursor-pointer hover:bg-white transition-all dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+                                >
+                                    <option value="">All Genres</option>
+                                    {GENRES.map(genreItem => (
+                                        <option key={genreItem} value={genreItem}>{genreItem}</option>
                                     ))}
                                 </select>
                             </div>
@@ -247,7 +279,7 @@ const FilterContent = ({
         </div>
 
         {/* Sort Section */}
-        <div className="bg-white rounded-2xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+        <div className="overflow-hidden rounded-2xl border border-gray-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/65">
             <button
                 onClick={() => toggleSection('sorting')}
                 className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
@@ -303,7 +335,7 @@ const FilterContent = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={applyFilters}
-            className="w-full py-4 px-6 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl active:scale-95"
+            className="w-full rounded-2xl bg-primary-600 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-primary-700 active:scale-95"
         >
             Show Results
         </motion.button>
@@ -314,7 +346,7 @@ const FilterContent = ({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={resetFilters}
-                className="w-full py-4 px-6 bg-gray-900 hover:bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg hover:shadow-xl active:scale-95 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                className="w-full rounded-2xl bg-gray-900 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-black active:scale-95 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
             >
                 Reset All Filters ({activeFilterCount})
             </motion.button>
@@ -327,6 +359,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
         title,
         author,
         category,
+        genre,
         minPrice,
         maxPrice,
         minRating,
@@ -338,6 +371,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
         setTitle,
         setAuthor,
         setCategory,
+        setGenre,
         setPriceRange,
         setMinRating,
         setInStockOnly,
@@ -363,6 +397,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
         (title ? 1 : 0) +
         (author ? 1 : 0) +
         (category ? 1 : 0) +
+        (genre ? 1 : 0) +
         (minPrice !== null || maxPrice !== null ? 1 : 0) +
         (minRating !== null ? 1 : 0) +
         (inStockOnly ? 1 : 0)
@@ -374,7 +409,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                 <motion.div
                     initial={false}
                     animate={{ width: isSidebarOpen ? 300 : 70 }}
-                    className="sticky top-24 h-[calc(100vh-8rem)] bg-gray-50/30 rounded-3xl p-2 border border-white transition-all shadow-inner dark:bg-slate-900/60 dark:border-slate-800"
+                    className="sticky top-20 h-[calc(100vh-6.5rem)] rounded-3xl border border-gray-200/60 bg-gray-50/20 p-2 transition-all dark:border-slate-800 dark:bg-slate-900/45"
                 >
                     <div className="h-full flex flex-col p-2">
                         <div className="flex items-center justify-between mb-6 px-0 pt-2">
@@ -385,7 +420,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                                         animate={{ opacity: 1, x: 0 }}
                                         className="flex items-center gap-3"
                                     >
-                                        <div className="w-8 h-8 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-200">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-600 shadow-[0_10px_20px_-14px_rgba(37,99,235,0.8)]">
                                             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                                             </svg>
@@ -396,7 +431,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                             </AnimatePresence>
                             <button
                                 onClick={toggleSidebar}
-                                className="p-2.5 bg-white hover:bg-gray-50 rounded-xl transition-all shadow-sm border border-gray-100 hover:scale-110 active:scale-90 dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800"
+                                className="rounded-xl border border-gray-200/70 bg-white/80 p-2.5 transition-all hover:bg-gray-50 active:scale-90 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:bg-slate-800"
                             >
                                 <motion.div animate={{ rotate: isSidebarOpen ? 0 : 180 }}>
                                     <svg className="w-4 h-4 text-gray-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -412,6 +447,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                                     title={title}
                                     author={author}
                                     category={category}
+                                    genre={genre}
                                     minPrice={minPrice}
                                     maxPrice={maxPrice}
                                     minRating={minRating}
@@ -421,6 +457,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                                     setTitle={setTitle}
                                     setAuthor={setAuthor}
                                     setCategory={setCategory}
+                                    setGenre={setGenre}
                                     setPriceRange={setPriceRange}
                                     setMinRating={setMinRating}
                                     setInStockOnly={setInStockOnly}
@@ -467,6 +504,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                                 title={title}
                                 author={author}
                                 category={category}
+                                genre={genre}
                                 minPrice={minPrice}
                                 maxPrice={maxPrice}
                                 minRating={minRating}
@@ -476,6 +514,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                                 setTitle={setTitle}
                                 setAuthor={setAuthor}
                                 setCategory={setCategory}
+                                setGenre={setGenre}
                                 setPriceRange={setPriceRange}
                                 setMinRating={setMinRating}
                                 setInStockOnly={setInStockOnly}

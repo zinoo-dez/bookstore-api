@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
@@ -11,7 +11,7 @@ import {
 
 @Injectable()
 export class BooksService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Calculate stock status for a book
@@ -57,6 +57,7 @@ export class BooksService {
       author,
       isbn,
       category,
+      genre,
       minPrice,
       maxPrice,
       minRating,
@@ -83,6 +84,10 @@ export class BooksService {
 
     if (category) {
       where.categories = { hasSome: [category] };
+    }
+
+    if (genre) {
+      where.genres = { hasSome: [genre] };
     }
 
     // Price range filter
@@ -168,13 +173,40 @@ export class BooksService {
   }
 
   async remove(id: string): Promise<BookWithStockStatus> {
-    const existingBook = await this.findOne(id);
+    await this.findOne(id);
 
-    const book = await this.prisma.book.delete({
-      where: { id },
-    });
+    const [purchaseRequestRefs, purchaseOrderItemRefs] = await Promise.all([
+      this.prisma.purchaseRequest.count({ where: { bookId: id } }),
+      this.prisma.purchaseOrderItem.count({ where: { bookId: id } }),
+    ]);
 
-    return this.enhanceBookWithStockStatus(book);
+    if (purchaseRequestRefs > 0 || purchaseOrderItemRefs > 0) {
+      const parts: string[] = [];
+      if (purchaseRequestRefs > 0) {
+        parts.push(`${purchaseRequestRefs} purchase request${purchaseRequestRefs > 1 ? 's' : ''}`);
+      }
+      if (purchaseOrderItemRefs > 0) {
+        parts.push(`${purchaseOrderItemRefs} purchase order item${purchaseOrderItemRefs > 1 ? 's' : ''}`);
+      }
+      throw new BadRequestException(
+        `Cannot delete this book because it is linked to ${parts.join(' and ')}.`,
+      );
+    }
+
+    try {
+      const book = await this.prisma.book.delete({
+        where: { id },
+      });
+
+      return this.enhanceBookWithStockStatus(book);
+    } catch (error: any) {
+      if (error?.code === 'P2003') {
+        throw new BadRequestException(
+          'Cannot delete this book because it is referenced by existing records.',
+        );
+      }
+      throw error;
+    }
   }
 
   /**

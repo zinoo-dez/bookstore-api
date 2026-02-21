@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+backend/package-lock.json
+frontend/package-lock.json
 
 # build output
 dist/
@@ -26,3 +28,7 @@ backend/uploads/*
 
 # Prisma
 node_modules/.prisma/
+
+IMPLEMENTATION_PLAN.md
+START_SERVERS.md
+TESTING_GUIDE.md

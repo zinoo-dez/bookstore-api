@@ -25,6 +25,12 @@ describe('BooksService', () => {
               delete: jest.fn(),
               count: jest.fn(),
             },
+            purchaseRequest: {
+              count: jest.fn(),
+            },
+            purchaseOrderItem: {
+              count: jest.fn(),
+            },
           },
         },
       ],
@@ -34,6 +40,8 @@ describe('BooksService', () => {
     prismaService = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+    (prismaService.purchaseRequest.count as jest.Mock).mockResolvedValue(0);
+    (prismaService.purchaseOrderItem.count as jest.Mock).mockResolvedValue(0);
   });
 
   it('should be defined', () => {

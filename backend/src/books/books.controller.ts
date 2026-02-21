@@ -68,6 +68,12 @@ export class BooksController {
     description: 'Filter by category',
   })
   @ApiQuery({
+    name: 'genre',
+    required: false,
+    type: String,
+    description: 'Filter by genre',
+  })
+  @ApiQuery({
     name: 'isbn',
     required: false,
     type: String,
@@ -132,7 +138,10 @@ export class BooksController {
     type: Number,
     description: 'Number of popular books to return (default: 6)',
   })
-  @ApiResponse({ status: 200, description: 'Popular books retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Popular books retrieved successfully',
+  })
   getPopularBooks(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     return this.booksService.getPopularBooks(parsedLimit);
@@ -141,15 +150,23 @@ export class BooksController {
   @Get('recommended')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get recommended books based on recent user purchases' })
+  @ApiOperation({
+    summary: 'Get recommended books based on recent user purchases',
+  })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
     description: 'Number of recommended books to return (default: 6)',
   })
-  @ApiResponse({ status: 200, description: 'Recommended books retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
+  @ApiResponse({
+    status: 200,
+    description: 'Recommended books retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
   getRecommendedBooks(@Request() req: any, @Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     return this.booksService.getRecommendedBooks(req.user.sub, parsedLimit);
@@ -157,7 +174,7 @@ export class BooksController {
 
   @Get('inventory/out-of-stock')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all out of stock books (Admin only)' })
   @ApiResponse({
@@ -194,7 +211,7 @@ export class BooksController {
 
   @Get('inventory/low-stock')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all low stock books (Admin only)' })
   @ApiResponse({
@@ -305,7 +322,7 @@ export class BooksController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Post()
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new book (Admin only)' })
@@ -344,7 +361,7 @@ export class BooksController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Patch(':id')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a book (Admin only)' })
@@ -384,7 +401,7 @@ export class BooksController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Delete(':id')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete a book (Admin only)' })

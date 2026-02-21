@@ -3,13 +3,19 @@ import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, type LoginData } from '@/lib/schemas'
-import { useLogin } from '@/services/auth'
+import { useForgotPassword, useLogin, useResetPassword } from '@/services/auth'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Logo from '@/components/ui/Logo'
+import { useState } from 'react'
 
 const LoginPage = () => {
   const loginMutation = useLogin()
+  const forgotPasswordMutation = useForgotPassword()
+  const resetPasswordMutation = useResetPassword()
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [tokenHint, setTokenHint] = useState('')
+  const [resetNotice, setResetNotice] = useState('')
 
   const {
     register,
@@ -23,6 +29,45 @@ const LoginPage = () => {
     loginMutation.mutate(data)
     // Navigation is handled by useLogin hook based on user role
   }
+
+  const forgotForm = useForm<{ email: string }>({
+    defaultValues: { email: '' },
+  })
+
+  const resetForm = useForm<{ token: string; newPassword: string; confirmPassword: string }>({
+    defaultValues: { token: '', newPassword: '', confirmPassword: '' },
+  })
+
+  const onForgotPassword = forgotForm.handleSubmit(async ({ email }) => {
+    try {
+      const result = await forgotPasswordMutation.mutateAsync(email)
+      setResetNotice(result.message)
+      const returnedToken = result.resetToken || ''
+      setTokenHint(returnedToken)
+      if (returnedToken) {
+        resetForm.setValue('token', returnedToken)
+      }
+    } catch (error) {
+      setResetNotice((error as Error).message)
+    }
+  })
+
+  const onResetPassword = resetForm.handleSubmit(async ({ token, newPassword, confirmPassword }) => {
+    if (newPassword !== confirmPassword) {
+      setResetNotice('Passwords do not match.')
+      return
+    }
+
+    try {
+      const result = await resetPasswordMutation.mutateAsync({ token, newPassword })
+      setResetNotice(result.message)
+      resetForm.reset({ token: '', newPassword: '', confirmPassword: '' })
+      setTokenHint('')
+      setShowForgotPassword(false)
+    } catch (error) {
+      setResetNotice((error as Error).message)
+    }
+  })
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -119,6 +164,15 @@ const LoginPage = () => {
                       error={errors.password?.message}
                       autoComplete="current-password"
                     />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword((prev) => !prev)}
+                        className="text-sm font-semibold text-primary-600 hover:text-primary-700"
+                      >
+                        {showForgotPassword ? 'Close' : 'Forgot password?'}
+                      </button>
+                    </div>
                   </div>
 
                   {loginMutation.error && (
@@ -147,6 +201,58 @@ const LoginPage = () => {
                     Sign in
                   </Button>
                 </form>
+
+                {showForgotPassword && (
+                  <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Reset Password</h3>
+
+                    <form onSubmit={onForgotPassword} className="mt-3 space-y-3">
+                      <Input
+                        {...forgotForm.register('email')}
+                        type="email"
+                        label="Account Email"
+                        placeholder="Enter your email"
+                      />
+                      <Button type="submit" isLoading={forgotPasswordMutation.isPending} className="w-full">
+                        Request Reset Token
+                      </Button>
+                    </form>
+
+                    {tokenHint && (
+                      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-900/50 dark:bg-amber-950/50">
+                        <p className="font-semibold">Reset token (dev mode):</p>
+                        <p className="mt-1 break-all font-mono">{tokenHint}</p>
+                      </div>
+                    )}
+
+                    <form onSubmit={onResetPassword} className="mt-4 space-y-3">
+                      <Input
+                        {...resetForm.register('token')}
+                        label="Reset Token"
+                        placeholder="Paste reset token"
+                      />
+                      <Input
+                        {...resetForm.register('newPassword')}
+                        type="password"
+                        label="New Password"
+                        placeholder="Enter new password"
+                      />
+                      <Input
+                        {...resetForm.register('confirmPassword')}
+                        type="password"
+                        label="Confirm New Password"
+                        placeholder="Confirm new password"
+                      />
+                      <Button type="submit" isLoading={resetPasswordMutation.isPending} className="w-full">
+                        Reset Password
+                      </Button>
+                    </form>
+
+                    {resetNotice && (
+                      <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">{resetNotice}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <p className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">

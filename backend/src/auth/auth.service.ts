@@ -10,6 +10,10 @@ import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { resolveUserPermissionKeys } from './permission-resolution';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -45,6 +49,10 @@ export class AuthService {
         avatarType: true,
         avatarValue: true,
         backgroundColor: true,
+        pronouns: true,
+        shortBio: true,
+        about: true,
+        coverImage: true,
         createdAt: true,
       },
     });
@@ -62,6 +70,41 @@ export class AuthService {
         avatarType: true,
         avatarValue: true,
         backgroundColor: true,
+        pronouns: true,
+        shortBio: true,
+        about: true,
+        coverImage: true,
+        staffProfile: {
+          select: {
+            title: true,
+            department: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
+            assignments: {
+              where: {
+                OR: [{ effectiveTo: null }, { effectiveTo: { gt: new Date() } }],
+                effectiveFrom: {
+                  lte: new Date(),
+                },
+              },
+              orderBy: {
+                effectiveFrom: 'desc',
+              },
+              select: {
+                role: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -77,14 +120,34 @@ export class AuthService {
       throw new UnauthorizedException('Incorrect password');
     }
 
+    const staffRoles = user.staffProfile?.assignments.map((assignment) => ({
+      id: assignment.role.id,
+      name: assignment.role.name,
+      code: assignment.role.code,
+    })) ?? [];
+    const primaryStaffRole = staffRoles[0] ?? null;
+
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
+      permissions: Array.from(
+        await resolveUserPermissionKeys(this.prisma, user.id),
+      ),
       name: user.name,
       avatarType: user.avatarType,
       avatarValue: user.avatarValue,
       backgroundColor: user.backgroundColor,
+      pronouns: user.pronouns,
+      shortBio: user.shortBio,
+      about: user.about,
+      coverImage: user.coverImage,
+      staffTitle: user.staffProfile?.title,
+      staffDepartmentName: user.staffProfile?.department.name,
+      staffDepartmentCode: user.staffProfile?.department.code,
+      staffRoles,
+      primaryStaffRoleName: primaryStaffRole?.name,
+      primaryStaffRoleCode: primaryStaffRole?.code,
     };
 
     return {
@@ -92,15 +155,57 @@ export class AuthService {
     };
   }
 
+  async getMyPermissions(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException(
+        'Invalid user session. Please login again.',
+      );
+    }
+
+    const permissions = Array.from(
+      await resolveUserPermissionKeys(this.prisma, userId),
+    ).sort();
+
+    return {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      permissions,
+    };
+  }
+
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    console.log('UPDATE PROFILE userId:', userId)
+    console.log('UPDATE PROFILE userId:', userId);
     return this.prisma.user.update({
       where: { id: userId },
       data: {
-        ...(dto.name && { name: dto.name }),
-        ...(dto.avatarType && { avatarType: dto.avatarType }),
-        ...(dto.avatarValue && { avatarValue: dto.avatarValue }),
-        ...(dto.backgroundColor && { backgroundColor: dto.backgroundColor }),
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.avatarType !== undefined ? { avatarType: dto.avatarType } : {}),
+        ...(dto.avatarValue !== undefined
+          ? { avatarValue: dto.avatarValue }
+          : {}),
+        ...(dto.backgroundColor !== undefined
+          ? { backgroundColor: dto.backgroundColor }
+          : {}),
+        ...(dto.pronouns !== undefined
+          ? { pronouns: dto.pronouns.trim() || null }
+          : {}),
+        ...(dto.shortBio !== undefined
+          ? { shortBio: dto.shortBio.trim() || null }
+          : {}),
+        ...(dto.about !== undefined ? { about: dto.about.trim() || null } : {}),
+        ...(dto.coverImage !== undefined
+          ? { coverImage: dto.coverImage.trim() || null }
+          : {}),
       },
       select: {
         id: true,
@@ -110,8 +215,90 @@ export class AuthService {
         avatarType: true,
         avatarValue: true,
         backgroundColor: true,
+        pronouns: true,
+        shortBio: true,
+        about: true,
+        coverImage: true,
         createdAt: true,
       },
     });
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return {
+        message:
+          'If an account exists with this email, a reset token has been generated.',
+      };
+    }
+
+    await this.prisma.passwordResetToken.deleteMany({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    const token =
+      randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '');
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt,
+      },
+    });
+
+    return {
+      message:
+        'If an account exists with this email, a reset token has been generated.',
+      resetToken: token,
+      expiresAt,
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { token: dto.token },
+      include: {
+        user: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !resetToken ||
+      resetToken.usedAt !== null ||
+      resetToken.expiresAt.getTime() < Date.now()
+    ) {
+      throw new BadRequestException('Reset token is invalid or expired');
+    }
+
+    const bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
+    const hashedPassword = await bcrypt.hash(dto.newPassword, bcryptRounds);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetToken.user.id },
+        data: { password: hashedPassword },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      message: 'Password has been reset successfully.',
+    };
   }
 }

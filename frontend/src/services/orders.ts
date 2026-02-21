@@ -4,8 +4,21 @@ import { api } from '@/lib/api'
 export interface Order {
   id: string
   userId: string
+  subtotalPrice?: number | string
+  discountAmount?: number | string
+  promoCode?: string | null
   totalPrice: number | string
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED'
+  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+  shippingFullName?: string | null
+  shippingEmail?: string | null
+  shippingPhone?: string | null
+  shippingAddress?: string | null
+  shippingCity?: string | null
+  shippingState?: string | null
+  shippingZipCode?: string | null
+  shippingCountry?: string | null
+  paymentProvider?: 'KPAY' | 'WAVEPAY' | 'MPU' | 'VISA' | null
+  paymentReceiptUrl?: string | null
   createdAt: string
   user?: {
     id: string
@@ -25,6 +38,57 @@ export interface Order {
   }[]
 }
 
+export interface WarehouseDeliveryTask {
+  id: string
+  staffId: string
+  type: string
+  status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  metadata?: Record<string, unknown> | null
+  createdAt: string
+  completedAt?: string | null
+  staff: {
+    id: string
+    user: {
+      id: string
+      name: string
+      email: string
+    }
+    department: {
+      id: string
+      name: string
+      code: string
+    }
+  }
+  order?: {
+    id: string
+    status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+    createdAt: string
+    user: {
+      id: string
+      name: string
+      email: string
+    }
+    shippingFullName?: string | null
+    shippingEmail?: string | null
+    shippingPhone?: string | null
+    shippingAddress?: string | null
+    shippingCity?: string | null
+    shippingState?: string | null
+    shippingZipCode?: string | null
+    shippingCountry?: string | null
+    orderItems: Array<{
+      id: string
+      quantity: number
+      book: {
+        id: string
+        title: string
+        author: string
+      }
+    }>
+  } | null
+}
+
 export const useOrders = () => {
   return useQuery({
     queryKey: ['orders'],
@@ -35,13 +99,15 @@ export const useOrders = () => {
   })
 }
 
-export const useAdminOrders = () => {
+export const useAdminOrders = ({ enabled = true }: { enabled?: boolean } = {}) => {
   return useQuery({
     queryKey: ['admin-orders'],
     queryFn: async (): Promise<Order[]> => {
       const response = await api.get('/orders/admin/all')
       return response.data
     },
+    enabled,
+    retry: false,
   })
 }
 
@@ -60,8 +126,20 @@ export const useCreateOrder = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      const response = await api.post('/orders')
+    mutationFn: async (payload: {
+      fullName: string
+      email: string
+      phone: string
+      address: string
+      city: string
+      state: string
+      zipCode: string
+      country: string
+      paymentProvider: 'KPAY' | 'WAVEPAY' | 'MPU' | 'VISA'
+      paymentReceiptUrl: string
+      promoCode?: string
+    }) => {
+      const response = await api.post('/orders', payload)
       return response.data
     },
     onSuccess: () => {
@@ -72,12 +150,76 @@ export const useCreateOrder = () => {
   })
 }
 
+export interface PromoValidationResult {
+  valid: boolean
+  code: string
+  label?: string
+  message: string
+  subtotal: number
+  discountAmount: number
+  total: number
+}
+
+export const useValidatePromo = () => {
+  return useMutation({
+    mutationFn: async (code: string): Promise<PromoValidationResult> => {
+      const response = await api.post('/orders/promotions/validate', { code })
+      return response.data
+    },
+  })
+}
+
+export const useWarehouseDeliveryTasks = (status?: WarehouseDeliveryTask['status']) => {
+  return useQuery({
+    queryKey: ['warehouse-delivery-tasks', status || 'all'],
+    queryFn: async (): Promise<WarehouseDeliveryTask[]> => {
+      const response = await api.get('/orders/warehouse/delivery-tasks', {
+        params: status ? { status } : undefined,
+      })
+      return response.data
+    },
+    retry: false,
+  })
+}
+
+export const useCompleteWarehouseDeliveryTask = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const response = await api.post(`/orders/warehouse/delivery-tasks/${taskId}/complete`)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouse-delivery-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] })
+    },
+  })
+}
+
+export const useUploadPaymentReceipt = () => {
+  return useMutation({
+    mutationFn: async (file: File): Promise<{ url: string }> => {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await api.post('/users/upload-payment-receipt', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      return response.data
+    },
+  })
+}
+
 
 export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: 'PENDING' | 'COMPLETED' | 'CANCELLED' }) => {
+    mutationFn: async ({ orderId, status }: { orderId: string; status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' }) => {
       const response = await api.patch(`/orders/${orderId}/status`, { status })
       return response.data
     },

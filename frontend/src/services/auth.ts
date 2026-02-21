@@ -12,21 +12,38 @@ import {
 import { useAuthStore } from '@/store/auth.store'
 import { useCartStore } from '@/store/cart.store'
 import { jwtDecode } from 'jwt-decode'
+import { canAccessAdmin } from '@/lib/permissions'
 
 interface JwtPayload {
   sub: string
   email: string
-  role: 'USER' | 'ADMIN'
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+  name?: string
+  permissions?: string[]
+  staffRoles?: Array<{
+    id?: string
+    name: string
+    code?: string | null
+  }>
+  primaryStaffRoleName?: string | null
+  primaryStaffRoleCode?: string | null
+  staffTitle?: string | null
+  staffDepartmentName?: string | null
+  staffDepartmentCode?: string | null
   avatarType?: 'emoji' | 'upload'
   avatarValue?: string
   backgroundColor?: string
+  pronouns?: string | null
+  shortBio?: string | null
+  about?: string | null
+  coverImage?: string | null
   iat: number
   exp: number
 }
 
 export const useLogin = () => {
   const queryClient = useQueryClient()
-  const { login } = useAuthStore()
+  const { login, setPortalMode } = useAuthStore()
   const navigate = useNavigate()
 
   return useMutation({
@@ -44,22 +61,37 @@ export const useLogin = () => {
         const user: User = {
           id: decoded.sub,
           email: decoded.email,
-          name: decoded.email.split('@')[0],
+          name: decoded.name || decoded.email.split('@')[0],
           role: decoded.role,
+          permissions: decoded.permissions || [],
+          staffRoles: decoded.staffRoles || [],
+          primaryStaffRoleName: decoded.primaryStaffRoleName || null,
+          primaryStaffRoleCode: decoded.primaryStaffRoleCode || null,
+          staffTitle: decoded.staffTitle || null,
+          staffDepartmentName: decoded.staffDepartmentName || null,
+          staffDepartmentCode: decoded.staffDepartmentCode || null,
           avatarType: decoded.avatarType || 'emoji',
           avatarValue: decoded.avatarValue,
           backgroundColor: decoded.backgroundColor,
+          pronouns: decoded.pronouns || null,
+          shortBio: decoded.shortBio || null,
+          about: decoded.about || null,
+          coverImage: decoded.coverImage || null,
           createdAt: new Date().toISOString(),
         }
         login(user, data.access_token)
         queryClient.invalidateQueries({ queryKey: ['user'] })
 
-        // Redirect admin to dashboard, regular users to home
-        if (decoded.role === 'ADMIN') {
-          navigate('/admin')
-        } else {
-          navigate('/')
+        const hasAdminAccess = canAccessAdmin(decoded.role, decoded.permissions || [])
+
+        if (decoded.role === 'USER' && hasAdminAccess) {
+          setPortalMode(null)
+          navigate('/portal-select')
+          return
         }
+
+        setPortalMode(hasAdminAccess ? 'staff' : 'buyer')
+        navigate(hasAdminAccess ? '/admin' : '/')
       } catch (error) {
         throw new Error('Invalid token received')
       }
@@ -73,6 +105,32 @@ export const useRegister = () => {
       try {
         const response = await api.post('/auth/register', data)
         return userSchema.parse(response.data)
+      } catch (error) {
+        throw new Error(getErrorMessage(error))
+      }
+    },
+  })
+}
+
+export const useForgotPassword = () => {
+  return useMutation({
+    mutationFn: async (email: string): Promise<{ message: string; resetToken?: string; expiresAt?: string }> => {
+      try {
+        const response = await api.post('/auth/forgot-password', { email })
+        return response.data
+      } catch (error) {
+        throw new Error(getErrorMessage(error))
+      }
+    },
+  })
+}
+
+export const useResetPassword = () => {
+  return useMutation({
+    mutationFn: async (payload: { token: string; newPassword: string }): Promise<{ message: string }> => {
+      try {
+        const response = await api.post('/auth/reset-password', payload)
+        return response.data
       } catch (error) {
         throw new Error(getErrorMessage(error))
       }
@@ -104,6 +162,10 @@ export type UpdateProfileData = {
   avatarType?: 'emoji' | 'upload'
   avatarValue?: string
   backgroundColor?: string
+  pronouns?: string
+  shortBio?: string
+  about?: string
+  coverImage?: string
 }
 
 export const useUploadAvatar = () => {
@@ -128,7 +190,7 @@ export const useUploadAvatar = () => {
 
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient()
-  const { updateUser } = useAuthStore()
+  const { updateUser, user: currentUser } = useAuthStore()
 
   return useMutation({
     mutationFn: async (data: UpdateProfileData): Promise<User> => {
@@ -140,8 +202,17 @@ export const useUpdateProfile = () => {
       }
     },
     onSuccess: (updatedUser) => {
-      updateUser(updatedUser)
-      queryClient.setQueryData(['user'], updatedUser)
+      const mergedUser = {
+        ...updatedUser,
+        staffRoles: currentUser?.staffRoles ?? [],
+        primaryStaffRoleName: currentUser?.primaryStaffRoleName ?? null,
+        primaryStaffRoleCode: currentUser?.primaryStaffRoleCode ?? null,
+        staffTitle: currentUser?.staffTitle ?? null,
+        staffDepartmentName: currentUser?.staffDepartmentName ?? null,
+        staffDepartmentCode: currentUser?.staffDepartmentCode ?? null,
+      }
+      updateUser(mergedUser)
+      queryClient.setQueryData(['user'], mergedUser)
     },
   })
 }

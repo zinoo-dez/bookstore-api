@@ -2,12 +2,20 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useAuthStore } from '@/store/auth.store'
-import { useLogout } from '@/services/auth'
+import { hasPermission } from '@/lib/permissions'
 import { LayoutDashboard,
   BookOpen,
+  DollarSign,
   Package,
   Users,
-  LogOut,
+  Warehouse,
+  Building2,
+  ShieldCheck,
+  ListTodo,
+  BarChart3,
+  ClipboardCheck,
+  Truck,
+  MessageCircleMore,
   LucideIcon
 } from "lucide-react";
 
@@ -15,65 +23,146 @@ interface NavItem {
   name: string
   path: string
   icon: LucideIcon
+  permission?: string | string[]
+  requireAll?: boolean
+  adminOnly?: boolean
 }
 
 const navItems: NavItem[] = [
   { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-  { name: 'Books', path: '/admin/books', icon: BookOpen },
-  { name: 'Orders', path: '/admin/orders', icon: Package },
-  { name: 'Users', path: '/admin/users', icon: Users },
+  { name: 'Books', path: '/admin/books', icon: BookOpen, adminOnly: true },
+  { name: 'Orders', path: '/admin/orders', icon: Package, permission: 'finance.reports.view' },
+  { name: 'Promotions', path: '/admin/promotions', icon: DollarSign, permission: 'finance.payout.manage' },
+  { name: 'Delivery', path: '/admin/delivery', icon: Truck, permission: 'warehouse.purchase_order.view' },
+  { name: 'Warehouses', path: '/admin/warehouses', icon: Warehouse, permission: 'warehouse.view' },
+  { name: 'Book Distribution', path: '/admin/book-distribution', icon: BookOpen, permission: 'warehouse.view' },
+  { name: 'Vendors', path: '/admin/vendors', icon: Building2, permission: ['warehouse.view', 'warehouse.vendor.manage'], requireAll: false },
+  { name: 'Purchase Requests', path: '/admin/purchase-requests', icon: ClipboardCheck, permission: ['warehouse.purchase_request.view', 'finance.purchase_request.review', 'finance.purchase_request.approve', 'finance.purchase_request.reject'], requireAll: false },
+  { name: 'Purchase Orders', path: '/admin/purchase-orders', icon: Truck, permission: ['warehouse.purchase_order.view', 'finance.purchase_order.view', 'warehouse.purchase_order.create', 'warehouse.purchase_order.receive'], requireAll: false },
+  { name: 'Inquiries', path: '/admin/inquiries', icon: MessageCircleMore, adminOnly: true },
+  { name: 'Users', path: '/admin/users', icon: Users, adminOnly: true },
+  { name: 'Staff', path: '/admin/staff', icon: Users, permission: 'staff.view' },
+  { name: 'Departments', path: '/admin/staff/departments', icon: Building2, permission: ['staff.manage', 'staff.view'], requireAll: true },
+  { name: 'Role Matrix', path: '/admin/staff/roles', icon: ShieldCheck, permission: 'admin.permission.manage' },
+  { name: 'Staff Tasks', path: '/admin/staff/tasks', icon: ListTodo, permission: ['staff.view', 'hr.performance.manage'], requireAll: true },
+  { name: 'Performance', path: '/admin/staff/performance', icon: BarChart3, permission: 'hr.performance.manage' },
 ]
 
 const AdminSidebar = () => {
   const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const { user } = useAuthStore()
-  const logoutMutation = useLogout()
+  const isHrFocusedUser =
+    user?.role === 'USER'
+    && (
+      hasPermission(user?.permissions, 'staff.view')
+      || hasPermission(user?.permissions, 'staff.manage')
+      || hasPermission(user?.permissions, 'hr.performance.manage')
+    )
+    && !hasPermission(user?.permissions, 'finance.reports.view')
+    && !hasPermission(user?.permissions, 'warehouse.view')
+  const isWarehouseFocusedUser =
+    user?.role === 'USER'
+    && hasPermission(user?.permissions, 'warehouse.view')
+    && (hasPermission(user?.permissions, 'warehouse.stock.update') || hasPermission(user?.permissions, 'warehouse.transfer'))
+    && !hasPermission(user?.permissions, 'finance.reports.view')
+    && !hasPermission(user?.permissions, 'staff.view')
+  const hrFocusedPaths = new Set([
+    '/admin',
+    '/admin/staff',
+    '/admin/staff/departments',
+    '/admin/staff/roles',
+    '/admin/staff/tasks',
+    '/admin/staff/performance',
+  ])
+  const warehouseFocusedPaths = new Set([
+    '/admin',
+    '/admin/delivery',
+    '/admin/warehouses',
+    '/admin/book-distribution',
+    '/admin/purchase-requests',
+    '/admin/purchase-orders',
+  ])
+  const visibleNavItems = navItems.filter((item) => {
+    if (isHrFocusedUser && !hrFocusedPaths.has(item.path)) {
+      return false
+    }
+    if (isWarehouseFocusedUser && !warehouseFocusedPaths.has(item.path)) {
+      return false
+    }
 
-  const handleLogout = () => {
-    logoutMutation.mutate()
-  }
+    if (item.adminOnly) {
+      return user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
+    }
+
+    if (!item.permission) {
+      return true
+    }
+
+    const permissions = Array.isArray(item.permission) ? item.permission : [item.permission]
+    if (item.requireAll) {
+      return permissions.every((key) => hasPermission(user?.permissions, key))
+    }
+
+    return permissions.some((key) => hasPermission(user?.permissions, key))
+  })
+
+  const departmentName = user?.staffDepartmentName?.trim()
+  const sidebarTitle =
+    user?.role === 'USER' && departmentName ? departmentName : 'Admin Panel'
+  const sidebarSubtitle =
+    user?.role === 'USER' && departmentName
+      ? `${departmentName} workspace`
+      : isHrFocusedUser
+        ? 'HR operations workspace'
+        : isWarehouseFocusedUser
+          ? 'Warehouse operations workspace'
+          : 'Manage your store'
 
   return (
     <div 
-      className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r h-screen sticky top-0 flex flex-col transition-all duration-300 dark:bg-slate-900 dark:border-slate-800`}
+      className={`${isCollapsed ? 'w-16' : 'w-[13.25rem]'} border-r border-slate-200/70 bg-white/85 backdrop-blur h-screen sticky top-0 flex flex-col transition-all duration-200 dark:bg-slate-900/88 dark:border-slate-800/80`}
     >
       {/* Logo/Title & Toggle */}
-      <div className="p-6 border-b flex items-center justify-between dark:border-slate-800">
+      <div className="p-4 border-b border-slate-200/70 flex items-center justify-between dark:border-slate-800/80">
         {!isCollapsed && (
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Admin Panel</h2>
-            <p className="text-sm text-gray-500 mt-1 dark:text-slate-400">Manage your store</p>
+            <h2 className="text-lg font-bold leading-tight text-gray-900 dark:text-slate-100">{sidebarTitle}</h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">{sidebarSubtitle}</p>
           </div>
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors dark:hover:bg-slate-800"
+          className="p-2 hover:bg-slate-100 rounded-lg transition-colors dark:hover:bg-slate-800"
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <span className="text-xl">{isCollapsed ? '→' : '←'}</span>
+          <span className="text-base">{isCollapsed ? '→' : '←'}</span>
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="p-4 flex-1 overflow-y-auto">
+      <nav className="p-3 flex-1 overflow-y-auto">
         <div className="space-y-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path
             const Icon = item.icon;
+            const displayName = isWarehouseFocusedUser && item.path === '/admin'
+              ? 'Warehouse Overview'
+              : item.name
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className="relative"
-                title={isCollapsed ? item.name : ''}
+                className="relative block"
+                title={isCollapsed ? displayName : ''}
               >
-               <motion.div
+              <motion.div
                 whileHover={{ x: 4 }}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors
+                className={`relative flex items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-1.5 transition-all duration-150
+                  before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-r before:transition-colors
                   ${isActive
-                    ? "bg-primary-50 text-primary-700 dark:bg-amber-900/30 dark:text-amber-200"
-                    : "text-gray-700 hover:bg-gray-50 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-300"
+                    ? "bg-[var(--admin-accent-soft)] text-[var(--admin-accent)] before:bg-[var(--admin-accent)]"
+                    : "text-gray-700 hover:bg-slate-100/80 hover:text-[var(--admin-accent)] before:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-[var(--admin-accent)]"
                   }
                   ${isCollapsed ? "justify-center" : ""}
                 `}
@@ -81,19 +170,15 @@ const AdminSidebar = () => {
                 {/* ICON */}
                 <Icon
                   className={`h-5 w-5 flex-shrink-0
-                    ${isActive ? "text-primary-600 dark:text-amber-300" : "text-gray-500 dark:text-slate-400"}
+                    ${isActive ? "text-[var(--admin-accent)]" : "text-gray-500 dark:text-slate-400"}
                   `}
                 />
 
                 {/* LABEL */}
                 {!isCollapsed && (
-                  <span className="text-sm font-medium">
-                    {item.name}
+                  <span className="text-[13px] font-medium">
+                    {displayName}
                   </span>
-                )}
-
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-primary-600 dark:bg-amber-300" />
                 )}
               </motion.div>
               </Link>
@@ -102,46 +187,13 @@ const AdminSidebar = () => {
         </div>
       </nav>
 
-      {/* User Info & Logout */}
-      {!isCollapsed && user && (
-        <div className="p-4 border-t bg-gray-50 dark:border-slate-800 dark:bg-slate-950">
-          <div className="mb-3">
-            <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{user.name}</p>
-            <p className="text-xs text-gray-500 dark:text-slate-400">{user.email}</p>
-            <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs font-semibold rounded dark:bg-purple-900/40 dark:text-purple-200">
-              {user.role}
-            </span>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-2 dark:hover:bg-red-950/40"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      )}
-
-      {/* Collapsed User Info */}
-      {isCollapsed && user && (
-        <div className="p-4 border-t bg-gray-50 flex flex-col items-center gap-2 dark:border-slate-800 dark:bg-slate-950">
-          <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-            {user.name.charAt(0).toUpperCase()}
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors dark:hover:bg-red-950/40"
-          >
-            <LogOut className="h-5 w-5" />
-            {!isCollapsed && <span className="text-sm font-medium">Logout</span>}
-          </button>
-        </div>
-      )}
-
       {/* Bottom Section */}
-      <div className={`p-4 border-t bg-gray-50 ${isCollapsed ? 'text-center' : ''} dark:border-slate-800 dark:bg-slate-950`}>
+      <div className={`p-3 border-t border-slate-200/70 bg-slate-50/60 ${isCollapsed ? 'text-center' : ''} dark:border-slate-800/80 dark:bg-slate-950/70`}>
         <div className="text-xs text-gray-500 dark:text-slate-500">
-          <p>{isCollapsed ? 'v1.0' : 'Bookstore Admin v1.0'}</p>
+          <p>{isCollapsed ? 'v1.0' : 'Admin v1.0'}</p>
+          {!isCollapsed && user && (
+            <p className="mt-1 truncate text-[11px]">{user.name}</p>
+          )}
         </div>
       </div>
     </div>

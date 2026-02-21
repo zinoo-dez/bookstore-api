@@ -19,7 +19,12 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed": "ts-node prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force && npm run db:seed"
+    "db:seed:append": "ts-node prisma/seed.append.ts",
+    "db:seed:faker": "ts-node prisma/seed.faker.ts",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:reset": "prisma migrate reset --force && npm run db:seed",
+    "db:backup": "bash scripts/db-backup.sh",
+    "db:restore": "bash scripts/db-restore.sh"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -78,6 +78,20 @@ const CartPage = () => {
       animate={{ opacity: 1 }}
       className="max-w-6xl mx-auto px-4 py-8 dark:text-slate-100"
     >
+      <nav className="mb-6 text-xs font-semibold uppercase tracking-widest text-slate-500">
+        <Link to="/" className="hover:text-primary-600">Home</Link>
+        <span className="mx-2 text-slate-300">/</span>
+        <span className="text-slate-700 dark:text-slate-300">Cart</span>
+      </nav>
+      <Link
+        to="/"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-primary-600"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Back to Home
+      </Link>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Your Cart</h1>
       </div>

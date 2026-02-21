@@ -1,24 +1,41 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Eye, Pencil } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Eye, Pencil, Trash2, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, getErrorMessage } from '@/lib/api'
 import Skeleton from '@/components/ui/Skeleton'
+import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal'
+import { useDeleteUser, useUpdateUser, useUserStats } from '@/services/users'
+import { useAuthStore } from '@/store/auth.store'
+import { useNavigate } from 'react-router-dom'
 
 interface User {
   id: string
   email: string
   name: string
-  role: 'USER' | 'ADMIN'
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
   createdAt: string
 }
 
+const roleOptions: Array<User['role']> = ['USER', 'ADMIN', 'SUPER_ADMIN']
+
 const AdminUsersPage = () => {
+  const navigate = useNavigate()
+  const currentUser = useAuthStore((state) => state.user)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable')
   const [sortKey, setSortKey] = useState<'name' | 'email' | 'role' | 'createdAt'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [viewingUser, setViewingUser] = useState<User | null>(null)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [deletingUser, setDeletingUser] = useState<User | null>(null)
+  const [actionMessage, setActionMessage] = useState('')
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    role: 'USER' as User['role'],
+  })
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -28,30 +45,44 @@ const AdminUsersPage = () => {
     },
   })
 
-  const allUsers = users || []
-  
-  // Filter users
-  const filteredUsers = allUsers.filter(user => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter
-    return matchesSearch && matchesRole
-  })
+  const { data: userStats, isFetching: isStatsLoading } = useUserStats(viewingUser?.id || '')
+  const updateUser = useUpdateUser()
+  const deleteUser = useDeleteUser()
 
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const dir = sortDir === 'asc' ? 1 : -1
-    switch (sortKey) {
-      case 'email':
-        return a.email.localeCompare(b.email) * dir
-      case 'role':
-        return a.role.localeCompare(b.role) * dir
-      case 'createdAt':
-        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir
-      default:
-        return a.name.localeCompare(b.name) * dir
-    }
-  })
+  const showActionMessage = (text: string) => {
+    setActionMessage(text)
+    window.setTimeout(() => setActionMessage(''), 3200)
+  }
+
+  const allUsers = users || []
+
+  const filteredUsers = useMemo(() => {
+    return allUsers.filter((user) => {
+      const name = user.name || ''
+      const email = user.email || ''
+      const matchesSearch =
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        email.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesRole = roleFilter === 'all' || user.role === roleFilter
+      return matchesSearch && matchesRole
+    })
+  }, [allUsers, roleFilter, searchTerm])
+
+  const sortedUsers = useMemo(() => {
+    return [...filteredUsers].sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1
+      switch (sortKey) {
+        case 'email':
+          return a.email.localeCompare(b.email) * dir
+        case 'role':
+          return a.role.localeCompare(b.role) * dir
+        case 'createdAt':
+          return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir
+        default:
+          return a.name.localeCompare(b.name) * dir
+      }
+    })
+  }, [filteredUsers, sortDir, sortKey])
 
   const toggleSort = (key: typeof sortKey) => {
     if (sortKey === key) {
@@ -60,6 +91,59 @@ const AdminUsersPage = () => {
       setSortKey(key)
       setSortDir('asc')
     }
+  }
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user)
+    setEditForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    })
+  }
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return
+
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      showActionMessage('Name and email are required.')
+      return
+    }
+
+    try {
+      await updateUser.mutateAsync({
+        userId: editingUser.id,
+        data: {
+          name: editForm.name.trim(),
+          email: editForm.email.trim(),
+          role: editForm.role,
+        },
+      })
+      setEditingUser(null)
+      showActionMessage('User updated.')
+    } catch (error) {
+      showActionMessage(getErrorMessage(error))
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return
+
+    try {
+      await deleteUser.mutateAsync(deletingUser.id)
+      setDeletingUser(null)
+      if (viewingUser?.id === deletingUser.id) {
+        setViewingUser(null)
+      }
+      showActionMessage('User deleted.')
+    } catch (error) {
+      showActionMessage(getErrorMessage(error))
+    }
+  }
+
+  const handleOrderClick = (orderId: string) => {
+    setViewingUser(null)
+    navigate(`/admin/orders?orderId=${encodeURIComponent(orderId)}`)
   }
 
   const densityPad = density === 'compact' ? 'py-2' : 'py-3'
@@ -94,12 +178,11 @@ const AdminUsersPage = () => {
   }
 
   const totalUsers = allUsers.length
-  const adminUsers = allUsers.filter(u => u.role === 'ADMIN').length
-  const regularUsers = allUsers.filter(u => u.role === 'USER').length
+  const adminUsers = allUsers.filter((u) => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length
+  const regularUsers = allUsers.filter((u) => u.role === 'USER').length
 
   return (
     <div className="p-8 dark:text-slate-100">
-      {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -109,7 +192,6 @@ const AdminUsersPage = () => {
           </div>
         </div>
 
-        {/* Search and Filter */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_200px_auto]">
           <div className="flex-1">
             <input
@@ -120,7 +202,7 @@ const AdminUsersPage = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
             />
           </div>
-          <select 
+          <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
@@ -128,6 +210,7 @@ const AdminUsersPage = () => {
             <option value="all">All Roles</option>
             <option value="USER">Users</option>
             <option value="ADMIN">Admins</option>
+            <option value="SUPER_ADMIN">Super Admins</option>
           </select>
 
           <div className="flex items-center gap-2">
@@ -160,7 +243,12 @@ const AdminUsersPage = () => {
         </div>
       </div>
 
-      {/* Stats */}
+      {actionMessage && (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+          {actionMessage}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 xl:grid-cols-3">
         <div className="bg-white p-4 rounded-2xl border dark:bg-slate-900 dark:border-slate-800">
           <p className="text-sm text-gray-600 dark:text-slate-400">Total Users</p>
@@ -176,7 +264,6 @@ const AdminUsersPage = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl border overflow-hidden dark:bg-slate-900 dark:border-slate-800">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -216,9 +303,11 @@ const AdminUsersPage = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200 dark:bg-slate-900 dark:divide-slate-800">
               {sortedUsers.map((user, index) => {
-                const initial = user.name.charAt(0).toUpperCase()
-                const bgColor = user.role === 'ADMIN' ? 'bg-purple-500' : 'bg-blue-500'
-                
+                const initial = user.name?.charAt(0).toUpperCase() || '?'
+                const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN'
+                const bgColor = isAdmin ? 'bg-purple-500' : 'bg-blue-500'
+                const isSelf = user.id === currentUser?.id
+
                 return (
                   <motion.tr
                     key={user.id}
@@ -247,7 +336,7 @@ const AdminUsersPage = () => {
                     <td className={`px-6 ${densityPad} whitespace-nowrap`}>
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.role === 'ADMIN'
+                          isAdmin
                             ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200'
                             : 'bg-blue-100 text-blue-800 dark:bg-amber-900/30 dark:text-amber-200'
                         }`}
@@ -263,6 +352,7 @@ const AdminUsersPage = () => {
                     <td className={`px-6 ${densityPad} whitespace-nowrap text-sm`}>
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => setViewingUser(user)}
                           className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 hover:border-amber-300 hover:text-amber-300 transition-colors dark:border-slate-800"
                           aria-label="View user"
                           title="View user"
@@ -270,11 +360,21 @@ const AdminUsersPage = () => {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => openEditModal(user)}
                           className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 hover:border-amber-300 hover:text-amber-300 transition-colors dark:border-slate-800"
                           aria-label="Edit user"
                           title="Edit user"
                         >
                           <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingUser(user)}
+                          disabled={isSelf}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 hover:border-rose-400 hover:text-rose-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800"
+                          aria-label="Delete user"
+                          title={isSelf ? 'Cannot delete your own account' : 'Delete user'}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -285,24 +385,193 @@ const AdminUsersPage = () => {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="px-6 py-4 border-t bg-gray-50 flex flex-col gap-3 md:flex-row md:items-center md:justify-between dark:bg-slate-950 dark:border-slate-800">
           <div className="text-sm text-gray-600 dark:text-slate-400">
             Showing {filteredUsers.length} of {allUsers.length} users
           </div>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border rounded hover:bg-gray-100 dark:border-slate-800 dark:hover:text-amber-300 dark:hover:border-amber-300">
-              Previous
-            </button>
-            <button className="px-3 py-1 bg-primary-600 text-white rounded dark:bg-amber-400 dark:text-slate-900">
-              1
-            </button>
-            <button className="px-3 py-1 border rounded hover:bg-gray-100 dark:border-slate-800 dark:hover:text-amber-300 dark:hover:border-amber-300">
-              Next
-            </button>
-          </div>
+          <div className="text-sm text-slate-500">Actions now support view, edit, and delete.</div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {viewingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setViewingUser(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="relative w-full max-w-2xl rounded-2xl border bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+            >
+              <button
+                onClick={() => setViewingUser(null)}
+                className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">User Overview</h2>
+              <p className="mt-1 text-sm text-slate-500">{viewingUser.name} ({viewingUser.email})</p>
+
+              {isStatsLoading ? (
+                <div className="mt-4 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div className="rounded-xl border p-3 dark:border-slate-800">
+                      <p className="text-xs text-slate-500">Orders</p>
+                      <p className="text-lg font-semibold">{userStats?.stats.totalOrders ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl border p-3 dark:border-slate-800">
+                      <p className="text-xs text-slate-500">Spent</p>
+                      <p className="text-lg font-semibold">${(userStats?.stats.totalSpent ?? 0).toFixed(2)}</p>
+                    </div>
+                    <div className="rounded-xl border p-3 dark:border-slate-800">
+                      <p className="text-xs text-slate-500">Completed</p>
+                      <p className="text-lg font-semibold">{userStats?.stats.completedOrders ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl border p-3 dark:border-slate-800">
+                      <p className="text-xs text-slate-500">Pending</p>
+                      <p className="text-lg font-semibold">{userStats?.stats.pendingOrders ?? 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Recent Orders</p>
+                    <div className="max-h-52 overflow-auto rounded-xl border dark:border-slate-800">
+                      {(userStats?.recentOrders || []).length === 0 ? (
+                        <p className="p-4 text-sm text-slate-500">No orders yet.</p>
+                      ) : (
+                        <ul className="divide-y dark:divide-slate-800">
+                          {(userStats?.recentOrders || []).map((order) => (
+                            <li key={order.id} className="p-3 text-sm">
+                              <button
+                                type="button"
+                                onClick={() => handleOrderClick(order.id)}
+                                className="w-full rounded-lg p-1 text-left transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                                title="Open in Orders Management"
+                              >
+                              <p className="font-medium text-slate-800 dark:text-slate-100">#{order.id.slice(-8)} - {order.status}</p>
+                              <p className="text-slate-500">${Number(order.totalPrice).toFixed(2)} on {new Date(order.createdAt).toLocaleDateString()}</p>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {editingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setEditingUser(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="relative w-full max-w-lg rounded-2xl border bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+            >
+              <button
+                onClick={() => setEditingUser(null)}
+                className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit User</h2>
+              <p className="mt-1 text-sm text-slate-500">Update profile fields and role.</p>
+
+              <div className="mt-4 space-y-3">
+                <input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Name"
+                  className="w-full rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+                <input
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="Email"
+                  className="w-full rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+                <select
+                  value={editForm.role}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      role: e.target.value as User['role'],
+                    }))
+                  }
+                  disabled={editingUser.id === currentUser?.id}
+                  className="w-full rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900"
+                >
+                  {roleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                {editingUser.id === currentUser?.id && (
+                  <p className="text-xs text-amber-600 dark:text-amber-300">Your own role cannot be changed.</p>
+                )}
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  onClick={() => setEditingUser(null)}
+                  className="rounded-lg border px-4 py-2 text-sm dark:border-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveUser}
+                  disabled={updateUser.isPending}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-400 dark:text-slate-900"
+                >
+                  {updateUser.isPending ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <DeleteConfirmModal
+        isOpen={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={handleDeleteUser}
+        title="Delete User"
+        message={
+          deletingUser
+            ? `Delete ${deletingUser.name} (${deletingUser.email})? This action cannot be undone.`
+            : ''
+        }
+        isLoading={deleteUser.isPending}
+      />
     </div>
   )
 }

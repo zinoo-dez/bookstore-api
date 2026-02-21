@@ -13,19 +13,25 @@ const ProfileSettingsPage = () => {
     const uploadAvatarMutation = useUploadAvatar()
 
     const [name, setName] = useState(user?.name || '')
-    const [avatarType, setAvatarType] = useState<'emoji' | 'upload'>(user?.avatarType || 'emoji')
     const [avatarValue, setAvatarValue] = useState(user?.avatarValue || 'avatar-1')
     const [selectedBg, setSelectedBg] = useState(user?.backgroundColor || 'bg-slate-100')
+    const [pronouns, setPronouns] = useState(user?.pronouns || '')
+    const [shortBio, setShortBio] = useState(user?.shortBio || '')
+    const [about, setAbout] = useState(user?.about || '')
+    const [coverImage, setCoverImage] = useState(user?.coverImage || '')
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
     const [activeTab, setActiveTab] = useState<'emoji' | 'upload'>(user?.avatarType || 'emoji')
 
     useEffect(() => {
         if (user) {
             setName(user.name)
-            setAvatarType(user.avatarType || 'emoji')
             setAvatarValue(user.avatarValue || 'avatar-1')
             setSelectedBg(user.backgroundColor || 'bg-slate-100')
             setActiveTab(user.avatarType || 'emoji')
+            setPronouns(user.pronouns || '')
+            setShortBio(user.shortBio || '')
+            setAbout(user.about || '')
+            setCoverImage(user.coverImage || '')
         }
     }, [user])
 
@@ -51,7 +57,6 @@ const ProfileSettingsPage = () => {
             // The url might be relative e.g. /uploads/avatars/file.jpg.
             // Avatar component expects a full URL or relative if handled.
             // Let's assume it works as is.
-            setAvatarType('upload')
             setAvatarValue(result.url)
             setMessage({ type: 'success', text: 'Image uploaded successfully!' })
             setTimeout(() => setMessage(null), 3000)
@@ -92,6 +97,10 @@ const ProfileSettingsPage = () => {
             avatarType: finalAvatarType,
             avatarValue: finalAvatarValue,
             backgroundColor: selectedBg,
+            pronouns,
+            shortBio,
+            about,
+            coverImage,
         }
 
         updateProfileMutation.mutate(data, {
@@ -119,19 +128,30 @@ const ProfileSettingsPage = () => {
                         <div className="lg:col-span-1">
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview</h2>
                             <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                                <Avatar
-                                    avatarType={activeTab}
-                                    avatarValue={
-                                        activeTab === 'emoji'
-                                            ? (avatarValue.includes('/') ? 'avatar-1' : avatarValue)
-                                            : avatarValue
-                                    }
-                                    backgroundColor={selectedBg}
-                                    size="xl"
-                                    className="mb-4 shadow-md"
-                                />
-                                <h3 className="text-xl font-bold text-gray-900">{name || 'Your Name'}</h3>
-                                {/* <p className="text-sm text-gray-500 mt-1">{user?.role}</p> */}
+                                <div className="w-full overflow-hidden rounded-xl border border-gray-200 bg-white">
+                                    <div
+                                        className="h-24 w-full bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 bg-cover bg-center"
+                                        style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
+                                    />
+                                    <div className="-mt-10 flex flex-col items-center px-4 pb-5">
+                                        <Avatar
+                                            avatarType={activeTab}
+                                            avatarValue={
+                                                activeTab === 'emoji'
+                                                    ? (avatarValue.includes('/') ? 'avatar-1' : avatarValue)
+                                                    : avatarValue
+                                            }
+                                            backgroundColor={selectedBg}
+                                            size="xl"
+                                            className="mb-4 shadow-md"
+                                        />
+                                        <h3 className="text-xl font-bold text-gray-900">{name || 'Your Name'}</h3>
+                                        {pronouns && <p className="mt-1 text-sm text-gray-500">{pronouns}</p>}
+                                        {shortBio && (
+                                            <p className="mt-3 text-center text-sm text-gray-600">{shortBio}</p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -265,6 +285,57 @@ const ProfileSettingsPage = () => {
                                         />
                                         <p className="mt-1 text-sm text-gray-500">2-30 characters</p>
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Pronouns</h2>
+                                        <input
+                                            type="text"
+                                            value={pronouns}
+                                            onChange={(e) => setPronouns(e.target.value)}
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-3 border"
+                                            placeholder="she/her"
+                                            maxLength={30}
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500">{pronouns.length}/30</p>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Cover Image URL</h2>
+                                        <input
+                                            type="url"
+                                            value={coverImage}
+                                            onChange={(e) => setCoverImage(e.target.value)}
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-3 border"
+                                            placeholder="https://images.example.com/cover.jpg"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900 mb-2">Short Bio</h2>
+                                    <textarea
+                                        value={shortBio}
+                                        onChange={(e) => setShortBio(e.target.value)}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-3 border"
+                                        placeholder="A short one-liner shown on your profile card."
+                                        rows={3}
+                                        maxLength={160}
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">{shortBio.length}/160</p>
+                                </div>
+
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900 mb-2">About</h2>
+                                    <textarea
+                                        value={about}
+                                        onChange={(e) => setAbout(e.target.value)}
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-3 border"
+                                        placeholder="Longer background, interests, and what you write about."
+                                        rows={6}
+                                        maxLength={4000}
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">{about.length}/4000</p>
                                 </div>
 
                                 {/* Actions */}

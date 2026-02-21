@@ -25,7 +25,7 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
             <div className="space-y-3">
                 <Skeleton className="h-6 w-28" />
                 {[0, 1, 2].map((item) => (
-                    <div key={item} className="bg-white rounded-lg border p-4">
+                    <div key={item} className="rounded-xl bg-slate-50/80 p-4 dark:bg-[#081a40]/80">
                         <div className="flex items-start gap-3">
                             <Skeleton className="h-10 w-10 rounded-full" />
                             <div className="flex-1 space-y-2">
@@ -42,7 +42,7 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
 
     if (!reviews || reviews.length === 0) {
         return (
-            <div className="text-center py-8 text-gray-500">
+            <div className="py-8 text-center text-slate-500 dark:text-slate-400">
                 <p className="text-4xl mb-2">📝</p>
                 <p>No reviews yet. Be the first to review this book!</p>
             </div>
@@ -89,7 +89,7 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
 
     const getAvatarDisplay = () => {
         return (
-            <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                 <svg
                     viewBox="0 0 24 24"
                     fill="none"
@@ -97,7 +97,7 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                     strokeWidth="1.8"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="w-5 h-5"
+                    className="h-5 w-5"
                     aria-hidden="true"
                 >
                     <path d="M20 21a8 8 0 0 0-16 0" />
@@ -135,13 +135,13 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="bg-white rounded-lg border p-4"
+                        className="border-b border-slate-200/50 py-5 last:border-b-0 dark:border-slate-700/50"
                     >
                         {editingReview?.id === review.id ? (
                             // Edit Mode
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                                         Rating
                                     </label>
                                     <div className="flex gap-2">
@@ -158,7 +158,7 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                                                     className={
                                                         star <= (hoveredRating || editRating)
                                                             ? 'text-yellow-400'
-                                                            : 'text-gray-300'
+                                                            : 'text-slate-300 dark:text-slate-600'
                                                     }
                                                 >
                                                     ★
@@ -168,14 +168,14 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                                         Comment
                                     </label>
                                     <textarea
                                         value={editComment}
                                         onChange={(e) => setEditComment(e.target.value)}
                                         rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                                        className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                                         maxLength={1000}
                                     />
                                 </div>
@@ -204,10 +204,10 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
                                             <div>
-                                                <p className="font-medium text-gray-900">{review.user.name}</p>
+                                                <p className="font-medium text-slate-900 dark:text-slate-100">{review.user.name}</p>
                                                 <div className="flex items-center gap-2">
                                                     {renderStars(review.rating)}
-                                                    <span className="text-xs text-gray-500">
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
                                                         {new Date(review.createdAt).toLocaleDateString()}
                                                     </span>
                                                 </div>
@@ -216,13 +216,13 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                                                 <div className="flex gap-2">
                                                     <button
                                                         onClick={() => handleEdit(review)}
-                                                        className="text-sm text-blue-600 hover:text-blue-800"
+                                                        className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                                                     >
                                                         Edit
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(review.id)}
-                                                        className="text-sm text-red-600 hover:text-red-800"
+                                                        className="text-sm text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
                                                     >
                                                         Delete
                                                     </button>
@@ -230,7 +230,7 @@ const ReviewsList = ({ bookId }: ReviewsListProps) => {
                                             )}
                                         </div>
                                         {review.comment && (
-                                            <p className="text-gray-700 text-sm mt-2">{review.comment}</p>
+                                            <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300">{review.comment}</p>
                                         )}
                                     </div>
                                 </div>

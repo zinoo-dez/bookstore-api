@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
 
 describe('OrdersController', () => {
   let controller: OrdersController;
@@ -15,13 +16,21 @@ describe('OrdersController', () => {
           provide: OrdersService,
           useValue: {
             create: jest.fn(),
+            validatePromo: jest.fn(),
             findAll: jest.fn(),
+            findAllForAdmin: jest.fn(),
+            listWarehouseDeliveryTasks: jest.fn(),
+            completeWarehouseDeliveryTask: jest.fn(),
             findOne: jest.fn(),
+            updateStatus: jest.fn(),
+            cancelOrder: jest.fn(),
           },
         },
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(PermissionsGuard)
       .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 
@@ -44,13 +53,25 @@ describe('OrdersController', () => {
         orderItems: [],
       };
       const req = { user: { sub: userId } };
+      const dto: any = {
+        fullName: 'A User',
+        email: 'a@b.com',
+        phone: '12345',
+        address: 'Road 1',
+        city: 'City',
+        state: 'State',
+        zipCode: '10001',
+        country: 'US',
+        paymentProvider: 'VISA',
+        paymentReceiptUrl: '/uploads/r.png',
+      };
 
       ordersService.create.mockResolvedValue(mockOrder as any);
 
-      const result = await controller.create(req);
+      const result = await controller.create(req, dto);
 
       expect(result).toEqual(mockOrder);
-      expect(ordersService.create).toHaveBeenCalledWith(userId);
+      expect(ordersService.create).toHaveBeenCalledWith(userId, dto);
     });
   });
 

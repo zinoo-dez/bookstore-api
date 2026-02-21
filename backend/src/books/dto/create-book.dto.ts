@@ -28,6 +28,16 @@ export class CreateBookDto {
   @IsString({ each: true })
   categories?: string[];
 
+  @ApiPropertyOptional({
+    description: 'Book genres',
+    example: ['Thriller', 'Adventure'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  genres?: string[];
+
   @ApiProperty({
     description: 'Book author',
     example: 'F. Scott Fitzgerald',

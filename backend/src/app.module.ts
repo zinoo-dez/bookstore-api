@@ -9,6 +9,15 @@ import { UsersModule } from './users/users.module';
 import { CartModule } from './cart/cart.module';
 import { OrdersModule } from './orders/orders.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { LibraryModule } from './library/library.module';
+import { ContactModule } from './contact/contact.module';
+import { ReadingModule } from './reading/reading.module';
+import { BlogsModule } from './blogs/blogs.module';
+import { WarehousesModule } from './warehouses/warehouses.module';
+import { StaffModule } from './staff/staff.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { InquiriesModule } from './inquiries/inquiries.module';
+import { PromotionsModule } from './promotions/promotions.module';
 
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -28,8 +37,17 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     CartModule,
     OrdersModule,
     ReviewsModule,
+    LibraryModule,
+    ContactModule,
+    ReadingModule,
+    BlogsModule,
+    WarehousesModule,
+    StaffModule,
+    NotificationsModule,
+    InquiriesModule,
+    PromotionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

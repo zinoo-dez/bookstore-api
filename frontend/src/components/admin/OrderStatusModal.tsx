@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button'
 interface OrderStatusModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (status: 'PENDING' | 'COMPLETED' | 'CANCELLED') => void
+  onSubmit: (status: 'PENDING' | 'CONFIRMED') => void
   currentStatus: string
   orderId: string
   isLoading?: boolean
@@ -19,8 +19,8 @@ const OrderStatusModal = ({
   orderId,
   isLoading,
 }: OrderStatusModalProps) => {
-  const [selectedStatus, setSelectedStatus] = useState<'PENDING' | 'COMPLETED' | 'CANCELLED'>(
-    currentStatus as any
+  const [selectedStatus, setSelectedStatus] = useState<'PENDING' | 'CONFIRMED'>(
+    currentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING'
   )
 
   const handleSubmit = () => {
@@ -90,37 +90,20 @@ const OrderStatusModal = ({
                 <input
                   type="radio"
                   name="status"
-                  value="COMPLETED"
-                  checked={selectedStatus === 'COMPLETED'}
+                  value="CONFIRMED"
+                  checked={selectedStatus === 'CONFIRMED'}
                   onChange={(e) => setSelectedStatus(e.target.value as any)}
                   className="mr-3"
                 />
                 <div className="flex-1">
-                  <div className="font-medium">Completed</div>
-                  <div className="text-sm text-gray-600 dark:text-slate-400">Order has been delivered</div>
+                  <div className="font-medium">Confirmed</div>
+                  <div className="text-sm text-gray-600 dark:text-slate-400">Finance has verified payment and sent to warehouse delivery tasks</div>
                 </div>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full dark:bg-emerald-900/40 dark:text-emerald-200">
-                  COMPLETED
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full dark:bg-blue-900/40 dark:text-blue-200">
+                  CONFIRMED
                 </span>
               </label>
 
-              <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800">
-                <input
-                  type="radio"
-                  name="status"
-                  value="CANCELLED"
-                  checked={selectedStatus === 'CANCELLED'}
-                  onChange={(e) => setSelectedStatus(e.target.value as any)}
-                  className="mr-3"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">Cancelled</div>
-                  <div className="text-sm text-gray-600 dark:text-slate-400">Order has been cancelled</div>
-                </div>
-                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full dark:bg-rose-900/40 dark:text-rose-200">
-                  CANCELLED
-                </span>
-              </label>
             </div>
 
             {/* Actions */}

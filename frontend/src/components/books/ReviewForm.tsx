@@ -18,8 +18,8 @@ const ReviewForm = ({ bookId, onSuccess }: ReviewFormProps) => {
 
     if (!user) {
         return (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <p className="text-blue-800">Please log in to write a review</p>
+            <div className="rounded-xl bg-blue-50/80 p-4 text-center dark:bg-blue-950/30">
+                <p className="text-blue-800 dark:text-blue-200">Please log in to write a review</p>
             </div>
         )
     }
@@ -51,13 +51,13 @@ const ReviewForm = ({ bookId, onSuccess }: ReviewFormProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             onSubmit={handleSubmit}
-            className="bg-white rounded-lg border p-6"
+            className="rounded-2xl border border-white/20 bg-white/60 p-6 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60"
         >
-            <h3 className="text-lg font-semibold mb-4">Write a Review</h3>
+            <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">Write a Review</h3>
 
             {/* Star Rating */}
             <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
                     Your Rating
                 </label>
                 <div className="flex gap-2">
@@ -74,7 +74,7 @@ const ReviewForm = ({ bookId, onSuccess }: ReviewFormProps) => {
                                 className={
                                     star <= (hoveredRating || rating)
                                         ? 'text-yellow-400'
-                                        : 'text-gray-300'
+                                        : 'text-slate-300 dark:text-slate-600'
                                 }
                             >
                                 ★
@@ -82,7 +82,7 @@ const ReviewForm = ({ bookId, onSuccess }: ReviewFormProps) => {
                         </button>
                     ))}
                     {rating > 0 && (
-                        <span className="ml-2 text-sm text-gray-600 self-center">
+                        <span className="ml-2 self-center text-sm text-slate-600 dark:text-slate-300">
                             {rating} star{rating !== 1 ? 's' : ''}
                         </span>
                     )}
@@ -91,7 +91,7 @@ const ReviewForm = ({ bookId, onSuccess }: ReviewFormProps) => {
 
             {/* Comment */}
             <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
                     Your Review (Optional)
                 </label>
                 <textarea
@@ -99,10 +99,10 @@ const ReviewForm = ({ bookId, onSuccess }: ReviewFormProps) => {
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Share your thoughts about this book..."
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                    className="w-full resize-none rounded-xl border border-slate-200/50 bg-white/80 px-3 py-2 text-slate-900 placeholder:text-slate-400 backdrop-blur-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-600/50 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500"
                     maxLength={1000}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {comment.length}/1000 characters
                 </p>
             </div>

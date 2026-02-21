@@ -16,12 +16,137 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum OrderStatus {
   PENDING
+  CONFIRMED
   COMPLETED
   CANCELLED
+}
+
+enum PromotionDiscountType {
+  PERCENT
+  FIXED
+}
+
+enum ContactType {
+  support
+  author
+  publisher
+  business
+  legal
+}
+
+enum ContactStatus {
+  new
+  archived
+}
+
+enum ReadingStatus {
+  TO_READ
+  READING
+  FINISHED
+}
+
+enum WarehouseAlertStatus {
+  OPEN
+  RESOLVED
+}
+
+enum PurchaseRequestStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CLOSED
+  CANCELLED
+}
+
+enum StaffStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+}
+
+enum StaffTaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+}
+
+enum StaffTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  support_reply
+  announcement
+  inquiry_update
+  system
+  blog_like
+  blog_comment
+  blog_follow
+  inquiry_created
+  inquiry_assigned
+  inquiry_escalated
+  inquiry_reply
+}
+
+enum InquiryType {
+  order
+  payment
+  legal
+  author
+  stock
+  other
+}
+
+enum InquiryStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum InquiryPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum InquirySenderType {
+  USER
+  STAFF
+}
+
+enum InquiryAuditAction {
+  CREATED
+  ASSIGNED
+  ESCALATED
+  STATUS_CHANGED
+  CLOSED
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
 }
 
 model User {
@@ -33,6 +158,10 @@ model User {
   avatarType      String?    @default("emoji")
   avatarValue     String?    @default("avatar-1")
   backgroundColor String?    @default("bg-slate-100")
+  pronouns        String?
+  shortBio        String?
+  about           String?
+  coverImage      String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   
@@ -40,8 +169,176 @@ model User {
   cart            CartItem[]
   orders          Order[]
   reviews         Review[]
+  wishlistItems   WishlistItem[]
+  favorites       FavoriteItem[]
+  readingItems    ReadingItem[]
+  readingSessions ReadingSession[]
+  blogComments    BlogComment[]
+  blogNotifications BlogNotification[]
+  notifications   Notification[]
+  createdInquiries Inquiry[]    @relation("InquiryCreatedBy")
+  inquiryAudits   InquiryAudit[] @relation("InquiryAuditPerformer")
+  inquiryQuickReplyTemplates InquiryQuickReplyTemplate[] @relation("InquiryTemplateCreator")
+  blogLikes       BlogLike[]
+  authoredPosts   AuthorBlog[]      @relation("BlogAuthor")
+  postFollows     AuthorFollow[]    @relation("BlogFollower")
+  postFollowers   AuthorFollow[]    @relation("BlogFollowing")
+  staffProfile    StaffProfile?
+  staffAuditLogs  StaffAuditLog[] @relation("StaffAuditActor")
+  passwordResetTokens PasswordResetToken[]
+  createdPurchaseRequests PurchaseRequest[] @relation("PurchaseRequestCreator")
+  approvedPurchaseRequests PurchaseRequest[] @relation("PurchaseRequestApprover")
+  createdPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderCreator")
+  approvedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderApprover")
 
   @@index([email])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  staffProfiles StaffProfile[]
+  staffRoles    StaffRole[]
+  inquiries     Inquiry[]
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model StaffProfile {
+  id           String      @id @default(uuid())
+  userId       String      @unique
+  departmentId String
+  employeeCode String      @unique
+  title        String
+  managerId    String?
+  status       StaffStatus @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  manager      StaffProfile?  @relation("StaffManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports StaffProfile[] @relation("StaffManager")
+  assignments  StaffAssignment[]
+  tasks        StaffTask[]
+  assignedInquiries Inquiry[] @relation("InquiryAssignedStaff")
+  inquiryInternalNotes InquiryInternalNote[]
+
+  @@index([departmentId])
+  @@index([status])
+  @@index([managerId])
+}
+
+model StaffRole {
+  id           String   @id @default(uuid())
+  code         String?  @unique
+  name         String
+  departmentId String?
+  isSystem     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department  Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  assignments StaffAssignment[]
+  permissions StaffRolePermission[]
+
+  @@unique([name, departmentId])
+  @@index([code])
+  @@index([name])
+}
+
+model StaffPermission {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles StaffRolePermission[]
+}
+
+model StaffRolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       StaffRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission StaffPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model StaffAssignment {
+  id            String   @id @default(uuid())
+  staffId        String
+  roleId         String
+  effectiveFrom  DateTime @default(now())
+  effectiveTo    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  staff StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  role  StaffRole    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([roleId])
+  @@index([effectiveFrom])
+}
+
+model StaffTask {
+  id          String            @id @default(uuid())
+  staffId     String
+  type        String
+  status      StaffTaskStatus   @default(TODO)
+  priority    StaffTaskPriority @default(MEDIUM)
+  metadata    Json?
+  createdAt   DateTime          @default(now())
+  completedAt DateTime?
+
+  staff StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model StaffAuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  action      String
+  resource    String
+  resourceId  String?
+  changes     Json?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("StaffAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([resource])
+  @@index([createdAt])
 }
 
 model Book {
@@ -54,6 +351,7 @@ model Book {
   stock       Int         @default(0)
   coverImage  String?     // URL to book cover image
   categories  String[]    // Book categories/genres (array)
+  genres      String[]    @default([]) // Book genres (array)
   rating      Float?      @default(0) // Average rating (0-5)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -62,10 +360,48 @@ model Book {
   cartItems   CartItem[]
   orderItems  OrderItem[]
   reviews     Review[]
+  wishlistedBy WishlistItem[]
+  favoritedBy FavoriteItem[]
+  readingItems ReadingItem[]
+  readingSessions ReadingSession[]
+  warehouseStocks WarehouseStock[]
+  warehouseAlerts WarehouseAlert[]
+  transferItems WarehouseTransfer[]
+  purchaseRequests PurchaseRequest[]
+  purchaseOrderItems PurchaseOrderItem[]
+  blogReferences BlogPostBookReference[]
 
   @@index([title])
   @@index([author])
   @@index([isbn])
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
+}
+
+model FavoriteItem {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
 }
 
 model Review {
@@ -106,7 +442,20 @@ model Order {
   id         String      @id @default(uuid())
   userId     String
   status     OrderStatus @default(PENDING)
+  subtotalPrice Decimal   @db.Decimal(10, 2)
+  discountAmount Decimal  @default(0) @db.Decimal(10, 2)
+  promoCode   String?
   totalPrice Decimal     @db.Decimal(10, 2)
+  shippingFullName String?
+  shippingEmail    String?
+  shippingPhone    String?
+  shippingAddress  String?
+  shippingCity     String?
+  shippingState    String?
+  shippingZipCode  String?
+  shippingCountry  String?
+  paymentProvider  String?
+  paymentReceiptUrl String?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
@@ -115,6 +464,31 @@ model Order {
   orderItems OrderItem[]
 
   @@index([userId])
+  @@index([promoCode])
+  @@index([shippingCity])
+  @@index([shippingState])
+  @@index([shippingCountry])
+}
+
+model PromotionCode {
+  id                String                @id @default(uuid())
+  code              String                @unique
+  name              String
+  description       String?
+  discountType      PromotionDiscountType
+  discountValue     Decimal               @db.Decimal(10, 2)
+  minSubtotal       Decimal               @default(0) @db.Decimal(10, 2)
+  maxDiscountAmount Decimal?              @db.Decimal(10, 2)
+  startsAt          DateTime?
+  endsAt            DateTime?
+  maxRedemptions    Int?
+  redeemedCount     Int                   @default(0)
+  isActive          Boolean               @default(true)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([isActive])
+  @@index([startsAt, endsAt])
 }
 
 model OrderItem {
@@ -130,4 +504,476 @@ model OrderItem {
   book  Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+}
+
+model ContactMessage {
+  id        String        @id @default(uuid())
+  type      ContactType
+  name      String
+  email     String
+  subject   String?
+  message   String
+  metadata  Json?
+  status    ContactStatus @default(new)
+  createdAt DateTime      @default(now())
+
+  @@index([type])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model ContactNotification {
+  id          String   @id @default(uuid())
+  type        ContactType
+  recipient   String
+  subject     String
+  body        String
+  messageId   String?
+  createdAt   DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ReadingItem {
+  id            String        @id @default(uuid())
+  userId        String
+  bookId        String
+  status        ReadingStatus @default(TO_READ)
+  currentPage   Int           @default(0)
+  totalPages    Int?
+  dailyGoalPages Int?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  sessions ReadingSession[]
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([status])
+  @@index([updatedAt])
+}
+
+model ReadingSession {
+  id            String   @id @default(uuid())
+  userId        String
+  bookId        String
+  readingItemId String?
+  pagesRead     Int
+  sessionDate   DateTime @default(now())
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book        Book         @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  readingItem ReadingItem? @relation(fields: [readingItemId], references: [id], onDelete: SetNull)
+
+  @@index([userId, sessionDate])
+  @@index([bookId, sessionDate])
+  @@index([readingItemId])
+}
+
+model AuthorBlog {
+  id        String   @id @default(uuid())
+  authorId  String
+  title     String
+  subtitle  String?
+  content   String   @db.Text
+  coverImage String?
+  readingTime Int     @default(1)
+  status    BlogPostStatus @default(DRAFT)
+  viewsCount Int     @default(0)
+  likesCount Int     @default(0)
+  commentsCount Int  @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments BlogComment[]
+  likes    BlogLike[]
+  tags     BlogPostTag[]
+  bookReferences BlogPostBookReference[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([viewsCount])
+  @@index([likesCount])
+}
+
+model AuthorFollow {
+  id         String   @id @default(uuid())
+  followerId String
+  authorId   String
+  createdAt  DateTime @default(now())
+
+  follower User @relation("BlogFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  author   User @relation("BlogFollowing", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, authorId])
+  @@index([followerId])
+  @@index([authorId])
+}
+
+model BlogComment {
+  id        String   @id @default(uuid())
+  blogId    String
+  userId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blog AuthorBlog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([blogId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model BlogLike {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post AuthorBlog @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model BlogTag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  posts BlogPostTag[]
+
+  @@index([name])
+}
+
+model BlogPostTag {
+  postId String
+  tagId  String
+
+  post AuthorBlog @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  BlogTag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+}
+
+model BlogPostBookReference {
+  postId String
+  bookId String
+
+  post AuthorBlog @relation(fields: [postId], references: [id], onDelete: Cascade)
+  book Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@id([postId, bookId])
+  @@index([bookId])
+}
+
+model BlogNotification {
+  id         String   @id @default(uuid())
+  userId     String
+  blogId     String
+  authorId   String
+  message    String
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model Inquiry {
+  id                String         @id @default(uuid())
+  type              InquiryType
+  departmentId      String
+  status            InquiryStatus  @default(OPEN)
+  priority          InquiryPriority @default(MEDIUM)
+  createdByUserId   String
+  assignedToStaffId String?
+  subject           String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  department      Department   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  createdBy       User         @relation("InquiryCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  assignedToStaff StaffProfile? @relation("InquiryAssignedStaff", fields: [assignedToStaffId], references: [id], onDelete: SetNull)
+  messages        InquiryMessage[]
+  internalNotes   InquiryInternalNote[]
+  audits          InquiryAudit[]
+
+  @@index([departmentId])
+  @@index([status])
+  @@index([createdByUserId])
+  @@index([assignedToStaffId])
+  @@index([createdAt])
+}
+
+model InquiryMessage {
+  id         String            @id @default(uuid())
+  inquiryId  String
+  senderId   String
+  senderType InquirySenderType
+  message    String
+  createdAt  DateTime          @default(now())
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId])
+  @@index([createdAt])
+}
+
+model InquiryInternalNote {
+  id        String   @id @default(uuid())
+  inquiryId String
+  staffId   String
+  note      String
+  createdAt DateTime @default(now())
+
+  inquiry Inquiry     @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  staff   StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId])
+  @@index([staffId])
+  @@index([createdAt])
+}
+
+model InquiryAudit {
+  id                String            @id @default(uuid())
+  inquiryId         String
+  action            InquiryAuditAction
+  fromDepartmentId  String?
+  toDepartmentId    String?
+  performedByUserId String
+  createdAt         DateTime          @default(now())
+
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  performer User    @relation("InquiryAuditPerformer", fields: [performedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([inquiryId])
+  @@index([createdAt])
+  @@index([performedByUserId])
+}
+
+model InquiryQuickReplyTemplate {
+  id              String      @id @default(uuid())
+  title           String
+  body            String
+  type            InquiryType?
+  tags            String[]    @default([])
+  createdByUserId String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  createdBy User? @relation("InquiryTemplateCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([createdByUserId])
+  @@index([createdAt])
+}
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  city      String
+  state     String
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stocks         WarehouseStock[]
+  outboundTransfers WarehouseTransfer[] @relation("OutboundWarehouse")
+  inboundTransfers  WarehouseTransfer[] @relation("InboundWarehouse")
+  alerts         WarehouseAlert[]
+  purchaseRequests PurchaseRequest[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([name])
+  @@index([state])
+  @@index([isActive])
+}
+
+model WarehouseStock {
+  id               String   @id @default(uuid())
+  warehouseId      String
+  bookId           String
+  stock            Int      @default(0)
+  lowStockThreshold Int     @default(5)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  book      Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, bookId])
+  @@index([warehouseId])
+  @@index([bookId])
+}
+
+model WarehouseTransfer {
+  id               String   @id @default(uuid())
+  bookId           String
+  fromWarehouseId  String
+  toWarehouseId    String
+  quantity         Int
+  note             String?
+  createdByUserId  String?
+  createdAt        DateTime @default(now())
+
+  book          Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  fromWarehouse Warehouse @relation("OutboundWarehouse", fields: [fromWarehouseId], references: [id], onDelete: Cascade)
+  toWarehouse   Warehouse @relation("InboundWarehouse", fields: [toWarehouseId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([createdAt])
+}
+
+model WarehouseAlert {
+  id          String               @id @default(uuid())
+  warehouseId String
+  bookId      String
+  stock       Int
+  threshold   Int
+  status      WarehouseAlertStatus @default(OPEN)
+  createdAt   DateTime             @default(now())
+  resolvedAt  DateTime?
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  book      Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([warehouseId])
+  @@index([bookId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PurchaseRequest {
+  id                String                @id @default(uuid())
+  bookId            String
+  warehouseId       String
+  requestedByUserId String
+  quantity          Int
+  estimatedCost     Decimal?              @db.Decimal(10, 2)
+  approvedQuantity  Int?
+  approvedCost      Decimal?              @db.Decimal(10, 2)
+  reviewNote        String?
+  status            PurchaseRequestStatus @default(PENDING_APPROVAL)
+  approvedByUserId  String?
+  purchaseOrderId   String?               @unique
+  approvedAt        DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  book            Book      @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  warehouse       Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  requestedByUser User      @relation("PurchaseRequestCreator", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  approvedByUser  User?     @relation("PurchaseRequestApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([warehouseId])
+  @@index([bookId])
+  @@index([requestedByUserId])
+  @@index([createdAt])
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model PurchaseOrder {
+  id               String              @id @default(uuid())
+  vendorId         String
+  warehouseId      String
+  status           PurchaseOrderStatus @default(DRAFT)
+  createdByUserId  String
+  approvedByUserId String?
+  expectedAt       DateTime?
+  sentAt           DateTime?
+  receivedAt       DateTime?
+  notes            String?
+  totalCost        Decimal?            @db.Decimal(10, 2)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  vendor         Vendor              @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  warehouse      Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  createdByUser  User                @relation("PurchaseOrderCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  approvedByUser User?               @relation("PurchaseOrderApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  request        PurchaseRequest?
+  items          PurchaseOrderItem[]
+
+  @@index([status])
+  @@index([vendorId])
+  @@index([warehouseId])
+  @@index([createdByUserId])
+  @@index([createdAt])
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(uuid())
+  purchaseOrderId String
+  bookId          String
+  orderedQuantity Int
+  receivedQuantity Int     @default(0)
+  unitCost        Decimal? @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  book          Book          @relation(fields: [bookId], references: [id], onDelete: Restrict)
+
+  @@unique([purchaseOrderId, bookId])
+  @@index([bookId])
 }
