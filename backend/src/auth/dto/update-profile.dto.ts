@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUrl, MinLength, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
@@ -78,4 +78,74 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(2048)
   coverImage?: string;
+
+  @ApiPropertyOptional({
+    description: 'Allow others to see your email on public profile',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  showEmail?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Allow others to see followers count',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  showFollowers?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Allow others to see following count',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  showFollowing?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Allow others to see your saved books section',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  showFavorites?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Allow others to see posts you liked',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  showLikedPosts?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Enable author support modal on blog pages',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  supportEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Hosted support payment URL (BuyMeACoffee/Ko-fi/Stripe link)',
+    example: 'https://buymeacoffee.com/authorname',
+    maxLength: 2048,
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_protocol: true })
+  @MaxLength(2048)
+  supportUrl?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional QR image URL for support payments',
+    example: 'https://images.example.com/author-qr.png',
+    maxLength: 2048,
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_protocol: true })
+  @MaxLength(2048)
+  supportQrImage?: string;
 }

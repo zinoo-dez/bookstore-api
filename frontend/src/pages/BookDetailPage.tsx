@@ -98,6 +98,7 @@ const BookDetailPage = () => {
   const [localFavorited, setLocalFavorited] = useState(false)
   const [shareToast, setShareToast] = useState('')
   const [cartMessage, setCartMessage] = useState('')
+  const [purchaseFormat, setPurchaseFormat] = useState<'PHYSICAL' | 'EBOOK'>('PHYSICAL')
 
   const trackedItem = trackedItems[0]
   const isTracked = Boolean(trackedItem)
@@ -131,6 +132,17 @@ const BookDetailPage = () => {
   }, [trackedItem])
 
   useEffect(() => {
+    if (!book) return
+    if (book.stock > 0) {
+      setPurchaseFormat('PHYSICAL')
+      return
+    }
+    if (book.isDigital && book.ebookFilePath) {
+      setPurchaseFormat('EBOOK')
+    }
+  }, [book])
+
+  useEffect(() => {
     const allLists = getLibraryLists().map((item) => item.name)
     setLibraryLists(allLists)
   }, [])
@@ -153,11 +165,11 @@ const BookDetailPage = () => {
 
   const primaryGenre = genreTags[0]
   const { data: authorBooks } = useBooks(
-    { author: book?.author, limit: 8 },
+    { author: book?.author, limit: 8, status: 'active' },
     { enabled: Boolean(book?.author) }
   )
   const { data: genreBooks } = useBooks(
-    { genre: primaryGenre, limit: 8 },
+    { genre: primaryGenre, limit: 8, status: 'active' },
     { enabled: Boolean(primaryGenre) }
   )
 
@@ -258,13 +270,21 @@ const BookDetailPage = () => {
 
   const handleAddToCart = async () => {
     if (!book || !ensureAuth()) return
-    if (book.stock <= 0) {
+    if (purchaseFormat === 'PHYSICAL' && book.stock <= 0) {
       setCartMessage('This book is out of stock.')
       return
     }
+    if (purchaseFormat === 'EBOOK' && (!book.isDigital || !book.ebookFilePath)) {
+      setCartMessage('eBook format is not available for this title.')
+      return
+    }
     try {
-      await addToCart.mutateAsync({ bookId: book.id, quantity: 1 })
-      setCartMessage('Added to cart.')
+      await addToCart.mutateAsync({
+        bookId: book.id,
+        quantity: 1,
+        format: purchaseFormat,
+      })
+      setCartMessage(`Added ${purchaseFormat === 'EBOOK' ? 'eBook' : 'physical copy'} to cart.`)
     } catch (error) {
       setCartMessage(getErrorMessage(error))
     }
@@ -417,7 +437,7 @@ const BookDetailPage = () => {
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/85 via-slate-100/80 to-slate-100 dark:from-[#0b111b]/85 dark:via-[#171017]/80 dark:to-[#0c0e12]" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-8 sm:px-6 lg:px-8">
           <nav className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300/75">
             <Link to="/" className="hover:text-slate-900 dark:hover:text-white">Home</Link>
             <span className="mx-2 text-slate-400 dark:text-slate-500">/</span>
@@ -451,7 +471,7 @@ const BookDetailPage = () => {
             </div>
           )}
 
-          <section className="rounded-[2rem] border border-white/20 bg-white/40 p-6 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40 lg:p-8">
+          <section className="rounded-[2rem] border border-white/20 bg-white/40 p-6 shadow-[0_14px_36px_-26px_rgba(15,23,42,0.34)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40 dark:shadow-[0_18px_42px_-30px_rgba(2,6,23,0.78)] lg:p-8">
             <div className="grid items-start gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
               <div className="mx-auto w-full max-w-[320px] rounded-2xl bg-gradient-to-br from-white/60 to-white/40 p-3 shadow-lg backdrop-blur-sm dark:from-slate-800/40 dark:to-slate-900/40">
                 <div className="relative aspect-[2/3] overflow-hidden rounded-xl shadow-md">
@@ -506,19 +526,57 @@ const BookDetailPage = () => {
                 )}
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
+                  {(book.stock > 0 || (book.isDigital && book.ebookFilePath)) && (
+                    <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold uppercase tracking-[0.12em] dark:border-white/10 dark:bg-white/10">
+                      {book.stock > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setPurchaseFormat('PHYSICAL')}
+                          className={cn(
+                            'rounded-lg px-3 py-2 transition',
+                            purchaseFormat === 'PHYSICAL'
+                              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                              : 'text-slate-600 dark:text-slate-300',
+                          )}
+                        >
+                          Physical ${Number(book.price).toFixed(2)}
+                        </button>
+                      )}
+                      {book.isDigital && book.ebookFilePath && (
+                        <button
+                          type="button"
+                          onClick={() => setPurchaseFormat('EBOOK')}
+                          className={cn(
+                            'rounded-lg px-3 py-2 transition',
+                            purchaseFormat === 'EBOOK'
+                              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                              : 'text-slate-600 dark:text-slate-300',
+                          )}
+                        >
+                          eBook ${Number(book.ebookPrice ?? book.price).toFixed(2)}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => void handleAddToCart()}
-                    disabled={book.stock <= 0 || addToCart.isPending}
+                    disabled={
+                      addToCart.isPending
+                      || (purchaseFormat === 'PHYSICAL' && book.stock <= 0)
+                      || (purchaseFormat === 'EBOOK' && (!book.isDigital || !book.ebookFilePath))
+                    }
                     className={cn(
                       'inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] transition',
-                      book.stock <= 0
+                      (purchaseFormat === 'PHYSICAL' && book.stock <= 0)
+                      || (purchaseFormat === 'EBOOK' && (!book.isDigital || !book.ebookFilePath))
                         ? 'border border-slate-200/50 bg-slate-100/70 text-slate-400 backdrop-blur-sm dark:border-white/10 dark:bg-white/10 dark:text-slate-500'
                         : 'border border-white/30 bg-white/70 text-slate-700 shadow-md backdrop-blur-sm hover:-translate-y-0.5 hover:shadow-lg dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'
                     )}
                   >
                     <ShoppingBag className="h-4 w-4" />
-                    {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
+                    {addToCart.isPending ? 'Adding...' : `Add ${purchaseFormat === 'EBOOK' ? 'eBook' : 'to Cart'}`}
                   </button>
                   <button
                     type="button"
@@ -648,7 +706,7 @@ const BookDetailPage = () => {
             </section>
           )}
 
-          <section ref={reviewsRef} className="mt-10 rounded-3xl border border-white/20 bg-white/40 p-8 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40">
+          <section ref={reviewsRef} className="mt-10 rounded-3xl border border-white/20 bg-white/40 p-8 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.3)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40 dark:shadow-[0_16px_40px_-30px_rgba(2,6,23,0.76)]">
             <div className="grid gap-8 xl:grid-cols-[420px_minmax(0,1fr)]">
               <section className="xl:border-r xl:border-slate-200/30 xl:pr-8 dark:xl:border-white/10">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Rating Summary</p>
@@ -683,7 +741,7 @@ const BookDetailPage = () => {
             </div>
           </section>
 
-          <section className="mt-6 rounded-3xl border border-white/20 bg-white/40 p-8 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40">
+          <section className="mt-6 rounded-3xl border border-white/20 bg-white/40 p-8 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.3)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/40 dark:shadow-[0_16px_40px_-30px_rgba(2,6,23,0.76)]">
             <p className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Reader Reviews</p>
             <div>
               <ReviewsList bookId={book.id} />
@@ -691,8 +749,6 @@ const BookDetailPage = () => {
           </section>
         </div>
       </div>
-      <div className="pointer-events-none h-20 bg-gradient-to-b from-transparent to-[#0f1726]/45 dark:to-[#0f1726]/65" />
-
       {optionsOpen && (
         <>
           <button

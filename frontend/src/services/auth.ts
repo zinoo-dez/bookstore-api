@@ -12,12 +12,14 @@ import {
 import { useAuthStore } from '@/store/auth.store'
 import { useCartStore } from '@/store/cart.store'
 import { jwtDecode } from 'jwt-decode'
-import { canAccessAdmin } from '@/lib/permissions'
+import { canAccessAdmin, canAccessCS } from '@/lib/permissions'
 
 interface JwtPayload {
   sub: string
   email: string
   role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+  isStaff?: boolean
+  staffStatus?: 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE' | null
   name?: string
   permissions?: string[]
   staffRoles?: Array<{
@@ -30,6 +32,8 @@ interface JwtPayload {
   staffTitle?: string | null
   staffDepartmentName?: string | null
   staffDepartmentCode?: string | null
+  staffProfileId?: string | null
+  staffEmployeeCode?: string | null
   avatarType?: 'emoji' | 'upload'
   avatarValue?: string
   backgroundColor?: string
@@ -37,6 +41,14 @@ interface JwtPayload {
   shortBio?: string | null
   about?: string | null
   coverImage?: string | null
+  showEmail?: boolean
+  showFollowers?: boolean
+  showFollowing?: boolean
+  showFavorites?: boolean
+  showLikedPosts?: boolean
+  supportEnabled?: boolean
+  supportUrl?: string | null
+  supportQrImage?: string | null
   iat: number
   exp: number
 }
@@ -63,6 +75,8 @@ export const useLogin = () => {
           email: decoded.email,
           name: decoded.name || decoded.email.split('@')[0],
           role: decoded.role,
+          isStaff: decoded.isStaff ?? false,
+          staffStatus: decoded.staffStatus ?? null,
           permissions: decoded.permissions || [],
           staffRoles: decoded.staffRoles || [],
           primaryStaffRoleName: decoded.primaryStaffRoleName || null,
@@ -70,6 +84,8 @@ export const useLogin = () => {
           staffTitle: decoded.staffTitle || null,
           staffDepartmentName: decoded.staffDepartmentName || null,
           staffDepartmentCode: decoded.staffDepartmentCode || null,
+          staffProfileId: decoded.staffProfileId || null,
+          staffEmployeeCode: decoded.staffEmployeeCode || null,
           avatarType: decoded.avatarType || 'emoji',
           avatarValue: decoded.avatarValue,
           backgroundColor: decoded.backgroundColor,
@@ -77,21 +93,44 @@ export const useLogin = () => {
           shortBio: decoded.shortBio || null,
           about: decoded.about || null,
           coverImage: decoded.coverImage || null,
+          showEmail: decoded.showEmail ?? false,
+          showFollowers: decoded.showFollowers ?? true,
+          showFollowing: decoded.showFollowing ?? true,
+          showFavorites: decoded.showFavorites ?? false,
+          showLikedPosts: decoded.showLikedPosts ?? false,
+          supportEnabled: decoded.supportEnabled ?? false,
+          supportUrl: decoded.supportUrl ?? null,
+          supportQrImage: decoded.supportQrImage ?? null,
           createdAt: new Date().toISOString(),
         }
         login(user, data.access_token)
         queryClient.invalidateQueries({ queryKey: ['user'] })
 
         const hasAdminAccess = canAccessAdmin(decoded.role, decoded.permissions || [])
+        const hasCSAccess = canAccessCS(decoded.role, decoded.permissions || [])
+        const hasStaffPortalAccess = hasAdminAccess || hasCSAccess
+        const isStaff = decoded.isStaff ?? false
+        const staffPortalPath =
+          decoded.role === 'ADMIN' || decoded.role === 'SUPER_ADMIN'
+            ? '/admin'
+            : hasCSAccess
+              ? '/cs'
+              : '/admin'
 
-        if (decoded.role === 'USER' && hasAdminAccess) {
+        if (isStaff || decoded.role !== 'USER') {
+          setPortalMode('staff')
+          navigate(staffPortalPath)
+          return
+        }
+
+        if (decoded.role === 'USER' && hasAdminAccess && !hasCSAccess) {
           setPortalMode(null)
           navigate('/portal-select')
           return
         }
 
-        setPortalMode(hasAdminAccess ? 'staff' : 'buyer')
-        navigate(hasAdminAccess ? '/admin' : '/')
+        setPortalMode(hasStaffPortalAccess ? 'staff' : 'buyer')
+        navigate(hasStaffPortalAccess ? staffPortalPath : '/')
       } catch (error) {
         throw new Error('Invalid token received')
       }
@@ -166,6 +205,14 @@ export type UpdateProfileData = {
   shortBio?: string
   about?: string
   coverImage?: string
+  showEmail?: boolean
+  showFollowers?: boolean
+  showFollowing?: boolean
+  showFavorites?: boolean
+  showLikedPosts?: boolean
+  supportEnabled?: boolean
+  supportUrl?: string
+  supportQrImage?: string
 }
 
 export const useUploadAvatar = () => {
@@ -210,6 +257,10 @@ export const useUpdateProfile = () => {
         staffTitle: currentUser?.staffTitle ?? null,
         staffDepartmentName: currentUser?.staffDepartmentName ?? null,
         staffDepartmentCode: currentUser?.staffDepartmentCode ?? null,
+        staffProfileId: currentUser?.staffProfileId ?? null,
+        staffEmployeeCode: currentUser?.staffEmployeeCode ?? null,
+        isStaff: currentUser?.isStaff ?? false,
+        staffStatus: currentUser?.staffStatus ?? null,
       }
       updateUser(mergedUser)
       queryClient.setQueryData(['user'], mergedUser)

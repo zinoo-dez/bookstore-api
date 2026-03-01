@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Patch,
@@ -50,6 +51,22 @@ export class UsersController {
     @Request() req: { user: { sub: string; role?: string } },
   ) {
     return this.usersService.updateUser(id, body, {
+      userId: req.user.sub,
+      role: req.user.role,
+    });
+  }
+
+  @Patch(':id/status')
+  setUserActiveStatus(
+    @Param('id') id: string,
+    @Body() body: { isActive: boolean },
+    @Request() req: { user: { sub: string; role?: string } },
+  ) {
+    if (typeof body?.isActive !== 'boolean') {
+      throw new BadRequestException('isActive boolean is required');
+    }
+
+    return this.usersService.setUserActiveStatus(id, body.isActive, {
       userId: req.user.sub,
       role: req.user.role,
     });

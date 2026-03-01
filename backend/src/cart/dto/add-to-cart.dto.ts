@@ -1,5 +1,7 @@
 import { IsString, IsNotEmpty, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { BookPurchaseFormat } from '@prisma/client';
+import { IsEnum, IsOptional } from 'class-validator';
 
 export class AddToCartDto {
   @ApiProperty({
@@ -18,4 +20,14 @@ export class AddToCartDto {
   @IsNumber()
   @Min(1)
   quantity!: number;
+
+  @ApiProperty({
+    description: 'Purchase format for the cart item',
+    enum: BookPurchaseFormat,
+    required: false,
+    default: BookPurchaseFormat.PHYSICAL,
+  })
+  @IsOptional()
+  @IsEnum(BookPurchaseFormat)
+  format?: BookPurchaseFormat;
 }

@@ -96,10 +96,10 @@ const FilterContent = ({
 }: FilterContentProps) => (
     <div className="space-y-4">
         {/* Search Section */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/65">
+        <div className="overflow-hidden rounded-2xl border border-gray-300/70 bg-slate-200/70 dark:border-slate-700/60 dark:bg-gray-800 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.06)]">
             <button
                 onClick={() => toggleSection('search')}
-                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
+                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-slate-200/70 transition-colors dark:hover:bg-slate-800/45"
             >
                 <div className="flex items-center gap-2.5">
                     <span className="text-lg">🔍</span>
@@ -125,25 +125,25 @@ const FilterContent = ({
                     >
                         <div className="px-5 pb-5 space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Book Title</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-400">Book Title</label>
                                 <div className="relative group">
                                     <input
                                         type="text"
                                         placeholder="Atomic Habits..."
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all group-hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:group-hover:bg-slate-800"
+                                        className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all group-hover:bg-white dark:bg-slate-900/55 dark:border-slate-700/70 dark:text-slate-100 dark:placeholder-slate-500 dark:group-hover:bg-slate-900/75"
                                     />
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Author</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-400">Author</label>
                                 <input
                                     type="text"
                                     placeholder="James Clear..."
                                     value={author}
                                     onChange={(e) => setAuthor(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-800"
+                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 text-sm transition-all hover:bg-white dark:bg-slate-900/55 dark:border-slate-700/70 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-900/75"
                                 />
                             </div>
                         </div>
@@ -153,10 +153,10 @@ const FilterContent = ({
         </div>
 
         {/* Filters Section */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/65">
+        <div className="overflow-hidden rounded-2xl border border-gray-300/70 bg-slate-200/70 dark:border-slate-700/60 dark:bg-gray-800 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.06)]">
             <button
                 onClick={() => toggleSection('filters')}
-                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
+                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-slate-200/70 transition-colors dark:hover:bg-slate-800/45"
             >
                 <div className="flex items-center gap-2.5">
                     <span className="text-lg">🎛</span>
@@ -183,11 +183,11 @@ const FilterContent = ({
                         <div className="px-5 pb-5 space-y-6">
                             {/* Category */}
                             <div className="space-y-3">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Category</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-400">Category</label>
                                 <select
                                     value={category}
                                     onChange={(e) => setCategory(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-sm appearance-none cursor-pointer hover:bg-white transition-all dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-sm appearance-none cursor-pointer hover:bg-white transition-all dark:bg-slate-900/55 dark:border-slate-700/70 dark:text-slate-100 dark:hover:bg-slate-900/75"
                                 >
                                     <option value="">All Categories</option>
                                     {CATEGORIES.map(cat => (
@@ -198,11 +198,11 @@ const FilterContent = ({
 
                             {/* Genre */}
                             <div className="space-y-3">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Genre</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-400">Genre</label>
                                 <select
                                     value={genre}
                                     onChange={(e) => setGenre(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-sm appearance-none cursor-pointer hover:bg-white transition-all dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
+                                    className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 text-sm appearance-none cursor-pointer hover:bg-white transition-all dark:bg-slate-900/55 dark:border-slate-700/70 dark:text-slate-100 dark:hover:bg-slate-900/75"
                                 >
                                     <option value="">All Genres</option>
                                     {GENRES.map(genreItem => (
@@ -213,7 +213,7 @@ const FilterContent = ({
 
                             {/* Price Range */}
                             <div className="space-y-3">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Price Range</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-400">Price Range</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="relative group">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs dark:text-slate-500">$</span>
@@ -222,7 +222,7 @@ const FilterContent = ({
                                             placeholder="Min"
                                             value={minPrice ?? ''}
                                             onChange={(e) => setPriceRange(e.target.value ? Number(e.target.value) : null, maxPrice)}
-                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-800"
+                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white dark:bg-slate-900/55 dark:border-slate-700/70 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-900/75"
                                         />
                                     </div>
                                     <div className="relative group">
@@ -232,7 +232,7 @@ const FilterContent = ({
                                             placeholder="Max"
                                             value={maxPrice ?? ''}
                                             onChange={(e) => setPriceRange(minPrice, e.target.value ? Number(e.target.value) : null)}
-                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white dark:bg-slate-800/60 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-800"
+                                            className="w-full pl-7 pr-3 py-2 bg-gray-50/50 border border-gray-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all hover:bg-white dark:bg-slate-900/55 dark:border-slate-700/70 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:bg-slate-900/75"
                                         />
                                     </div>
                                 </div>
@@ -240,8 +240,8 @@ const FilterContent = ({
 
                             {/* Rating */}
                             <div className="space-y-3">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-500">Min. Rating</label>
-                                <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100 dark:bg-slate-800/60 dark:border-slate-700">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 dark:text-slate-400">Min. Rating</label>
+                                <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100 dark:bg-slate-900/55 dark:border-slate-700/70">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <button
                                             key={star}
@@ -260,7 +260,7 @@ const FilterContent = ({
                             </div>
 
                             {/* Availability */}
-                            <label className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100 cursor-pointer group hover:bg-white transition-all dark:bg-slate-800/60 dark:border-slate-700 dark:hover:bg-slate-800">
+                            <label className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100 cursor-pointer group hover:bg-white transition-all dark:bg-slate-900/55 dark:border-slate-700/70 dark:hover:bg-slate-900/75">
                                 <span className="text-xs font-bold text-gray-600 uppercase tracking-wider group-hover:text-primary-600 transition-colors dark:text-slate-300 dark:group-hover:text-amber-300">In Stock Only</span>
                                 <div className="relative inline-flex items-center cursor-pointer">
                                     <input
@@ -279,10 +279,10 @@ const FilterContent = ({
         </div>
 
         {/* Sort Section */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200/70 bg-white/70 dark:border-slate-800 dark:bg-slate-900/65">
+        <div className="overflow-hidden rounded-2xl border border-gray-300/70 bg-slate-200/70 dark:border-slate-700/60 dark:bg-gray-800 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.06)]">
             <button
                 onClick={() => toggleSection('sorting')}
-                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/60"
+                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-slate-200/70 transition-colors dark:hover:bg-slate-800/45"
             >
                 <div className="flex items-center gap-2.5">
                     <span className="text-lg">⇅</span>
@@ -334,8 +334,10 @@ const FilterContent = ({
         <motion.button
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.01, y: -1 }}
+            whileTap={{ scale: 0.985, y: 1 }}
             onClick={applyFilters}
-            className="w-full rounded-2xl bg-primary-600 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-primary-700 active:scale-95"
+            className="ios-cta w-full rounded-2xl px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-white"
         >
             Show Results
         </motion.button>
@@ -345,8 +347,10 @@ const FilterContent = ({
             <motion.button
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.985, y: 1 }}
                 onClick={resetFilters}
-                className="w-full rounded-2xl bg-gray-900 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-black active:scale-95 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                className="ios-cta-secondary w-full rounded-2xl px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-100"
             >
                 Reset All Filters ({activeFilterCount})
             </motion.button>
@@ -409,7 +413,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                 <motion.div
                     initial={false}
                     animate={{ width: isSidebarOpen ? 300 : 70 }}
-                    className="sticky top-20 h-[calc(100vh-6.5rem)] rounded-3xl border border-gray-200/60 bg-gray-50/20 p-2 transition-all dark:border-slate-800 dark:bg-slate-900/45"
+                    className="sticky top-20 h-[calc(100vh-6.5rem)] overflow-hidden rounded-3xl border border-gray-300/45 bg-slate-200/25 p-2 backdrop-blur-sm transition-all dark:border-slate-700/60 dark:bg-[linear-gradient(165deg,rgba(7,14,30,0.92),rgba(10,19,38,0.88))] dark:shadow-[0_24px_60px_-44px_rgba(2,6,23,0.96)]"
                 >
                     <div className="h-full flex flex-col p-2">
                         <div className="flex items-center justify-between mb-6 px-0 pt-2">
@@ -431,7 +435,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                             </AnimatePresence>
                             <button
                                 onClick={toggleSidebar}
-                                className="rounded-xl border border-gray-200/70 bg-white/80 p-2.5 transition-all hover:bg-gray-50 active:scale-90 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:bg-slate-800"
+                                className="rounded-xl border border-gray-200/70 bg-white/80 p-2.5 transition-all hover:bg-gray-50 active:scale-90 dark:border-slate-700/70 dark:bg-slate-900/70 dark:hover:bg-slate-800/80"
                             >
                                 <motion.div animate={{ rotate: isSidebarOpen ? 0 : 180 }}>
                                     <svg className="w-4 h-4 text-gray-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -442,7 +446,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                         </div>
 
                         {isSidebarOpen ? (
-                            <div className="flex-1 overflow-y-auto px-2 custom-scrollbar space-y-4">
+                            <div className="flex-1 overflow-y-auto px-2 pb-4 custom-scrollbar space-y-4">
                                 <FilterContent
                                     title={title}
                                     author={author}
@@ -474,7 +478,7 @@ const FilterSidebar = ({ className }: FilterSidebarProps) => {
                 </motion.div>
             </div>
 
-            {/* Mobile Drawer (Truncated for brevity, assuming standard implementation) */}
+            {/* Mobile Drawer */}
             <AnimatePresence>
                 {isMobileSidebarOpen && (
                     <div className="lg:hidden fixed inset-0 z-50">

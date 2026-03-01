@@ -7,11 +7,12 @@ import {
   useWarehouseDeliveryTasks,
   type WarehouseDeliveryTask,
 } from '@/services/orders'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
 
 const AdminDeliveryPage = () => {
   const { data: tasks = [] } = useWarehouseDeliveryTasks()
   const completeTask = useCompleteWarehouseDeliveryTask()
-  const [message, setMessage] = useState('')
+  const { message, showMessage } = useTimedMessage(2800)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [isMapExpanded, setIsMapExpanded] = useState(false)
 
@@ -115,12 +116,10 @@ const AdminDeliveryPage = () => {
   const onComplete = async (taskId: string) => {
     try {
       await completeTask.mutateAsync(taskId)
-      setMessage('Delivery task completed.')
-      window.setTimeout(() => setMessage(''), 2200)
+      showMessage('Delivery task completed.')
       setSelectedTaskId(null)
     } catch (error) {
-      setMessage(getErrorMessage(error))
-      window.setTimeout(() => setMessage(''), 2800)
+      showMessage(getErrorMessage(error))
     }
   }
 
@@ -143,9 +142,9 @@ const AdminDeliveryPage = () => {
           <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Open Delivery Tasks</h2>
           <span className="text-xs text-slate-500">{openTasks.length} task(s)</span>
         </div>
-        <div className="overflow-auto rounded-xl border dark:border-slate-800">
-          <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-950">
+        <div className="admin-table-wrapper overflow-auto">
+          <table className="admin-table min-w-full text-sm">
+            <thead className="admin-table-head">
               <tr>
                 <th className="px-3 py-2 text-left">Order ID</th>
                 <th className="px-3 py-2 text-left">Customer</th>
@@ -155,7 +154,7 @@ const AdminDeliveryPage = () => {
                 <th className="px-3 py-2 text-left">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody>
               {openTasks.map((task) => {
                 const meta = (task.metadata || {}) as { orderId?: string }
                 const items = task.order?.orderItems ?? []
@@ -202,9 +201,9 @@ const AdminDeliveryPage = () => {
           <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Delivery History</h2>
           <span className="text-xs text-slate-500">{completedTasks.length} completed</span>
         </div>
-        <div className="overflow-auto rounded-xl border dark:border-slate-800">
-          <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-950">
+        <div className="admin-table-wrapper overflow-auto">
+          <table className="admin-table min-w-full text-sm">
+            <thead className="admin-table-head">
               <tr>
                 <th className="px-3 py-2 text-left">Order ID</th>
                 <th className="px-3 py-2 text-left">Customer</th>
@@ -213,7 +212,7 @@ const AdminDeliveryPage = () => {
                 <th className="px-3 py-2 text-left">SLA</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody>
               {completedTasks.map((task) => {
                 const meta = (task.metadata || {}) as { orderId?: string }
                 const items = task.order?.orderItems ?? []

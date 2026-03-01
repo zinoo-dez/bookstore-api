@@ -26,6 +26,7 @@ const AdminPage = lazy(() => import('@/pages/AdminPage'))
 const ProfileSettingsPage = lazy(() => import('@/pages/ProfileSettingsPage'))
 const LibraryPage = lazy(() => import('@/pages/LibraryPage'))
 const MyBooksPage = lazy(() => import('@/pages/MyBooksPage'))
+const BookReaderPage = lazy(() => import('@/pages/BookReaderPage'))
 const ContactPage = lazy(() => import('@/pages/ContactPage'))
 const ContactSupportPage = lazy(() => import('@/pages/ContactSupportPage'))
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'))
@@ -45,6 +46,7 @@ const CSKnowledgePage = lazy(() => import('@/pages/cs/CSKnowledgePage'))
 const CSTeamPage = lazy(() => import('@/pages/cs/CSTeamPage'))
 
 const AdminBooksPage = lazy(() => import('@/pages/admin/AdminBooksPage'))
+const AdminBooksBinPage = lazy(() => import('@/pages/admin/AdminBooksBinPage'))
 const AdminOrdersPage = lazy(() => import('@/pages/admin/AdminOrdersPage'))
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'))
 const AdminWarehousesPage = lazy(() => import('@/pages/admin/AdminWarehousesPage'))
@@ -60,6 +62,7 @@ const AdminPurchaseRequestsPage = lazy(() => import('@/pages/admin/AdminPurchase
 const AdminPurchaseOrdersPage = lazy(() => import('@/pages/admin/AdminPurchaseOrdersPage'))
 const AdminVendorsPage = lazy(() => import('@/pages/admin/AdminVendorsPage'))
 const AdminBookDistributionPage = lazy(() => import('@/pages/admin/AdminBookDistributionPage'))
+const AdminStoresPage = lazy(() => import('@/pages/admin/AdminStoresPage'))
 const AdminInquiriesPage = lazy(() => import('@/pages/admin/AdminInquiriesPage'))
 const AdminPromotionsPage = lazy(() => import('@/pages/admin/AdminPromotionsPage'))
 
@@ -117,13 +120,18 @@ function App() {
 
   const canUseAdmin = canAccessAdmin(user?.role, user?.permissions)
   const canUseCS = canAccessCS(user?.role, user?.permissions)
+  const hasStaffPortalAccess = canUseAdmin || canUseCS
+  const isStaffLinkedUser = !!user?.isStaff
+  const isBuyerSession =
+    user?.role === 'USER' && !isStaffLinkedUser && portalMode === 'buyer'
   const staffPortalPath =
     canUseAdmin && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN')
       ? '/admin'
       : canUseCS
         ? '/cs'
         : '/admin'
-  const isDualPortalUser = user?.role === 'USER' && canUseAdmin && !canUseCS
+  const isDualPortalUser =
+    user?.role === 'USER' && !isStaffLinkedUser && canUseAdmin && !canUseCS
   const isHrFocusedUser =
     user?.role === 'USER'
     && (
@@ -156,11 +164,11 @@ function App() {
           {/* Public Routes with Layout */}
           <Route path="/" element={<Layout />}>
             <Route index element={
-              isAuthenticated && canUseCS && user?.role === 'USER'
+              isAuthenticated && canUseCS && (user?.role === 'USER' || isStaffLinkedUser)
                 ? <Navigate to="/cs" replace />
                 : isAuthenticated && isDualPortalUser && !portalMode
                   ? <Navigate to="/portal-select" replace />
-                  : isAuthenticated && (canUseAdmin || canUseCS) && (user?.role !== 'USER' || portalMode === 'staff')
+                  : isAuthenticated && hasStaffPortalAccess && (!isBuyerSession || isStaffLinkedUser)
                     ? <Navigate to={staffPortalPath} replace />
                     : <HomePage />
             } />
@@ -185,12 +193,12 @@ function App() {
               }
             />
             <Route path="books" element={
-              (canUseAdmin || canUseCS) && (user?.role !== 'USER' || portalMode !== 'buyer')
+              hasStaffPortalAccess && !isBuyerSession
                 ? <Navigate to={canUseAdmin ? "/admin/books" : staffPortalPath} replace />
                 : <BooksPage />
             } />
             <Route path="books/:id" element={
-              (canUseAdmin || canUseCS) && (user?.role !== 'USER' || portalMode !== 'buyer')
+              hasStaffPortalAccess && !isBuyerSession
                 ? <Navigate to={canUseAdmin ? "/admin/books" : staffPortalPath} replace />
                 : <BookDetailPage />
             } />
@@ -217,7 +225,7 @@ function App() {
             <Route
               path="cart"
               element={
-                (canUseAdmin || canUseCS) && (user?.role !== 'USER' || portalMode !== 'buyer')
+                hasStaffPortalAccess && !isBuyerSession
                   ? <Navigate to={staffPortalPath} replace />
                   : <ProtectedRoute><CartPage /></ProtectedRoute>
               }
@@ -225,7 +233,7 @@ function App() {
             <Route
               path="checkout"
               element={
-                (canUseAdmin || canUseCS) && (user?.role !== 'USER' || portalMode !== 'buyer')
+                hasStaffPortalAccess && !isBuyerSession
                   ? <Navigate to={staffPortalPath} replace />
                   : <ProtectedRoute><CheckoutPage /></ProtectedRoute>
               }
@@ -233,7 +241,7 @@ function App() {
             <Route
               path="order-confirmation/:orderId"
               element={
-                (canUseAdmin || canUseCS) && (user?.role !== 'USER' || portalMode !== 'buyer')
+                hasStaffPortalAccess && !isBuyerSession
                   ? <Navigate to={staffPortalPath} replace />
                   : <ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>
               }
@@ -241,13 +249,21 @@ function App() {
             <Route
               path="orders"
               element={
-                (canUseAdmin || canUseCS) && (user?.role !== 'USER' || portalMode !== 'buyer')
+                hasStaffPortalAccess && !isBuyerSession
                   ? <Navigate to={canUseAdmin ? "/admin/orders" : staffPortalPath} replace />
                   : <ProtectedRoute><OrdersPage /></ProtectedRoute>
               }
             />
             <Route
               path="profile"
+              element={
+                <ProtectedRoute>
+                  <ProfileSettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="settings/profile"
               element={
                 <ProtectedRoute>
                   <ProfileSettingsPage />
@@ -279,6 +295,14 @@ function App() {
               }
             />
             <Route path="my-books" element={<Navigate to="/reading-insights" replace />} />
+            <Route
+              path="my-books/:id/read"
+              element={
+                <ProtectedRoute>
+                  <BookReaderPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
           {/* Customer Service Routes */}
@@ -323,6 +347,22 @@ function App() {
               element={
                 user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
                   ? <AdminBooksPage />
+                  : <Navigate to="/admin" replace />
+              }
+            />
+            <Route
+              path="books/bin"
+              element={
+                user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
+                  ? <AdminBooksBinPage />
+                  : <Navigate to="/admin" replace />
+              }
+            />
+            <Route
+              path="bin"
+              element={
+                user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
+                  ? <AdminBooksBinPage />
                   : <Navigate to="/admin" replace />
               }
             />
@@ -372,6 +412,14 @@ function App() {
               element={
                 <PermissionRoute permission="warehouse.view">
                   <AdminBookDistributionPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="stores"
+              element={
+                <PermissionRoute permission="warehouse.view">
+                  <AdminStoresPage />
                 </PermissionRoute>
               }
             />

@@ -22,6 +22,7 @@ const Navbar = () => {
   const [isLibraryMenuOpen, setIsLibraryMenuOpen] = useState(false)
   const [isBookstoreMenuOpen, setIsBookstoreMenuOpen] = useState(false)
   const [isNavbarVisible, setIsNavbarVisible] = useState(true)
+  const [isAtTop, setIsAtTop] = useState(true)
   const libraryMenuCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bookstoreMenuCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastScrollY = useRef(0)
@@ -88,10 +89,17 @@ const Navbar = () => {
     if (typeof window === 'undefined') return
 
     lastScrollY.current = window.scrollY
+    setIsAtTop(window.scrollY <= 12)
 
     const handleScroll = () => {
       const currentY = window.scrollY
       const delta = currentY - lastScrollY.current
+      // Hysteresis avoids rapid flip-flop around the threshold.
+      if (isAtTop) {
+        if (currentY > 40) setIsAtTop(false)
+      } else if (currentY < 10) {
+        setIsAtTop(true)
+      }
 
       if (Math.abs(delta) < 6) return
 
@@ -114,10 +122,13 @@ const Navbar = () => {
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [isAtTop])
 
   useEffect(() => {
     setIsNavbarVisible(true)
+    if (typeof window !== 'undefined') {
+      setIsAtTop(window.scrollY <= 12)
+    }
   }, [location.pathname])
 
   const navLinkClass = (path: string) =>
@@ -139,14 +150,37 @@ const Navbar = () => {
         transition-colors
       `
 
+  const menuPanelClass = (isOpen: boolean) => `
+    luxe-panel absolute left-0 top-full z-40 mt-3 w-56 p-1.5
+    bg-white/95 dark:bg-slate-900/95
+    transition-all duration-200
+    ${isOpen ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}
+  `
+
+  const menuItemClass = (active: boolean) => `
+    block rounded-lg px-3 py-2 text-sm font-medium transition-all
+    ${
+      active
+        ? 'bg-primary-50 text-primary-700 dark:bg-[#E6B65C]/20 dark:text-[#E6B65C]'
+        : 'text-slate-700 hover:bg-slate-100/90 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-slate-100'
+    }
+  `
+
   return (
-    <header
+    <div
       className={`
-        luxe-glass-nav sticky top-3 z-50 mx-auto w-[min(96%,80rem)] rounded-2xl
-        transition-transform duration-300
+        sticky top-0 z-50
+        transition-transform duration-390 ease-[cubic-bezier(0.22,1,0.36,1)]
         ${isNavbarVisible ? 'translate-y-0' : '-translate-y-full'}
       `}
     >
+      <header
+        className={`
+          luxe-glass-nav mx-auto
+          transition-[width,border-radius,box-shadow,margin-top] duration-600 ease-[cubic-bezier(0.22,1,0.36,1)]
+          ${isAtTop ? 'mt-0 w-full rounded-none border-x-0 border-t-0' : 'mt-3 w-[min(96%,80rem)] rounded-2xl'}
+        `}
+      >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -196,24 +230,15 @@ const Navbar = () => {
                     }
                   >
                     Bookstore
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform duration-200 ${isBookstoreMenuOpen ? 'rotate-180' : 'rotate-0'}`}
+                    />
                   </Link>
 
-                  <div
-                    className={`
-                      absolute left-0 top-full z-40 mt-2 w-52 rounded-xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur transition-all duration-200 dark:border-slate-700/80 dark:bg-slate-900/95
-                      ${isBookstoreMenuOpen ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}
-                    `}
-                  >
+                  <div className={menuPanelClass(isBookstoreMenuOpen)}>
                     <Link
                       to="/books"
-                      className={`
-                        block rounded-lg px-3 py-2 text-sm transition-colors
-                        ${isActive('/books')
-                          ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                        }
-                      `}
+                      className={menuItemClass(isActive('/books'))}
                     >
                       Browse Books
                     </Link>
@@ -221,13 +246,7 @@ const Navbar = () => {
                     {isAuthenticated && (
                       <Link
                         to="/orders"
-                        className={`
-                          mt-1 block rounded-lg px-3 py-2 text-sm transition-colors
-                          ${isActive('/orders')
-                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                          }
-                        `}
+                        className={`mt-1 ${menuItemClass(isActive('/orders'))}`}
                       >
                         Orders
                       </Link>
@@ -236,13 +255,7 @@ const Navbar = () => {
                     {isAuthenticated && (
                       <Link
                         to="/cart"
-                        className={`
-                          mt-1 block rounded-lg px-3 py-2 text-sm transition-colors
-                          ${isActive('/cart')
-                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                          }
-                        `}
+                        className={`mt-1 ${menuItemClass(isActive('/cart'))}`}
                       >
                         Cart
                       </Link>
@@ -289,36 +302,21 @@ const Navbar = () => {
                       }
                     >
                       Library
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${isLibraryMenuOpen ? 'rotate-180' : 'rotate-0'}`}
+                      />
                     </Link>
 
-                    <div
-                      className={`
-                        absolute left-0 top-full z-40 mt-2 w-52 rounded-xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur transition-all duration-200 dark:border-slate-700/80 dark:bg-slate-900/95
-                        ${isLibraryMenuOpen ? 'pointer-events-auto translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}
-                      `}
-                    >
+                    <div className={menuPanelClass(isLibraryMenuOpen)}>
                       <Link
                         to="/library"
-                        className={`
-                          block rounded-lg px-3 py-2 text-sm transition-colors
-                          ${isActive('/library')
-                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                          }
-                        `}
+                        className={menuItemClass(isActive('/library'))}
                       >
                         Open Library
                       </Link>
                       <Link
                         to="/reading-insights"
-                        className={`
-                          mt-1 block rounded-lg px-3 py-2 text-sm transition-colors
-                          ${isActive('/reading-insights')
-                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                          }
-                        `}
+                        className={`mt-1 ${menuItemClass(isActive('/reading-insights'))}`}
                       >
                         Reading Insights
                       </Link>
@@ -439,7 +437,7 @@ const Navbar = () => {
 
                 {/* User menu */}
                 <div className="flex items-center space-x-3">
-                  <Link to="/profile">
+                  <Link to={user?.id ? `/user/${user.id}` : '/profile'}>
                     <Avatar
                       avatarType={user?.avatarType}
                       avatarValue={user?.avatarValue ?? undefined}
@@ -463,11 +461,10 @@ const Navbar = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={handleLogout}
                     className="
-                      metal-button
+                      ios-cta-secondary
                       px-4 py-2
-                      text-xs font-semibold uppercase tracking-[0.2em]
+                      text-xs font-semibold uppercase tracking-[0.2em] text-slate-100
                       rounded-xl
-                      transition-colors
                     "
                   >
                     Logout
@@ -494,21 +491,12 @@ const Navbar = () => {
   <Link
   to="/register"
   className="
+    ios-cta
     px-4 py-2
     rounded-xl
-    text-xs font-semibold uppercase tracking-[0.2em]
-    transition-all
-
-    /* Day mode */
-    bg-primary-600 text-white
-    hover:bg-primary-700
-    shadow-lg shadow-primary-200/60
-
-    /* Night mode */
-    dark:bg-gold
-    dark:hover:bg-gold-hover
-    dark:text-slate-900
-    dark:shadow-[0_0_10px_rgba(218,155,46,0.4)]
+    text-xs font-semibold uppercase tracking-[0.2em] text-slate-900
+    transition-all duration-200
+    hover:-translate-y-0.5
   "
 >
   Register
@@ -518,7 +506,8 @@ const Navbar = () => {
           </div>
         </div>
       </div>
-    </header>
+      </header>
+    </div>
   )
 }
 

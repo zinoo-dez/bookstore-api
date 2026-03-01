@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Plus } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
 import {
   useCreateDepartment,
@@ -6,22 +7,20 @@ import {
   useDepartments,
   useUpdateDepartment,
 } from '@/services/staff'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 
 const AdminDepartmentsPage = () => {
+  const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [description, setDescription] = useState('')
-  const [message, setMessage] = useState('')
+  const { message, showMessage } = useTimedMessage(2400)
 
   const { data: departments = [] } = useDepartments()
   const createDepartment = useCreateDepartment()
   const updateDepartment = useUpdateDepartment()
   const deleteDepartment = useDeleteDepartment()
-
-  const showMessage = (text: string) => {
-    setMessage(text)
-    window.setTimeout(() => setMessage(''), 2400)
-  }
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +34,7 @@ const AdminDepartmentsPage = () => {
       setName('')
       setCode('')
       setDescription('')
+      setIsCreatePanelOpen(false)
       showMessage('Department created.')
     } catch (error) {
       showMessage(getErrorMessage(error))
@@ -61,9 +61,19 @@ const AdminDepartmentsPage = () => {
 
   return (
     <div className="space-y-6 p-8 dark:text-slate-100">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Staff</p>
-        <h1 className="text-2xl font-bold">Departments</h1>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Staff</p>
+          <h1 className="text-2xl font-bold">Departments</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsCreatePanelOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+        >
+          <Plus className="h-4 w-4" />
+          Create Department
+        </button>
       </div>
 
       {message && (
@@ -72,41 +82,11 @@ const AdminDepartmentsPage = () => {
         </div>
       )}
 
-      <form onSubmit={onCreate} className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Add Department</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Department name"
-            className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="Code"
-            className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description"
-            className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-        </div>
-        <button
-          type="submit"
-          className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white dark:bg-amber-400 dark:text-slate-900"
-        >
-          Create
-        </button>
-      </form>
-
       <div className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Department List</h2>
-        <div className="mt-4 overflow-auto rounded-xl border dark:border-slate-800">
-          <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-950">
+        <div className="admin-table-wrapper mt-4 overflow-auto">
+          <table className="admin-table min-w-full text-sm">
+            <thead className="admin-table-head">
               <tr>
                 <th className="px-3 py-2 text-left">Name</th>
                 <th className="px-3 py-2 text-left">Code</th>
@@ -115,7 +95,7 @@ const AdminDepartmentsPage = () => {
                 <th className="px-3 py-2 text-left">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody>
               {departments.map((department) => (
                 <tr key={department.id}>
                   <td className="px-3 py-2">
@@ -149,6 +129,58 @@ const AdminDepartmentsPage = () => {
           </table>
         </div>
       </div>
+
+      <AdminSlideOverPanel
+        open={isCreatePanelOpen}
+        onClose={() => setIsCreatePanelOpen(false)}
+        kicker="Department"
+        title="Create Department"
+        description="Add a new department to organize staff and permissions."
+        footer={(
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsCreatePanelOpen(false)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-widest transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="create-department-form"
+              disabled={createDepartment.isPending}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:opacity-60 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+            >
+              {createDepartment.isPending ? 'Creating...' : 'Create Department'}
+            </button>
+          </div>
+        )}
+      >
+        <form
+          id="create-department-form"
+          onSubmit={onCreate}
+          className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/45"
+        >
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Department name"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="Code"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+        </form>
+      </AdminSlideOverPanel>
     </div>
   )
 }

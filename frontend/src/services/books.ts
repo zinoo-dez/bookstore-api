@@ -19,6 +19,8 @@ export const useBooks = (params: SearchBooksData = {}, options?: { enabled?: boo
       return booksResponseSchema.parse(response.data)
     },
     enabled: options?.enabled ?? true,
+    placeholderData: (previousData) => previousData,
+    staleTime: 1000 * 60,
   })
 }
 
@@ -30,6 +32,7 @@ export const useBook = (id: string) => {
       return bookSchema.parse(response.data)
     },
     enabled: !!id,
+    staleTime: 1000 * 60 * 5,
   })
 }
 
@@ -67,11 +70,55 @@ export const useDeleteBook = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id: string): Promise<void> => {
-      await api.delete(`/books/${id}`)
+    mutationFn: async (id: string): Promise<Book> => {
+      const response = await api.delete(`/books/${id}`)
+      return bookSchema.parse(response.data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['books'] })
+    },
+  })
+}
+
+export const usePermanentDeleteBook = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string): Promise<Book> => {
+      const response = await api.delete(`/books/${id}/permanent`)
+      return bookSchema.parse(response.data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['books'] })
+    },
+  })
+}
+
+export const useEmptyBooksBin = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (): Promise<{ deleted: number }> => {
+      const response = await api.delete('/books/bin/empty')
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['books'] })
+    },
+  })
+}
+
+export const useRestoreBook = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string): Promise<Book> => {
+      const response = await api.patch(`/books/${id}/restore`)
+      return bookSchema.parse(response.data)
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['books'] })
+      queryClient.invalidateQueries({ queryKey: ['book', data.id] })
     },
   })
 }
@@ -103,6 +150,7 @@ export const usePopularBooks = (limit = 6) => {
       const response = await api.get('/books/popular', { params: { limit } })
       return z.array(bookSchema).parse(response.data)
     },
+    staleTime: 1000 * 60 * 5,
   })
 }
 
@@ -114,5 +162,6 @@ export const useRecommendedBooks = (limit = 6, enabled = true) => {
       return z.array(bookSchema).parse(response.data)
     },
     enabled,
+    staleTime: 1000 * 60 * 3,
   })
 }

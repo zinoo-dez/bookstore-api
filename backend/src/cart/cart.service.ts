@@ -7,11 +7,21 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
-import { CartItem } from '@prisma/client';
+import { BookPurchaseFormat, CartItem } from '@prisma/client';
 
 @Injectable()
 export class CartService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private resolveBookUnitPrice(
+    book: { price: any; ebookPrice: any | null },
+    format: BookPurchaseFormat,
+  ) {
+    if (format === BookPurchaseFormat.EBOOK) {
+      return Number(book.ebookPrice ?? book.price);
+    }
+    return Number(book.price);
+  }
 
   async addItem(userId: string, dto: AddToCartDto): Promise<CartItem> {
     // Verify user exists
@@ -34,16 +44,27 @@ export class CartService {
       throw new NotFoundException('Book not found');
     }
 
-    if (book.stock < dto.quantity) {
+    const format = dto.format ?? BookPurchaseFormat.PHYSICAL;
+    if (format === BookPurchaseFormat.EBOOK) {
+      if (!book.isDigital || !book.ebookFilePath) {
+        throw new BadRequestException('This title is not available as an eBook.');
+      }
+      if (dto.quantity !== 1) {
+        throw new BadRequestException('eBook quantity must be 1.');
+      }
+    }
+
+    if (format === BookPurchaseFormat.PHYSICAL && book.stock < dto.quantity) {
       throw new BadRequestException('Insufficient stock available');
     }
 
     // Check if item already exists in cart
     const existingCartItem = await this.prisma.cartItem.findUnique({
       where: {
-        userId_bookId: {
+        userId_bookId_format: {
           userId,
           bookId: dto.bookId,
+          format,
         },
       },
     });
@@ -51,6 +72,10 @@ export class CartService {
     if (existingCartItem) {
       // Update existing cart item
       const newQuantity = existingCartItem.quantity + dto.quantity;
+
+      if (format === BookPurchaseFormat.EBOOK) {
+        throw new BadRequestException('eBook is already in your cart.');
+      }
 
       if (book.stock < newQuantity) {
         throw new BadRequestException('Insufficient stock available');
@@ -67,6 +92,7 @@ export class CartService {
         data: {
           userId,
           bookId: dto.bookId,
+          format,
           quantity: dto.quantity,
         },
         include: { book: true },
@@ -77,6 +103,7 @@ export class CartService {
   async updateItem(
     userId: string,
     bookId: string,
+    format: BookPurchaseFormat,
     dto: UpdateCartItemDto,
   ): Promise<CartItem> {
     // Check if book exists and has sufficient stock
@@ -88,16 +115,26 @@ export class CartService {
       throw new NotFoundException('Book not found');
     }
 
-    if (book.stock < dto.quantity) {
+    if (format === BookPurchaseFormat.EBOOK) {
+      if (dto.quantity !== 1) {
+        throw new BadRequestException('eBook quantity must be 1.');
+      }
+      if (!book.isDigital || !book.ebookFilePath) {
+        throw new BadRequestException('This title is not available as an eBook.');
+      }
+    }
+
+    if (format === BookPurchaseFormat.PHYSICAL && book.stock < dto.quantity) {
       throw new BadRequestException('Insufficient stock available');
     }
 
     // Find existing cart item
     const cartItem = await this.prisma.cartItem.findUnique({
       where: {
-        userId_bookId: {
+        userId_bookId_format: {
           userId,
           bookId,
+          format,
         },
       },
     });
@@ -113,12 +150,17 @@ export class CartService {
     });
   }
 
-  async removeItem(userId: string, bookId: string): Promise<CartItem> {
+  async removeItem(
+    userId: string,
+    bookId: string,
+    format: BookPurchaseFormat,
+  ): Promise<CartItem> {
     const cartItem = await this.prisma.cartItem.findUnique({
       where: {
-        userId_bookId: {
+        userId_bookId_format: {
           userId,
           bookId,
+          format,
         },
       },
     });
@@ -135,18 +177,26 @@ export class CartService {
 
   async getCart(
     userId: string,
-  ): Promise<{ items: CartItem[]; totalPrice: number }> {
+  ): Promise<{ items: Array<CartItem & { unitPrice: number }>; totalPrice: number }> {
     const cartItems = await this.prisma.cartItem.findMany({
       where: { userId },
       include: { book: true },
     });
 
-    const totalPrice = cartItems.reduce((total, item) => {
-      return total + Number(item.book.price) * item.quantity;
+    const items = cartItems.map((item) => {
+      const unitPrice = this.resolveBookUnitPrice(item.book, item.format);
+      return {
+        ...item,
+        unitPrice,
+      };
+    });
+
+    const totalPrice = items.reduce((total, item) => {
+      return total + item.unitPrice * item.quantity;
     }, 0);
 
     return {
-      items: cartItems,
+      items,
       totalPrice: Number(totalPrice.toFixed(2)),
     };
   }

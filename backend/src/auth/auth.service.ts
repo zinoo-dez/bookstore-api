@@ -46,6 +46,7 @@ export class AuthService {
         email: true,
         name: true,
         role: true,
+        isActive: true,
         avatarType: true,
         avatarValue: true,
         backgroundColor: true,
@@ -53,6 +54,14 @@ export class AuthService {
         shortBio: true,
         about: true,
         coverImage: true,
+        showEmail: true,
+        showFollowers: true,
+        showFollowing: true,
+        showFavorites: true,
+        showLikedPosts: true,
+        supportEnabled: true,
+        supportUrl: true,
+        supportQrImage: true,
         createdAt: true,
       },
     });
@@ -67,6 +76,7 @@ export class AuthService {
         password: true,
         name: true,
         role: true,
+        isActive: true,
         avatarType: true,
         avatarValue: true,
         backgroundColor: true,
@@ -74,8 +84,19 @@ export class AuthService {
         shortBio: true,
         about: true,
         coverImage: true,
+        showEmail: true,
+        showFollowers: true,
+        showFollowing: true,
+        showFavorites: true,
+        showLikedPosts: true,
+        supportEnabled: true,
+        supportUrl: true,
+        supportQrImage: true,
         staffProfile: {
           select: {
+            id: true,
+            employeeCode: true,
+            status: true,
             title: true,
             department: {
               select: {
@@ -120,6 +141,12 @@ export class AuthService {
       throw new UnauthorizedException('Incorrect password');
     }
 
+    if (!user.isActive) {
+      throw new UnauthorizedException(
+        'Your account has been restricted. Please contact support.',
+      );
+    }
+
     const staffRoles = user.staffProfile?.assignments.map((assignment) => ({
       id: assignment.role.id,
       name: assignment.role.name,
@@ -142,9 +169,21 @@ export class AuthService {
       shortBio: user.shortBio,
       about: user.about,
       coverImage: user.coverImage,
+      showEmail: user.showEmail,
+      showFollowers: user.showFollowers,
+      showFollowing: user.showFollowing,
+      showFavorites: user.showFavorites,
+      showLikedPosts: user.showLikedPosts,
+      supportEnabled: user.supportEnabled,
+      supportUrl: user.supportUrl,
+      supportQrImage: user.supportQrImage,
       staffTitle: user.staffProfile?.title,
       staffDepartmentName: user.staffProfile?.department.name,
       staffDepartmentCode: user.staffProfile?.department.code,
+      staffProfileId: user.staffProfile?.id,
+      staffEmployeeCode: user.staffProfile?.employeeCode,
+      isStaff: !!user.staffProfile?.id,
+      staffStatus: user.staffProfile?.status,
       staffRoles,
       primaryStaffRoleName: primaryStaffRole?.name,
       primaryStaffRoleCode: primaryStaffRole?.code,
@@ -206,6 +245,28 @@ export class AuthService {
         ...(dto.coverImage !== undefined
           ? { coverImage: dto.coverImage.trim() || null }
           : {}),
+        ...(dto.showEmail !== undefined ? { showEmail: dto.showEmail } : {}),
+        ...(dto.showFollowers !== undefined
+          ? { showFollowers: dto.showFollowers }
+          : {}),
+        ...(dto.showFollowing !== undefined
+          ? { showFollowing: dto.showFollowing }
+          : {}),
+        ...(dto.showFavorites !== undefined
+          ? { showFavorites: dto.showFavorites }
+          : {}),
+        ...(dto.showLikedPosts !== undefined
+          ? { showLikedPosts: dto.showLikedPosts }
+          : {}),
+        ...(dto.supportEnabled !== undefined
+          ? { supportEnabled: dto.supportEnabled }
+          : {}),
+        ...(dto.supportUrl !== undefined
+          ? { supportUrl: dto.supportUrl.trim() || null }
+          : {}),
+        ...(dto.supportQrImage !== undefined
+          ? { supportQrImage: dto.supportQrImage.trim() || null }
+          : {}),
       },
       select: {
         id: true,
@@ -219,6 +280,14 @@ export class AuthService {
         shortBio: true,
         about: true,
         coverImage: true,
+        showEmail: true,
+        showFollowers: true,
+        showFollowing: true,
+        showFavorites: true,
+        showLikedPosts: true,
+        supportEnabled: true,
+        supportUrl: true,
+        supportQrImage: true,
         createdAt: true,
       },
     });

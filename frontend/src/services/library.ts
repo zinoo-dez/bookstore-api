@@ -37,6 +37,8 @@ export const useWishlist = (enabled = true) => {
       return z.array(wishlistItemSchema).parse(response.data)
     },
     enabled,
+    staleTime: 1000 * 60 * 2,
+    placeholderData: (previousData) => previousData,
   })
 }
 
@@ -48,6 +50,8 @@ export const useFavorites = (enabled = true) => {
       return z.array(favoriteItemSchema).parse(response.data)
     },
     enabled,
+    staleTime: 1000 * 60 * 2,
+    placeholderData: (previousData) => previousData,
   })
 }
 

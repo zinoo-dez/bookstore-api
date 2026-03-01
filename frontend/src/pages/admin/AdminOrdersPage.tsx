@@ -4,10 +4,18 @@ import { Pencil } from 'lucide-react'
 import { useAdminOrders, useUpdateOrderStatus, type Order } from '@/services/orders'
 import Skeleton from '@/components/ui/Skeleton'
 import OrderStatusModal from '@/components/admin/OrderStatusModal'
+import ColumnVisibilityMenu from '@/components/admin/ColumnVisibilityMenu'
 import { getErrorMessage } from '@/lib/api'
 import { hasPermission } from '@/lib/permissions'
 import { useAuthStore } from '@/store/auth.store'
 import { useSearchParams } from 'react-router-dom'
+
+const isOrderStatusFilter = (value: string | null) =>
+  value === 'all' ||
+  value === 'PENDING' ||
+  value === 'CONFIRMED' ||
+  value === 'COMPLETED' ||
+  value === 'CANCELLED'
 
 const AdminOrdersPage = () => {
   const user = useAuthStore((state) => state.user)
@@ -15,22 +23,47 @@ const AdminOrdersPage = () => {
     user?.role === 'ADMIN' ||
     user?.role === 'SUPER_ADMIN' ||
     hasPermission(user?.permissions, 'finance.payout.manage')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [customerTerm, setCustomerTerm] = useState('')
-  const [locationTerm, setLocationTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [minValue, setMinValue] = useState('')
-  const [maxValue, setMaxValue] = useState('')
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchTerm, setSearchTerm] = useState(
+    searchParams.get('q') ?? searchParams.get('orderId') ?? '',
+  )
+  const [customerTerm, setCustomerTerm] = useState(searchParams.get('customer') ?? '')
+  const [locationTerm, setLocationTerm] = useState(searchParams.get('location') ?? '')
+  const [statusFilter, setStatusFilter] = useState(
+    isOrderStatusFilter(searchParams.get('status')) ? (searchParams.get('status') as string) : 'all',
+  )
+  const [dateFrom, setDateFrom] = useState(searchParams.get('from') ?? '')
+  const [dateTo, setDateTo] = useState(searchParams.get('to') ?? '')
+  const [minValue, setMinValue] = useState(searchParams.get('min') ?? '')
+  const [maxValue, setMaxValue] = useState(searchParams.get('max') ?? '')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(
+    searchParams.get('advanced') === '1',
+  )
   const [updatingOrder, setUpdatingOrder] = useState<Order | null>(null)
   const [error, setError] = useState('')
-  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable')
-  const [sortKey, setSortKey] = useState<'createdAt' | 'totalPrice' | 'items' | 'status'>('createdAt')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [sortKey, setSortKey] = useState<'createdAt' | 'totalPrice' | 'items' | 'status'>(
+    (() => {
+      const raw = searchParams.get('sort')
+      if (raw === 'totalPrice' || raw === 'items' || raw === 'status') return raw
+      return 'createdAt'
+    })(),
+  )
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(
+    searchParams.get('dir') === 'asc' ? 'asc' : 'desc',
+  )
+  const [visibleColumns, setVisibleColumns] = useState({
+    rank: true,
+    orderId: true,
+    customer: true,
+    location: true,
+    payment: true,
+    date: true,
+    items: true,
+    total: true,
+    status: true,
+    actions: true,
+  })
   const [recentOrderId, setRecentOrderId] = useState<string | null>(null)
-  const [searchParams] = useSearchParams()
 
   const { data: orders, isLoading } = useAdminOrders()
   const updateOrderStatus = useUpdateOrderStatus()
@@ -52,8 +85,11 @@ const AdminOrdersPage = () => {
     const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase())
     const customerText = `${order.user?.name || ''} ${order.user?.email || ''}`.toLowerCase()
     const matchesCustomer = customerText.includes(customerTerm.toLowerCase())
+    const pickupStoreText = order.pickupStore
+      ? `${order.pickupStore.name} ${order.pickupStore.city} ${order.pickupStore.state} ${order.pickupStore.code}`
+      : ''
     const orderLocationText =
-      `${order.shippingAddress || ''} ${order.shippingCity || ''} ${order.shippingState || ''} ${order.shippingZipCode || ''} ${order.shippingCountry || ''}`.toLowerCase()
+      `${pickupStoreText} ${order.shippingAddress || ''} ${order.shippingCity || ''} ${order.shippingState || ''} ${order.shippingZipCode || ''} ${order.shippingCountry || ''}`.toLowerCase()
     const matchesLocation = orderLocationText.includes(locationTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
 
@@ -88,19 +124,6 @@ const AdminOrdersPage = () => {
     }
   })
 
-  if (isLoading) {
-    return (
-      <div className="p-8 dark:text-slate-100 space-y-6">
-        <Skeleton variant="logo" className="h-10 w-10" />
-        <div className="space-y-2">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-7 w-56" />
-          <Skeleton className="h-4 w-72" />
-        </div>
-      </div>
-    )
-  }
-
   const totalRevenue = allOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0)
   const pendingOrders = allOrders.filter((o) => o.status === 'PENDING').length
   const confirmedOrders = allOrders.filter((o) => o.status === 'CONFIRMED').length
@@ -132,9 +155,55 @@ const AdminOrdersPage = () => {
   useEffect(() => {
     const orderId = searchParams.get('orderId')
     if (!orderId) return
-    setSearchTerm(orderId)
+    if (orderId !== searchTerm) {
+      setSearchTerm(orderId)
+    }
     setRecentOrderId(orderId)
-  }, [searchParams])
+  }, [searchParams, searchTerm])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (searchTerm) next.set('q', searchTerm)
+    if (statusFilter !== 'all') next.set('status', statusFilter)
+    if (dateFrom) next.set('from', dateFrom)
+    if (dateTo) next.set('to', dateTo)
+    if (sortKey !== 'createdAt') next.set('sort', sortKey)
+    if (sortDir !== 'desc') next.set('dir', sortDir)
+    if (showAdvancedFilters) next.set('advanced', '1')
+
+    if (customerTerm) next.set('customer', customerTerm)
+    if (locationTerm) next.set('location', locationTerm)
+    if (minValue) next.set('min', minValue)
+    if (maxValue) next.set('max', maxValue)
+
+    setSearchParams(next, { replace: true })
+  }, [
+    customerTerm,
+    dateFrom,
+    dateTo,
+    locationTerm,
+    maxValue,
+    minValue,
+    searchTerm,
+    setSearchParams,
+    showAdvancedFilters,
+    sortDir,
+    sortKey,
+    statusFilter,
+  ])
+
+  if (isLoading) {
+    return (
+      <div className="p-8 dark:text-slate-100 space-y-6">
+        <Skeleton variant="logo" className="h-10 w-10" />
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+      </div>
+    )
+  }
 
   const toggleSort = (key: typeof sortKey) => {
     if (sortKey === key) {
@@ -145,7 +214,19 @@ const AdminOrdersPage = () => {
     }
   }
 
-  const densityPad = density === 'compact' ? 'py-2' : 'py-3'
+  const rowPad = 'py-3'
+  const columnOptions: Array<{ key: keyof typeof visibleColumns; label: string }> = [
+    { key: 'rank', label: '#' },
+    { key: 'orderId', label: 'Order ID' },
+    { key: 'customer', label: 'Customer' },
+    { key: 'location', label: 'Delivery Location' },
+    { key: 'payment', label: 'Payment' },
+    { key: 'date', label: 'Date' },
+    { key: 'items', label: 'Items' },
+    { key: 'total', label: 'Total' },
+    { key: 'status', label: 'Status' },
+    { key: 'actions', label: 'Actions' },
+  ]
   const statusChipTone = (status: Order['status']) => {
     if (status === 'COMPLETED') return 'bg-green-100 text-green-800 dark:bg-emerald-900/40 dark:text-emerald-200'
     if (status === 'CONFIRMED') return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
@@ -164,14 +245,21 @@ const AdminOrdersPage = () => {
             <p className="mt-1 text-gray-600 dark:text-slate-400">Filter by date/value/customer and manage statuses</p>
           </div>
         </div>
-
+        <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 xl:grid-cols-6">
+        <Stat label="Total Orders" value={allOrders.length} active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
+        <Stat label="Pending" value={pendingOrders} valueClassName="text-yellow-600 dark:text-amber-300" active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} />
+        <Stat label="Confirmed" value={confirmedOrders} valueClassName="text-blue-600 dark:text-blue-300" active={statusFilter === 'CONFIRMED'} onClick={() => setStatusFilter('CONFIRMED')} />
+        <Stat label="Completed" value={completedOrders} valueClassName="text-green-600 dark:text-emerald-300" active={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')} />
+        <Stat label="Revenue" value={`$${totalRevenue.toFixed(2)}`} valueClassName="text-primary-600 dark:text-amber-300" />
+        <Stat label="Avg Order Value" value={`$${avgOrderValue.toFixed(2)}`} />
+      </div>
         {error && (
           <div className="surface-subtle mb-4 border-red-300/60 bg-red-50/85 p-3 dark:border-rose-900/60 dark:bg-rose-950/60">
             <p className="text-red-600 text-sm dark:text-rose-200">{error}</p>
           </div>
         )}
 
-        <div className="luxe-panel section-reveal p-4">
+        <div className="luxe-panel section-reveal relative z-30 p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             type="text"
@@ -210,6 +298,11 @@ const AdminOrdersPage = () => {
           >
             {showAdvancedFilters ? 'Hide' : 'More'} filters
           </button>
+          <ColumnVisibilityMenu
+            visibleColumns={visibleColumns}
+            setVisibleColumns={setVisibleColumns}
+            options={columnOptions}
+          />
         </div>
 
         {showAdvancedFilters && (
@@ -248,69 +341,47 @@ const AdminOrdersPage = () => {
               onChange={(e) => setMaxValue(e.target.value)}
               className="rounded-lg border border-slate-200 bg-white/80 px-4 py-2 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
             />
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Density</span>
-              <div className="inline-flex rounded-lg border border-slate-200 overflow-hidden dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setDensity('comfortable')}
-                  className={`px-3 py-2 text-xs font-semibold uppercase tracking-widest ${
-                    density === 'comfortable' ? 'bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-900' : 'text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  Comfy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDensity('compact')}
-                  className={`px-3 py-2 text-xs font-semibold uppercase tracking-widest ${
-                    density === 'compact' ? 'bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-900' : 'text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  Compact
-                </button>
-              </div>
-            </div>
           </motion.div>
         )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 xl:grid-cols-6">
-        <Stat label="Total Orders" value={allOrders.length} active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
-        <Stat label="Pending" value={pendingOrders} valueClassName="text-yellow-600 dark:text-amber-300" active={statusFilter === 'PENDING'} onClick={() => setStatusFilter('PENDING')} />
-        <Stat label="Confirmed" value={confirmedOrders} valueClassName="text-blue-600 dark:text-blue-300" active={statusFilter === 'CONFIRMED'} onClick={() => setStatusFilter('CONFIRMED')} />
-        <Stat label="Completed" value={completedOrders} valueClassName="text-green-600 dark:text-emerald-300" active={statusFilter === 'COMPLETED'} onClick={() => setStatusFilter('COMPLETED')} />
-        <Stat label="Revenue" value={`$${totalRevenue.toFixed(2)}`} valueClassName="text-primary-600 dark:text-amber-300" />
-        <Stat label="Avg Order Value" value={`$${avgOrderValue.toFixed(2)}`} />
-      </div>
+      
 
-      <div className="luxe-panel section-reveal overflow-hidden">
+      <div className="admin-table-wrapper relative z-0">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b bg-slate-50/80 dark:bg-slate-950/60 dark:border-slate-800 sticky top-0">
+          <table className="admin-table min-w-[1400px]">
+            <thead className="admin-table-head sticky top-0 z-0">
               <tr>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>#</th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>Order ID</th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>Customer</th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>Shipping Location</th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>Payment</th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>
-                  <button type="button" onClick={() => toggleSort('createdAt')} className="inline-flex items-center gap-2">Date {sortKey === 'createdAt' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
-                </th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>
-                  <button type="button" onClick={() => toggleSort('items')} className="inline-flex items-center gap-2">Items {sortKey === 'items' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
-                </th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>
-                  <button type="button" onClick={() => toggleSort('totalPrice')} className="inline-flex items-center gap-2">Total {sortKey === 'totalPrice' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
-                </th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>
-                  <button type="button" onClick={() => toggleSort('status')} className="inline-flex items-center gap-2">Status {sortKey === 'status' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
-                </th>
-                <th className={`px-6 ${densityPad} text-left text-xs font-bold uppercase tracking-wider`}>Actions</th>
+                {visibleColumns.rank && <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>#</th>}
+                {visibleColumns.orderId && <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>Order ID</th>}
+                {visibleColumns.customer && <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>Customer</th>}
+                {visibleColumns.location && <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>Delivery Location</th>}
+                {visibleColumns.payment && <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>Payment</th>}
+                {visibleColumns.date && (
+                  <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>
+                    <button type="button" onClick={() => toggleSort('createdAt')} className="inline-flex items-center gap-2">Date {sortKey === 'createdAt' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
+                  </th>
+                )}
+                {visibleColumns.items && (
+                  <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>
+                    <button type="button" onClick={() => toggleSort('items')} className="inline-flex items-center gap-2">Items {sortKey === 'items' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
+                  </th>
+                )}
+                {visibleColumns.total && (
+                  <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>
+                    <button type="button" onClick={() => toggleSort('totalPrice')} className="inline-flex items-center gap-2">Total {sortKey === 'totalPrice' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
+                  </th>
+                )}
+                {visibleColumns.status && (
+                  <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>
+                    <button type="button" onClick={() => toggleSort('status')} className="inline-flex items-center gap-2">Status {sortKey === 'status' && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}</button>
+                  </th>
+                )}
+                {visibleColumns.actions && <th className={`px-6 ${rowPad} text-left text-xs font-bold uppercase tracking-wider`}>Actions</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-transparent dark:divide-slate-800">
+            <tbody>
               {sortedOrders.map((order, index) => (
                 <motion.tr
                   key={order.id}
@@ -319,50 +390,74 @@ const AdminOrdersPage = () => {
                   transition={{ delay: index * 0.02 }}
                   className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-slate-800/60 ${index % 2 === 1 ? 'bg-slate-50/25 dark:bg-slate-950/20' : ''} ${recentOrderId === order.id ? 'ring-2 ring-amber-300/60' : ''}`}
                 >
-                  <td className={`px-6 ${densityPad} whitespace-nowrap text-sm text-gray-500 dark:text-slate-500`}>#{index + 1}</td>
-                  <td className={`px-6 ${densityPad} whitespace-nowrap`}><span className="text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">{order.id.slice(-8).toUpperCase()}</span></td>
-                  <td className={`px-6 ${densityPad}`}>
-                    <p className="text-sm font-medium">{order.user?.name || 'Unknown'}</p>
-                    <p className="text-xs text-slate-400">{order.user?.email || 'No email'} • {customerOrderCount.get(order.userId) || 0} total orders</p>
-                  </td>
-                  <td className={`px-6 ${densityPad}`}>
-                    <p className="text-sm">
-                      {[order.shippingCity, order.shippingState].filter(Boolean).join(', ') || order.shippingCountry || '-'}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {[order.shippingAddress, order.shippingZipCode, order.shippingCountry].filter(Boolean).join(' • ') || 'No shipping address captured'}
-                    </p>
-                  </td>
-                  <td className={`px-6 ${densityPad}`}>
-                    <p className="text-sm">{order.paymentProvider || '-'}</p>
-                    <p className="text-xs text-slate-400">
-                      {order.paymentReceiptUrl ? 'Receipt uploaded' : 'No receipt'}
-                    </p>
-                  </td>
-                  <td className={`px-6 ${densityPad} whitespace-nowrap text-sm`}>{new Date(order.createdAt).toLocaleDateString()}</td>
-                  <td className={`px-6 ${densityPad} whitespace-nowrap text-sm`}>{order.orderItems.length} items</td>
-                  <td className={`px-6 ${densityPad} whitespace-nowrap text-sm font-semibold`}>${Number(order.totalPrice).toFixed(2)}</td>
-                  <td className={`px-6 ${densityPad} whitespace-nowrap`}>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusChipTone(order.status)}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className={`px-6 ${densityPad} whitespace-nowrap text-sm`}>
-                    {canManagePayouts && order.status === 'PENDING' ? (
-                      <button
-                        onClick={() => setUpdatingOrder(order)}
-                        className="metal-button inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
-                        title="Update Status"
-                        aria-label="Update order status"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <span className="text-xs text-slate-500">
-                        {order.status === 'PENDING' ? 'View only' : 'No action'}
+                  {visibleColumns.rank && <td className={`px-6 ${rowPad} whitespace-nowrap text-sm text-gray-500 dark:text-slate-500`}>#{index + 1}</td>}
+                  {visibleColumns.orderId && <td className={`px-6 ${rowPad} whitespace-nowrap`}><span className="text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">{order.id.slice(-8).toUpperCase()}</span></td>}
+                  {visibleColumns.customer && (
+                    <td className={`px-6 ${rowPad}`}>
+                      <p className="text-sm font-medium">{order.user?.name || 'Unknown'}</p>
+                      <p className="text-xs text-slate-400">{order.user?.email || 'No email'} • {customerOrderCount.get(order.userId) || 0} total orders</p>
+                    </td>
+                  )}
+                  {visibleColumns.location && (
+                    <td className={`px-6 ${rowPad}`}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {order.deliveryType === 'STORE_PICKUP' ? 'Store Pickup' : 'Home Delivery'}
+                      </p>
+                      {order.deliveryType === 'STORE_PICKUP' && order.pickupStore ? (
+                        <>
+                          <p className="text-sm">{order.pickupStore.name}</p>
+                          <p className="text-xs text-slate-400">
+                            {[order.pickupStore.city, order.pickupStore.state].filter(Boolean).join(', ')}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm">
+                            {[order.shippingCity, order.shippingState].filter(Boolean).join(', ') || order.shippingCountry || '-'}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {[order.shippingAddress, order.shippingZipCode, order.shippingCountry].filter(Boolean).join(' • ') || 'No shipping address captured'}
+                          </p>
+                        </>
+                      )}
+                    </td>
+                  )}
+                  {visibleColumns.payment && (
+                    <td className={`px-6 ${rowPad}`}>
+                      <p className="text-sm">{order.paymentProvider || '-'}</p>
+                      <p className="text-xs text-slate-400">
+                        {order.paymentReceiptUrl ? 'Receipt uploaded' : 'No receipt'}
+                      </p>
+                    </td>
+                  )}
+                  {visibleColumns.date && <td className={`px-6 ${rowPad} whitespace-nowrap text-sm`}>{new Date(order.createdAt).toLocaleDateString()}</td>}
+                  {visibleColumns.items && <td className={`px-6 ${rowPad} whitespace-nowrap text-sm`}>{order.orderItems.length} items</td>}
+                  {visibleColumns.total && <td className={`px-6 ${rowPad} whitespace-nowrap text-sm font-semibold`}>${Number(order.totalPrice).toFixed(2)}</td>}
+                  {visibleColumns.status && (
+                    <td className={`px-6 ${rowPad} whitespace-nowrap`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusChipTone(order.status)}`}>
+                        {order.status}
                       </span>
-                    )}
-                  </td>
+                    </td>
+                  )}
+                  {visibleColumns.actions && (
+                    <td className={`px-6 ${rowPad} whitespace-nowrap text-sm`}>
+                      {canManagePayouts && order.status === 'PENDING' ? (
+                        <button
+                          onClick={() => setUpdatingOrder(order)}
+                          className="metal-button inline-flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+                          title="Update Status"
+                          aria-label="Update order status"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-500">
+                          {order.status === 'PENDING' ? 'View only' : 'No action'}
+                        </span>
+                      )}
+                    </td>
+                  )}
                 </motion.tr>
               ))}
             </tbody>
@@ -371,7 +466,7 @@ const AdminOrdersPage = () => {
 
         <div className="border-t border-slate-200/70 bg-slate-50/80 px-6 py-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between dark:bg-slate-950 dark:border-slate-800">
           <div className="text-sm text-gray-600 dark:text-slate-400">Showing {filteredOrders.length} of {allOrders.length} orders</div>
-          <div className="text-xs text-slate-500">Location filter uses the shipping address entered on each order at checkout.</div>
+          <div className="text-xs text-slate-500">Location filter matches shipping address and pickup store metadata.</div>
         </div>
       </div>
 

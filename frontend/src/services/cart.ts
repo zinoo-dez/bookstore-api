@@ -5,7 +5,9 @@ import { useAuthStore } from '@/store/auth.store'
 export interface CartItem {
   id: string
   bookId: string
+  format: 'PHYSICAL' | 'EBOOK'
   quantity: number
+  unitPrice?: number
   book: {
     id: string
     title: string
@@ -33,7 +35,7 @@ export const useAddToCart = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: { bookId: string; quantity: number }) => {
+    mutationFn: async (data: { bookId: string; quantity: number; format?: 'PHYSICAL' | 'EBOOK' }) => {
       const response = await api.post('/cart', data)
       return response.data
     },
@@ -47,8 +49,18 @@ export const useUpdateCartItem = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ bookId, quantity }: { bookId: string; quantity: number }) => {
-      const response = await api.patch(`/cart/${bookId}`, { quantity })
+    mutationFn: async ({
+      bookId,
+      quantity,
+      format,
+    }: {
+      bookId: string
+      quantity: number
+      format: 'PHYSICAL' | 'EBOOK'
+    }) => {
+      const response = await api.patch(`/cart/${bookId}`, { quantity }, {
+        params: { format },
+      })
       return response.data
     },
     onSuccess: () => {
@@ -61,8 +73,10 @@ export const useRemoveFromCart = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (bookId: string) => {
-      await api.delete(`/cart/${bookId}`)
+    mutationFn: async ({ bookId, format }: { bookId: string; format: 'PHYSICAL' | 'EBOOK' }) => {
+      await api.delete(`/cart/${bookId}`, {
+        params: { format },
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] })

@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,6 +21,7 @@ import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { BookPurchaseFormat } from '@prisma/client';
 
 @ApiTags('cart')
 @Controller('cart')
@@ -89,9 +91,10 @@ export class CartController {
   updateItem(
     @Request() req: any,
     @Param('bookId') bookId: string,
+    @Query('format') format: BookPurchaseFormat = BookPurchaseFormat.PHYSICAL,
     @Body() dto: UpdateCartItemDto,
   ) {
-    return this.cartService.updateItem(req.user.sub, bookId, dto);
+    return this.cartService.updateItem(req.user.sub, bookId, format, dto);
   }
 
   @Delete(':bookId')
@@ -105,8 +108,12 @@ export class CartController {
     description: 'Unauthorized - JWT token required',
   })
   @ApiResponse({ status: 404, description: 'Cart item not found' })
-  removeItem(@Request() req: any, @Param('bookId') bookId: string) {
-    return this.cartService.removeItem(req.user.sub, bookId);
+  removeItem(
+    @Request() req: any,
+    @Param('bookId') bookId: string,
+    @Query('format') format: BookPurchaseFormat = BookPurchaseFormat.PHYSICAL,
+  ) {
+    return this.cartService.removeItem(req.user.sub, bookId, format);
   }
 
   @Get()

@@ -6,6 +6,7 @@ export interface User {
     email: string
     name: string
     role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+    isActive: boolean
     createdAt: string
 }
 
@@ -91,6 +92,27 @@ export const useDeleteUser = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+        },
+    })
+}
+
+export const useSetUserStatus = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async ({
+            userId,
+            isActive,
+        }: {
+            userId: string
+            isActive: boolean
+        }): Promise<User> => {
+            const response = await api.patch(`/admin/users/${userId}/status`, { isActive })
+            return response.data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+            queryClient.invalidateQueries({ queryKey: ['user-stats'] })
         },
     })
 }

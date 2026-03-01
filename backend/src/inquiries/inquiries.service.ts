@@ -206,7 +206,16 @@ export class InquiriesService {
           'Assigned scope requires active staff profile',
         );
       }
-      return { assignedToStaffId: actor.staffProfileId };
+      const departmentId = this.ensureDepartmentScope(actor);
+      return {
+        OR: [
+          { assignedToStaffId: actor.staffProfileId },
+          {
+            departmentId,
+            assignedToStaffId: null,
+          },
+        ],
+      };
     }
 
     const departmentId = this.ensureDepartmentScope(actor);

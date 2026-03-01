@@ -125,7 +125,7 @@ const ContactSupportPage = () => {
     if (!validate()) return
 
     try {
-      await createContact.mutateAsync({
+      const result = await createContact.mutateAsync({
         type: 'support',
         name: form.name,
         email: form.email,
@@ -164,7 +164,11 @@ const ContactSupportPage = () => {
         },
       })
       triggerSparkleBurst()
-      setSuccess('Thank you. Customer Service received your message and will route it to the right team if needed.')
+      setSuccess(
+        result.routingSucceeded
+          ? 'Thank you. Customer Service received your message and will route it to the right team if needed.'
+          : 'Message received, but routing to the service queue is currently unavailable. Please contact admin to check department/staff setup.',
+      )
       setForm((prev) => ({
         ...prev,
         topic: '',

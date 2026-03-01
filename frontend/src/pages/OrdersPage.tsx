@@ -15,6 +15,20 @@ const OrdersPage = () => {
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
+  const getFormatMeta = (format?: 'PHYSICAL' | 'EBOOK') => {
+    if (format === 'EBOOK') {
+      return {
+        label: 'EBOOK',
+        className:
+          'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
+      }
+    }
+    return {
+      label: 'PHYSICAL',
+      className:
+        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    }
+  }
 
   if (isLoading) {
     return (
@@ -183,6 +197,11 @@ const OrdersPage = () => {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 dark:text-slate-100">{item.book.title}</p>
                       <p className="text-sm text-gray-600 dark:text-slate-400">by {item.book.author}</p>
+                      <span
+                        className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${getFormatMeta(item.format).className}`}
+                      >
+                        {getFormatMeta(item.format).label}
+                      </span>
                       <p className="text-sm text-gray-600 mt-1 dark:text-slate-400">
                         Quantity: {item.quantity} × ${Number(item.price).toFixed(2)}
                       </p>
@@ -312,6 +331,11 @@ const OrdersPage = () => {
                           <div className="flex-1">
                             <p className="font-medium">{item.book.title}</p>
                             <p className="text-sm text-gray-600 dark:text-slate-400">by {item.book.author}</p>
+                            <span
+                              className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${getFormatMeta(item.format).className}`}
+                            >
+                              {getFormatMeta(item.format).label}
+                            </span>
                             <p className="text-sm text-gray-600 mt-1 dark:text-slate-400">
                               {item.quantity} × ${Number(item.price).toFixed(2)} = ${(Number(item.price) * item.quantity).toFixed(2)}
                             </p>

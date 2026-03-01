@@ -482,12 +482,20 @@ export class WarehousesService {
     });
   }
 
-  async listVendors(activeOnly?: boolean) {
+  async listVendors(
+    activeOnly?: boolean,
+    status: 'active' | 'trashed' | 'all' = 'active',
+  ) {
     return this.prisma.vendor.findMany({
       where: {
+        ...(status === 'all'
+          ? {}
+          : status === 'trashed'
+            ? { deletedAt: { not: null } }
+            : { deletedAt: null }),
         ...(activeOnly === undefined ? {} : { isActive: activeOnly }),
       },
-      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+      orderBy: [{ deletedAt: 'asc' }, { isActive: 'desc' }, { name: 'asc' }],
       take: 200,
     });
   }
@@ -509,10 +517,13 @@ export class WarehousesService {
   async updateVendor(vendorId: string, dto: UpdateVendorDto) {
     const existing = await this.prisma.vendor.findUnique({
       where: { id: vendorId },
-      select: { id: true },
+      select: { id: true, deletedAt: true },
     });
     if (!existing) {
       throw new NotFoundException('Vendor not found');
+    }
+    if (existing.deletedAt) {
+      throw new BadRequestException('Cannot update a vendor in bin. Restore it first.');
     }
 
     return this.prisma.vendor.update({
@@ -532,10 +543,13 @@ export class WarehousesService {
   async deleteVendor(vendorId: string) {
     const existing = await this.prisma.vendor.findUnique({
       where: { id: vendorId },
-      select: { id: true },
+      select: { id: true, deletedAt: true },
     });
     if (!existing) {
       throw new NotFoundException('Vendor not found');
+    }
+    if (existing.deletedAt) {
+      throw new BadRequestException('Vendor is already in bin.');
     }
 
     const linkedOrders = await this.prisma.purchaseOrder.count({
@@ -545,6 +559,56 @@ export class WarehousesService {
     if (linkedOrders > 0) {
       throw new BadRequestException(
         'Vendor cannot be deleted because it is linked to purchase orders. Set vendor to inactive instead.',
+      );
+    }
+
+    return this.prisma.vendor.update({
+      where: { id: vendorId },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+      },
+    });
+  }
+
+  async restoreVendor(vendorId: string) {
+    const existing = await this.prisma.vendor.findUnique({
+      where: { id: vendorId },
+      select: { id: true, deletedAt: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Vendor not found');
+    }
+    if (!existing.deletedAt) {
+      throw new BadRequestException('Vendor is not in bin.');
+    }
+
+    return this.prisma.vendor.update({
+      where: { id: vendorId },
+      data: { deletedAt: null },
+    });
+  }
+
+  async permanentDeleteVendor(vendorId: string) {
+    const existing = await this.prisma.vendor.findUnique({
+      where: { id: vendorId },
+      select: { id: true, deletedAt: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('Vendor not found');
+    }
+    if (!existing.deletedAt) {
+      throw new BadRequestException(
+        'Vendor must be moved to bin before permanent delete.',
+      );
+    }
+
+    const linkedOrders = await this.prisma.purchaseOrder.count({
+      where: { vendorId },
+    });
+    if (linkedOrders > 0) {
+      throw new BadRequestException(
+        'Vendor cannot be permanently deleted because it is linked to purchase orders.',
       );
     }
 
@@ -629,10 +693,13 @@ export class WarehousesService {
 
     const vendor = await this.prisma.vendor.findUnique({
       where: { id: dto.vendorId },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, deletedAt: true },
     });
     if (!vendor) {
       throw new NotFoundException('Vendor not found');
+    }
+    if (vendor.deletedAt) {
+      throw new BadRequestException('Vendor is in bin. Restore it first.');
     }
     if (!vendor.isActive) {
       throw new BadRequestException('Vendor is inactive.');
@@ -700,10 +767,13 @@ export class WarehousesService {
 
     const vendor = await this.prisma.vendor.findUnique({
       where: { id: dto.vendorId },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, deletedAt: true },
     });
     if (!vendor) {
       throw new NotFoundException('Vendor not found');
+    }
+    if (vendor.deletedAt) {
+      throw new BadRequestException('Vendor is in bin. Restore it first.');
     }
     if (!vendor.isActive) {
       throw new BadRequestException('Vendor is inactive.');

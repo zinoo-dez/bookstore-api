@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
   BookOpenCheck,
@@ -17,6 +17,7 @@ import { useFavorites, useWishlist } from '@/services/library'
 import {
   type ReadingStatus,
   useCreateReadingSession,
+  useMyEbooks,
   useReadingItems,
   useRemoveTrackedBook,
   useTrackBook,
@@ -26,7 +27,7 @@ import {
 } from '@/services/reading'
 import BookCover from '@/components/ui/BookCover'
 import Skeleton from '@/components/ui/Skeleton'
-import { getErrorMessage } from '@/lib/api'
+import { api, getErrorMessage } from '@/lib/api'
 import { getLibraryLists, type LibraryList } from '@/lib/libraryLists'
 import { cn } from '@/lib/utils'
 
@@ -42,6 +43,7 @@ type LibraryItem = {
     title?: string
     author?: string
     coverImage?: string | null
+    isDigital?: boolean
   }
 }
 
@@ -63,6 +65,7 @@ const FILTER_META: Record<LibraryStatusFilter, { label: string; icon: React.Reac
 
 const LibraryPage = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState<ActiveLibraryFilter>({ type: 'status', value: 'ALL' })
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false)
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null)
@@ -73,11 +76,13 @@ const LibraryPage = () => {
   const [currentPageInput, setCurrentPageInput] = useState('0')
   const [totalPagesInput, setTotalPagesInput] = useState('')
   const [goalInput, setGoalInput] = useState('')
+  const [isOpeningEbook, setIsOpeningEbook] = useState(false)
   const detailPanelRef = useRef<HTMLElement | null>(null)
 
   const { data: favorites = [], isLoading: favoritesLoading } = useFavorites(true)
   const { data: wishlist = [], isLoading: wishlistLoading } = useWishlist(true)
   const { data: readingItems = [], isLoading: readingLoading } = useReadingItems()
+  const { data: myEbooks = [], isLoading: ebooksLoading } = useMyEbooks(true)
 
   const trackBook = useTrackBook()
   const updateStatus = useUpdateReadingStatus()
@@ -107,8 +112,15 @@ const LibraryPage = () => {
     favorites.forEach(register)
     wishlist.forEach(register)
     readingItems.forEach(register)
+    myEbooks.forEach((item) =>
+      register({
+        id: item.id,
+        bookId: item.bookId,
+        book: item.book,
+      })
+    )
     return map
-  }, [favorites, readingItems, wishlist])
+  }, [favorites, myEbooks, readingItems, wishlist])
 
   const allBooks = Array.from(allBooksById.values())
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search])
@@ -132,6 +144,9 @@ const LibraryPage = () => {
       .slice(0, 4)
   }, [readingItems])
 
+  const entitledEbooks = useMemo(() => {
+    return myEbooks.filter((item) => item.book?.title)
+  }, [myEbooks])
   const counts = {
     ALL: allBooks.length,
     TO_READ: readingItems.filter((item) => item.status === 'TO_READ').length,
@@ -166,7 +181,7 @@ const LibraryPage = () => {
 
   const selectedPreview = selectedBookId ? allBooksById.get(selectedBookId) : undefined
   const selectedReadingItem = readingItems.find((item) => item.bookId === selectedBookId)
-  const isLoading = favoritesLoading || wishlistLoading || readingLoading
+  const isLoading = favoritesLoading || wishlistLoading || readingLoading || ebooksLoading
   const isPendingAction =
     trackBook.isPending ||
     updateStatus.isPending ||
@@ -273,6 +288,19 @@ const LibraryPage = () => {
     }
   }
 
+  const handleReadEbook = async () => {
+    if (!selectedBookId) return
+    setIsOpeningEbook(true)
+    try {
+      await api.get(`/reading/ebook/${selectedBookId}/open`)
+      navigate(`/my-books/${selectedBookId}/read`)
+    } catch (error) {
+      setFeedback(getErrorMessage(error))
+    } finally {
+      setIsOpeningEbook(false)
+    }
+  }
+
   const openDetailPanel = (bookId: string) => {
     setSelectedBookId(bookId)
     setIsDetailPanelOpen(true)
@@ -283,6 +311,20 @@ const LibraryPage = () => {
   const closeDetailPanel = () => {
     setIsDetailPanelOpen(false)
     setIsBookCardFlipped(false)
+    if (querySelectedBookId) {
+      const nextParams = new URLSearchParams(location.search)
+      nextParams.delete('selectedBookId')
+      nextParams.delete('bookId')
+      nextParams.delete('book')
+      const nextSearch = nextParams.toString()
+      navigate(
+        {
+          pathname: location.pathname,
+          search: nextSearch ? `?${nextSearch}` : '',
+        },
+        { replace: true },
+      )
+    }
   }
 
   useEffect(() => {
@@ -297,11 +339,12 @@ const LibraryPage = () => {
   useEffect(() => {
     if (!querySelectedBookId || isLoading) return
     if (!allBooksById.has(querySelectedBookId)) return
+    if (isDetailPanelOpen && selectedBookId === querySelectedBookId) return
     setSelectedBookId(querySelectedBookId)
     setIsDetailPanelOpen(true)
     setIsBookCardFlipped(false)
     setIsFilterPanelOpen(false)
-  }, [allBooksById, isLoading, querySelectedBookId])
+  }, [allBooksById, isDetailPanelOpen, isLoading, querySelectedBookId, selectedBookId])
 
   const activeFilterLabel = activeFilter.type === 'status'
     ? FILTER_META[activeFilter.value].label
@@ -343,7 +386,7 @@ const LibraryPage = () => {
           </div>
           <Link
             to="/books"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:bg-white/5 dark:text-slate-300 dark:hover:border-white/30 dark:hover:text-white"
+            className="tone-hover-gold inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 transition hover:text-slate-900 dark:border-white/15 dark:bg-white/5 dark:text-slate-300 dark:hover:text-white"
             aria-label="Browse books"
           >
             <Search className="h-5 w-5" />
@@ -356,6 +399,64 @@ const LibraryPage = () => {
           </div>
         )}
 
+        {entitledEbooks.length > 0 && (
+          <section className="mb-4 rounded-3xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/40 dark:bg-emerald-900/10">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Unlocked eBooks</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">My eBooks</h2>
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
+                {entitledEbooks.length} unlocked
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {entitledEbooks.slice(0, 6).map((ebook) => (
+                <div
+                  key={`ebook-access-${ebook.id}`}
+                  className="rounded-2xl border border-emerald-200 bg-white/90 p-3 dark:border-emerald-900/40 dark:bg-black/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-14 w-10 overflow-hidden rounded-md border border-slate-200 dark:border-white/10">
+                      <BookCover
+                        src={ebook.book.coverImage ?? null}
+                        alt={ebook.book.title || 'eBook'}
+                        className="h-full w-full"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{ebook.book.title}</p>
+                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">{ebook.book.author}</p>
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+                        {ebook.progress ? `${ebook.progress.percent.toFixed(1)}% read` : 'Not started'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Link
+                      to={`/my-books/${ebook.bookId}/read`}
+                      className="inline-flex flex-1 items-center justify-center rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white hover:bg-emerald-500"
+                    >
+                      Read Now
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveFilter({ type: 'status', value: 'ALL' })
+                        openDetailPanel(ebook.bookId)
+                      }}
+                      className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:text-slate-200 dark:hover:bg-white/10"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="rounded-3xl border border-slate-200 bg-white p-4 backdrop-blur-md dark:border-white/10 dark:bg-[#17171a]/85 lg:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -365,7 +466,7 @@ const LibraryPage = () => {
             <button
               type="button"
               onClick={() => setIsFilterPanelOpen((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:bg-white/[0.03] dark:text-slate-200 dark:hover:border-white/30 dark:hover:text-white"
+              className="tone-hover-gold inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:text-slate-900 dark:border-white/15 dark:bg-white/[0.03] dark:text-slate-200 dark:hover:text-white"
             >
               <ListFilter className="h-4 w-4" />
               Filters
@@ -391,7 +492,7 @@ const LibraryPage = () => {
                 <button
                   type="button"
                   onClick={() => setIsFilterPanelOpen(false)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:border-white/30 dark:hover:text-white"
+                  className="tone-hover-gold inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-600 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:text-white"
                   aria-label="Close filters"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -410,7 +511,7 @@ const LibraryPage = () => {
                         'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition',
                         activeFilter.type === 'status' && activeFilter.value === filter
                           ? 'border-slate-300 bg-white text-slate-900 dark:border-white/35 dark:bg-white/[0.12] dark:text-white'
-                          : 'border-slate-300/80 text-slate-600 hover:border-slate-400 dark:border-white/15 dark:text-slate-300 dark:hover:border-white/30'
+                          : 'border-slate-300/80 text-slate-600 hover:border-slate-400 dark:border-white/15 dark:text-slate-300 dark:hover:border-amber-300/40 dark:hover:text-amber-100'
                       )}
                     >
                       {FILTER_META[filter].icon}
@@ -435,7 +536,7 @@ const LibraryPage = () => {
                           'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition',
                           activeFilter.type === 'list' && activeFilter.value === list.name
                             ? 'border-slate-300 bg-white text-slate-900 dark:border-white/35 dark:bg-white/[0.12] dark:text-white'
-                            : 'border-slate-300/80 text-slate-600 hover:border-slate-400 dark:border-white/15 dark:text-slate-300 dark:hover:border-white/30'
+                            : 'border-slate-300/80 text-slate-600 hover:border-slate-400 dark:border-white/15 dark:text-slate-300 dark:hover:border-amber-300/40 dark:hover:text-amber-100'
                         )}
                       >
                         <ListPlus className="h-3.5 w-3.5" />
@@ -534,7 +635,7 @@ const LibraryPage = () => {
                         key={`recent-${item.id}`}
                         type="button"
                         onClick={() => openDetailPanel(item.bookId)}
-                        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/25"
+                        className="tone-hover-gold flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 text-left transition dark:border-white/10 dark:bg-white/[0.03]"
                       >
                         <div className="h-12 w-8 overflow-hidden rounded-md border border-slate-200 dark:border-white/10">
                           <BookCover src={item.book?.coverImage ?? null} alt={item.book?.title || 'Recent book'} className="h-full w-full" />
@@ -582,7 +683,7 @@ const LibraryPage = () => {
               <button
                 type="button"
                 onClick={closeDetailPanel}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:border-white/30 dark:hover:text-white"
+                className="tone-hover-gold inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:text-slate-300 dark:hover:border-white/30 dark:hover:text-white"
                 aria-label="Close selected book panel"
               >
                 <X className="h-4 w-4" />
@@ -602,7 +703,7 @@ const LibraryPage = () => {
                       <button
                         type="button"
                         onClick={() => setIsBookCardFlipped(true)}
-                        className="group w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/25"
+                        className="tone-hover-gold group w-full rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/25"
                       >
                         <div className="overflow-hidden rounded-2xl border border-slate-300 dark:border-white/15">
                           <BookCover
@@ -626,7 +727,7 @@ const LibraryPage = () => {
                         <button
                           type="button"
                           onClick={() => setIsBookCardFlipped(false)}
-                          className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-white/30 dark:hover:text-white"
+                          className="tone-hover-gold inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:border-white/30 dark:hover:text-white"
                         >
                           <RotateCcw className="h-3 w-3" />
                           Cover
@@ -713,6 +814,16 @@ const LibraryPage = () => {
                         >
                           Save Reading Details
                         </button>
+                        {selectedBookId && selectedPreview.book?.isDigital ? (
+                          <button
+                            type="button"
+                            disabled={isOpeningEbook}
+                            onClick={() => void handleReadEbook()}
+                            className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
+                          >
+                            {isOpeningEbook ? 'Opening eBook...' : 'Read eBook'}
+                          </button>
+                        ) : null}
                       </div>
 
                       {selectedReadingItem && (

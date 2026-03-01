@@ -18,6 +18,7 @@ import { StaffModule } from './staff/staff.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { InquiriesModule } from './inquiries/inquiries.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { StoresModule } from './stores/stores.module';
 
 import { join } from 'path';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -46,6 +47,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     NotificationsModule,
     InquiriesModule,
     PromotionsModule,
+    StoresModule,
   ],
   controllers: [AppController],
   providers: [AppService],

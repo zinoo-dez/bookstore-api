@@ -22,7 +22,6 @@ describe('BooksService', () => {
               findUnique: jest.fn(),
               create: jest.fn(),
               update: jest.fn(),
-              delete: jest.fn(),
               count: jest.fn(),
             },
             purchaseRequest: {
@@ -209,15 +208,21 @@ describe('BooksService', () => {
             price: 29.99,
             stock: 5,
             description: 'Test description',
+            deletedAt: null,
             createdAt: new Date(),
             updatedAt: new Date(),
+          };
+
+          const trashedBook = {
+            ...existingBook,
+            deletedAt: new Date(),
           };
 
           (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
             existingBook,
           );
-          (prismaService.book.delete as jest.Mock).mockResolvedValue(
-            existingBook,
+          (prismaService.book.update as jest.Mock).mockResolvedValue(
+            trashedBook,
           );
 
           // Act: Delete book
@@ -227,11 +232,12 @@ describe('BooksService', () => {
           expect(prismaService.book.findUnique).toHaveBeenCalledWith({
             where: { id: bookId },
           });
-          expect(prismaService.book.delete).toHaveBeenCalledWith({
+          expect(prismaService.book.update).toHaveBeenCalledWith({
             where: { id: bookId },
+            data: { deletedAt: expect.any(Date) },
           });
           expect(result).toMatchObject({
-            ...existingBook,
+            ...trashedBook,
             inStock: existingBook.stock > 0,
             stockStatus:
               existingBook.stock === 0
@@ -740,15 +746,20 @@ describe('BooksService', () => {
           price: 29.99,
           stock: 10,
           description: 'Test description',
+          deletedAt: null,
           createdAt: new Date(),
           updatedAt: new Date(),
+        };
+        const trashedBook = {
+          ...existingBook,
+          deletedAt: new Date(),
         };
 
         (prismaService.book.findUnique as jest.Mock).mockResolvedValue(
           existingBook,
         );
-        (prismaService.book.delete as jest.Mock).mockResolvedValue(
-          existingBook,
+        (prismaService.book.update as jest.Mock).mockResolvedValue(
+          trashedBook,
         );
 
         // Act
@@ -756,12 +767,13 @@ describe('BooksService', () => {
 
         // Assert
         expect(result).toMatchObject({
-          ...existingBook,
+          ...trashedBook,
           inStock: true,
           stockStatus: 'IN_STOCK',
         });
-        expect(prismaService.book.delete).toHaveBeenCalledWith({
+        expect(prismaService.book.update).toHaveBeenCalledWith({
           where: { id: bookId },
+          data: { deletedAt: expect.any(Date) },
         });
       });
 
@@ -772,7 +784,7 @@ describe('BooksService', () => {
 
         // Act & Assert
         await expect(service.remove(bookId)).rejects.toThrow(NotFoundException);
-        expect(prismaService.book.delete).not.toHaveBeenCalled();
+        expect(prismaService.book.update).not.toHaveBeenCalled();
       });
     });
 
@@ -828,6 +840,7 @@ describe('BooksService', () => {
         expect(prismaService.book.findMany).toHaveBeenCalledWith({
           where: {
             title: { contains: 'test', mode: 'insensitive' },
+            deletedAt: null,
           },
           skip: 0,
           take: 10,
@@ -858,7 +871,7 @@ describe('BooksService', () => {
           expect(result).toBe(true);
           expect(prismaService.book.findUnique).toHaveBeenCalledWith({
             where: { id: bookId },
-            select: { stock: true },
+            select: { stock: true, deletedAt: true },
           });
         });
 
@@ -930,7 +943,7 @@ describe('BooksService', () => {
           expect(result[0].inStock).toBe(false);
           expect(result[0].stockStatus).toBe('OUT_OF_STOCK');
           expect(prismaService.book.findMany).toHaveBeenCalledWith({
-            where: { stock: 0 },
+            where: { stock: 0, deletedAt: null },
             orderBy: { updatedAt: 'desc' },
           });
         });
@@ -971,6 +984,7 @@ describe('BooksService', () => {
                 gt: 0,
                 lte: 5,
               },
+              deletedAt: null,
             },
             orderBy: { stock: 'asc' },
           });

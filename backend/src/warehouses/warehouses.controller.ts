@@ -125,9 +125,17 @@ export class WarehousesController {
   @Permissions('warehouse.view')
   @ApiOperation({ summary: 'List vendors' })
   @ApiQuery({ name: 'activeOnly', required: false, type: Boolean })
-  listVendors(@Query('activeOnly') activeOnly?: string) {
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['active', 'trashed', 'all'],
+  })
+  listVendors(
+    @Query('activeOnly') activeOnly?: string,
+    @Query('status') status?: 'active' | 'trashed' | 'all',
+  ) {
     const parsed = activeOnly === undefined ? undefined : activeOnly === 'true';
-    return this.warehousesService.listVendors(parsed);
+    return this.warehousesService.listVendors(parsed, status);
   }
 
   @Post('vendors')
@@ -149,6 +157,20 @@ export class WarehousesController {
   @ApiOperation({ summary: 'Delete vendor' })
   deleteVendor(@Param('id') id: string) {
     return this.warehousesService.deleteVendor(id);
+  }
+
+  @Patch('vendors/:id/restore')
+  @Permissions('warehouse.vendor.manage')
+  @ApiOperation({ summary: 'Restore soft-deleted vendor from bin' })
+  restoreVendor(@Param('id') id: string) {
+    return this.warehousesService.restoreVendor(id);
+  }
+
+  @Delete('vendors/:id/permanent')
+  @Permissions('warehouse.vendor.manage')
+  @ApiOperation({ summary: 'Permanently delete vendor from bin' })
+  permanentDeleteVendor(@Param('id') id: string) {
+    return this.warehousesService.permanentDeleteVendor(id);
   }
 
   @Get('purchase-orders')

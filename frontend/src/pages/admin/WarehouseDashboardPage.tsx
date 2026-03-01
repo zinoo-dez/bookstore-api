@@ -5,6 +5,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { getErrorMessage } from '@/lib/api'
 import { useWarehouseAlerts, useWarehouseStocks, useWarehouseTransfers, useWarehouses } from '@/services/warehouses'
 import { useCompleteWarehouseDeliveryTask, useWarehouseDeliveryTasks } from '@/services/orders'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
 
 const SELECTED_WAREHOUSE_KEY = 'warehouse-dashboard:selected-warehouse'
 
@@ -23,7 +24,7 @@ const WarehouseDashboardPage = () => {
   const { data: selectedStocks = [] } = useWarehouseStocks(effectiveWarehouseId || undefined)
   const { data: tasks = [] } = useWarehouseDeliveryTasks()
   const completeTask = useCompleteWarehouseDeliveryTask()
-  const [taskMessage, setTaskMessage] = useState('')
+  const { message: taskMessage, showMessage: showTaskMessage } = useTimedMessage(2600)
 
   const effectiveStocks = selectedStocks
 
@@ -147,11 +148,6 @@ const WarehouseDashboardPage = () => {
   const lowStockItems = scopedAlerts.filter((alert) => alert.stock > 0 && alert.stock <= 3).length
   const restockTasksToday = scopedAlerts.length
 
-  const showTaskMessage = (text: string) => {
-    setTaskMessage(text)
-    window.setTimeout(() => setTaskMessage(''), 2600)
-  }
-
   const onCompleteDeliveryTask = async (taskId: string) => {
     try {
       await completeTask.mutateAsync(taskId)
@@ -265,9 +261,9 @@ const WarehouseDashboardPage = () => {
             </div>
           )}
 
-          <div className="mt-4 overflow-auto rounded-xl border border-slate-200/70 dark:border-slate-800">
-            <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-              <thead className="bg-slate-50 dark:bg-slate-950">
+          <div className="admin-table-wrapper mt-4 overflow-auto">
+            <table className="admin-table min-w-full text-sm">
+              <thead className="admin-table-head">
                 <tr>
                   <th className="px-3 py-2 text-left">Task</th>
                   <th className="px-3 py-2 text-left">Order</th>
@@ -279,7 +275,7 @@ const WarehouseDashboardPage = () => {
                   <th className="px-3 py-2 text-left">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody>
                 {openDeliveryTasks.map((task) => {
                   const meta = (task.metadata || {}) as { orderId?: string }
                   const sla = getDeliverySla(task.createdAt)

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircleMore } from 'lucide-react'
+import { MessageCircleMore, Plus } from 'lucide-react'
 import {
   useCreateInquiryQuickReplyTemplate,
   useDeleteInquiryQuickReplyTemplate,
@@ -9,6 +9,7 @@ import {
   useInquiryQuickReplyTemplates,
   useUpdateInquiryQuickReplyTemplate,
 } from '@/services/inquiries'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 
 const TEMPLATE_TYPE_OPTIONS = ['COMMON', 'order', 'payment', 'legal', 'author', 'stock', 'other'] as const
 
@@ -60,6 +61,7 @@ const AdminInquiriesPage = () => {
   const [newTemplateBody, setNewTemplateBody] = useState('')
   const [newTemplateType, setNewTemplateType] = useState<(typeof TEMPLATE_TYPE_OPTIONS)[number]>('COMMON')
   const [newTemplateTags, setNewTemplateTags] = useState('')
+  const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [editingBody, setEditingBody] = useState('')
@@ -101,6 +103,7 @@ const AdminInquiriesPage = () => {
     setNewTemplateBody('')
     setNewTemplateType('COMMON')
     setNewTemplateTags('')
+    setIsTemplatePanelOpen(false)
   }
 
   const startEditTemplate = (template: { id: string; title: string; body: string; type: string; tags: string[] }) => {
@@ -241,59 +244,21 @@ const AdminInquiriesPage = () => {
       </section>
 
       <section className="surface-panel p-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Quick reply templates</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Shared templates used by customer service in inquiry replies.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-            Create template
-          </p>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <input
-              value={newTemplateTitle}
-              onChange={(event) => setNewTemplateTitle(event.target.value)}
-              placeholder="Template title"
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            />
-            <select
-              value={newTemplateType}
-              onChange={(event) => setNewTemplateType(event.target.value as (typeof TEMPLATE_TYPE_OPTIONS)[number])}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            >
-              {TEMPLATE_TYPE_OPTIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item.toUpperCase()}
-                </option>
-              ))}
-            </select>
-            <input
-              value={newTemplateTags}
-              onChange={(event) => setNewTemplateTags(event.target.value)}
-              placeholder="Tags (comma separated)"
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:col-span-2"
-            />
-            <textarea
-              value={newTemplateBody}
-              onChange={(event) => setNewTemplateBody(event.target.value)}
-              rows={4}
-              placeholder="Template message body..."
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:col-span-2"
-            />
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Quick reply templates</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Shared templates used by customer service in inquiry replies.
+            </p>
           </div>
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={handleCreateTemplate}
-              disabled={createTemplate.isPending || !newTemplateTitle.trim() || !newTemplateBody.trim()}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
-            >
-              Create template
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsTemplatePanelOpen(true)}
+            className="inline-flex h-11 items-center gap-2 rounded-lg bg-slate-900 px-4 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+          >
+            <Plus className="h-4 w-4" />
+            Create Template
+          </button>
         </div>
 
         <div className="mt-4 space-y-3">
@@ -399,6 +364,66 @@ const AdminInquiriesPage = () => {
           )}
         </div>
       </section>
+
+      <AdminSlideOverPanel
+        open={isTemplatePanelOpen}
+        onClose={() => setIsTemplatePanelOpen(false)}
+        kicker="Templates"
+        title="Create Template"
+        description="Add a reusable quick reply template for customer-service inquiry responses."
+        footer={(
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsTemplatePanelOpen(false)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 dark:border-slate-600 dark:text-slate-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCreateTemplate()}
+              disabled={createTemplate.isPending || !newTemplateTitle.trim() || !newTemplateBody.trim()}
+              className="rounded-lg border border-slate-900 bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-400 dark:bg-amber-400 dark:text-slate-900"
+            >
+              {createTemplate.isPending ? 'Creating...' : 'Create Template'}
+            </button>
+          </div>
+        )}
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <input
+            value={newTemplateTitle}
+            onChange={(event) => setNewTemplateTitle(event.target.value)}
+            placeholder="Template title"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+          />
+          <select
+            value={newTemplateType}
+            onChange={(event) => setNewTemplateType(event.target.value as (typeof TEMPLATE_TYPE_OPTIONS)[number])}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+          >
+            {TEMPLATE_TYPE_OPTIONS.map((item) => (
+              <option key={item} value={item}>
+                {item.toUpperCase()}
+              </option>
+            ))}
+          </select>
+          <input
+            value={newTemplateTags}
+            onChange={(event) => setNewTemplateTags(event.target.value)}
+            placeholder="Tags (comma separated)"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:col-span-2"
+          />
+          <textarea
+            value={newTemplateBody}
+            onChange={(event) => setNewTemplateBody(event.target.value)}
+            rows={6}
+            placeholder="Template message body..."
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 md:col-span-2"
+          />
+        </div>
+      </AdminSlideOverPanel>
 
       <section className="surface-panel p-6">
         {isLoading ? (

@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { CheckCircle2, Clock3 } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 
 interface OrderStatusModalProps {
   isOpen: boolean
@@ -23,113 +24,99 @@ const OrderStatusModal = ({
     currentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING'
   )
 
+  useEffect(() => {
+    if (!isOpen) return
+    setSelectedStatus(currentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING')
+  }, [currentStatus, isOpen])
+
   const handleSubmit = () => {
     onSubmit(selectedStatus)
   }
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black bg-opacity-50"
-        />
-
-        {/* Modal */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 dark:bg-slate-900 dark:border dark:border-slate-800"
+    <AdminSlideOverPanel
+      open={isOpen}
+      onClose={onClose}
+      title="Update Order Status"
+      description={`Order #${orderId ? orderId.slice(-8).toUpperCase() : '-'}`}
+      widthClassName="sm:max-w-xl"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} isLoading={isLoading} disabled={selectedStatus === currentStatus}>
+            Update Status
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <label
+          className={`block cursor-pointer rounded-2xl border p-4 transition ${
+            selectedStatus === 'PENDING'
+              ? 'border-amber-300 bg-amber-50/50 dark:border-amber-500/50 dark:bg-amber-900/10'
+              : 'border-slate-200 hover:border-amber-200 dark:border-slate-700 dark:hover:border-amber-500/40'
+          }`}
         >
-          <div className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Update Order Status
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 text-2xl dark:text-slate-500 dark:hover:text-amber-300"
-              >
-                ×
-              </button>
+          <input
+            type="radio"
+            name="status"
+            value="PENDING"
+            checked={selectedStatus === 'PENDING'}
+            onChange={() => setSelectedStatus('PENDING')}
+            className="sr-only"
+          />
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 rounded-lg bg-amber-100 p-1.5 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
+                <Clock3 className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">Pending</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Order is being processed.</p>
+              </div>
             </div>
-
-            {/* Order ID */}
-            <p className="text-sm text-gray-600 mb-4 dark:text-slate-400">
-              Order ID: <span className="font-mono font-medium">{orderId.slice(-8).toUpperCase()}</span>
-            </p>
-
-            {/* Status Options */}
-            <div className="space-y-3 mb-6">
-              <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800">
-                <input
-                  type="radio"
-                  name="status"
-                  value="PENDING"
-                  checked={selectedStatus === 'PENDING'}
-                  onChange={(e) => setSelectedStatus(e.target.value as any)}
-                  className="mr-3"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">Pending</div>
-                  <div className="text-sm text-gray-600 dark:text-slate-400">Order is being processed</div>
-                </div>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full dark:bg-amber-900/40 dark:text-amber-200">
-                  PENDING
-                </span>
-              </label>
-
-              <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800">
-                <input
-                  type="radio"
-                  name="status"
-                  value="CONFIRMED"
-                  checked={selectedStatus === 'CONFIRMED'}
-                  onChange={(e) => setSelectedStatus(e.target.value as any)}
-                  className="mr-3"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">Confirmed</div>
-                  <div className="text-sm text-gray-600 dark:text-slate-400">Finance has verified payment and sent to warehouse delivery tasks</div>
-                </div>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full dark:bg-blue-900/40 dark:text-blue-200">
-                  CONFIRMED
-                </span>
-              </label>
-
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                isLoading={isLoading}
-                className="flex-1"
-                disabled={selectedStatus === currentStatus}
-              >
-                Update Status
-              </Button>
-            </div>
+            <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+              PENDING
+            </span>
           </div>
-        </motion.div>
+        </label>
+
+        <label
+          className={`block cursor-pointer rounded-2xl border p-4 transition ${
+            selectedStatus === 'CONFIRMED'
+              ? 'border-blue-300 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-900/10'
+              : 'border-slate-200 hover:border-blue-200 dark:border-slate-700 dark:hover:border-blue-500/40'
+          }`}
+        >
+          <input
+            type="radio"
+            name="status"
+            value="CONFIRMED"
+            checked={selectedStatus === 'CONFIRMED'}
+            onChange={() => setSelectedStatus('CONFIRMED')}
+            className="sr-only"
+          />
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 rounded-lg bg-blue-100 p-1.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+                <CheckCircle2 className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">Confirmed</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Finance has verified payment and sent to warehouse delivery tasks.
+                </p>
+              </div>
+            </div>
+            <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+              CONFIRMED
+            </span>
+          </div>
+        </label>
       </div>
-      )}
-    </AnimatePresence>
+    </AdminSlideOverPanel>
   )
 }
 

@@ -4,6 +4,8 @@ import { api } from '@/lib/api'
 export interface Order {
   id: string
   userId: string
+  deliveryType?: 'HOME_DELIVERY' | 'STORE_PICKUP'
+  storeId?: string | null
   subtotalPrice?: number | string
   discountAmount?: number | string
   promoCode?: string | null
@@ -20,6 +22,14 @@ export interface Order {
   paymentProvider?: 'KPAY' | 'WAVEPAY' | 'MPU' | 'VISA' | null
   paymentReceiptUrl?: string | null
   createdAt: string
+  pickupStore?: {
+    id: string
+    code: string
+    name: string
+    city: string
+    state: string
+    address?: string | null
+  } | null
   user?: {
     id: string
     name: string
@@ -28,6 +38,7 @@ export interface Order {
   orderItems: {
     id: string
     bookId: string
+    format?: 'PHYSICAL' | 'EBOOK'
     quantity: number
     price: number | string
     book: {
@@ -63,6 +74,7 @@ export interface WarehouseDeliveryTask {
   order?: {
     id: string
     status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+    deliveryType?: 'HOME_DELIVERY' | 'STORE_PICKUP'
     createdAt: string
     user: {
       id: string
@@ -77,6 +89,14 @@ export interface WarehouseDeliveryTask {
     shippingState?: string | null
     shippingZipCode?: string | null
     shippingCountry?: string | null
+    pickupStore?: {
+      id: string
+      code: string
+      name: string
+      city: string
+      state: string
+      address?: string | null
+    } | null
     orderItems: Array<{
       id: string
       quantity: number
@@ -127,14 +147,16 @@ export const useCreateOrder = () => {
 
   return useMutation({
     mutationFn: async (payload: {
+      deliveryType?: 'HOME_DELIVERY' | 'STORE_PICKUP'
+      storeId?: string
       fullName: string
       email: string
       phone: string
-      address: string
-      city: string
-      state: string
-      zipCode: string
-      country: string
+      address?: string
+      city?: string
+      state?: string
+      zipCode?: string
+      country?: string
       paymentProvider: 'KPAY' | 'WAVEPAY' | 'MPU' | 'VISA'
       paymentReceiptUrl: string
       promoCode?: string
@@ -249,10 +271,13 @@ export const useReorder = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (orderItems: { bookId: string; quantity: number }[]) => {
+    mutationFn: async (orderItems: { bookId: string; quantity: number; format?: 'PHYSICAL' | 'EBOOK' }[]) => {
       // Add all items to cart
       for (const item of orderItems) {
-        await api.post('/cart', item)
+        await api.post('/cart', {
+          ...item,
+          format: item.format ?? 'PHYSICAL',
+        })
       }
       return true
     },

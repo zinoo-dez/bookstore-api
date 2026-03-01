@@ -1,9 +1,6 @@
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-
-// Centralized API base URL (dev + prod safe)
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:3000'
+import { resolveMediaUrl } from '@/lib/media'
 
 // Legacy DiceBear avatars (kept for backward compatibility)
 export const AVATARS = [
@@ -74,9 +71,7 @@ const Avatar = ({
     )
   }
   if (avatarType === 'upload' && avatarValue) {
-    const imageSrc = avatarValue.startsWith('http')
-      ? avatarValue
-      : `${API_BASE_URL}${avatarValue}`
+    const imageSrc = resolveMediaUrl(avatarValue)
 
     content = (
       <img

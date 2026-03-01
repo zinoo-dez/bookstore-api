@@ -27,6 +27,7 @@ import { CreateStaffTaskDto } from './dto/create-staff-task.dto';
 import { UpdateStaffTaskDto } from './dto/update-staff-task.dto';
 import { HireExistingUserDto } from './dto/hire-existing-user.dto';
 import { CreateStaffAccountDto } from './dto/create-staff-account.dto';
+import { UpdateStaffAccountAccessDto } from './dto/update-staff-account-access.dto';
 
 @Injectable()
 export class StaffService {
@@ -301,6 +302,39 @@ export class StaffService {
         },
       },
       orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
+    });
+  }
+
+  async listElevatedAccounts() {
+    return this.prisma.user.findMany({
+      where: {
+        role: {
+          in: [Role.ADMIN, Role.SUPER_ADMIN],
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        staffProfile: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            department: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ role: 'desc' }, { name: 'asc' }],
     });
   }
 
@@ -997,6 +1031,75 @@ export class StaffService {
     return profile;
   }
 
+  async updateStaffAccountAccess(
+    id: string,
+    dto: UpdateStaffAccountAccessDto,
+    actorUserId?: string,
+  ) {
+    const actor = await this.prisma.user.findUnique({
+      where: { id: actorUserId },
+      select: { id: true, role: true },
+    });
+
+    if (!actor || actor.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException(
+        'Only SUPER_ADMIN can change staff account access.',
+      );
+    }
+
+    const profile = await this.prisma.staffProfile.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
+        user: {
+          select: {
+            id: true,
+            role: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Staff profile not found');
+    }
+
+    if (profile.user.id === actor.id && dto.role !== profile.user.role) {
+      throw new BadRequestException('You cannot change your own account role.');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: profile.userId },
+      data: { role: dto.role },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    await this.createAuditLog(
+      actorUserId,
+      'staffProfile.accountAccess.update',
+      'staffProfile',
+      id,
+      {
+        userId: profile.userId,
+        beforeRole: profile.user.role,
+        afterRole: dto.role,
+      } as unknown as Prisma.InputJsonValue,
+    );
+
+    return {
+      staffProfileId: id,
+      user: updatedUser,
+    };
+  }
+
   async assignRoleToStaff(
     staffId: string,
     dto: AssignStaffRoleDto,
@@ -1540,6 +1643,150 @@ export class StaffService {
               : Number(((item.completed / item.total) * 100).toFixed(2)),
         }))
         .sort((a, b) => b.total - a.total),
+    };
+  }
+
+  async getCommercialPerformanceMetrics(
+    filters: {
+      fromDate?: Date;
+      toDate?: Date;
+      limit?: number;
+    },
+    actorUserId?: string,
+  ) {
+    await this.getActorContext(actorUserId);
+
+    const limit = Math.max(3, Math.min(20, Math.floor(filters.limit ?? 5)));
+
+    const orderWhere: Prisma.OrderWhereInput = {
+      status: { in: ['CONFIRMED', 'COMPLETED'] },
+      ...(filters.fromDate || filters.toDate
+        ? {
+            createdAt: {
+              ...(filters.fromDate ? { gte: filters.fromDate } : {}),
+              ...(filters.toDate ? { lte: filters.toDate } : {}),
+            },
+          }
+        : {}),
+    };
+
+    const [buyerGroups, filteredItems] = await Promise.all([
+      this.prisma.order.groupBy({
+        by: ['userId'],
+        where: orderWhere,
+        _sum: { totalPrice: true },
+        _count: { id: true },
+        orderBy: { _sum: { totalPrice: 'desc' } },
+        take: limit,
+      }),
+      this.prisma.orderItem.findMany({
+        where: {
+          order: orderWhere,
+        },
+        select: {
+          bookId: true,
+          quantity: true,
+          price: true,
+        },
+      }),
+    ]);
+
+    const userIds = buyerGroups.map((row) => row.userId);
+    const users = userIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        })
+      : [];
+    const usersById = new Map(users.map((user) => [user.id, user]));
+
+    const topBuyers = buyerGroups.map((row) => {
+      const user = usersById.get(row.userId);
+      return {
+        userId: row.userId,
+        name: user?.name ?? 'Unknown user',
+        email: user?.email ?? '',
+        orderCount: row._count.id,
+        totalSpend: Number(row._sum.totalPrice ?? 0),
+      };
+    });
+
+    const bookRollup = filteredItems.reduce<
+      Record<
+        string,
+        {
+          bookId: string;
+          units: number;
+          revenue: number;
+        }
+      >
+    >((acc, item) => {
+      const current = acc[item.bookId] ?? {
+        bookId: item.bookId,
+        units: 0,
+        revenue: 0,
+      };
+      current.units += item.quantity;
+      current.revenue += Number(item.price) * item.quantity;
+      acc[item.bookId] = current;
+      return acc;
+    }, {});
+
+    const bookIds = Object.keys(bookRollup);
+    const books = bookIds.length
+      ? await this.prisma.book.findMany({
+          where: { id: { in: bookIds } },
+          select: {
+            id: true,
+            title: true,
+            author: true,
+            isbn: true,
+          },
+        })
+      : [];
+    const booksById = new Map(books.map((book) => [book.id, book]));
+
+    const mergedBooks = Object.values(bookRollup).map((row) => {
+      const book = booksById.get(row.bookId);
+      return {
+        bookId: row.bookId,
+        title: book?.title ?? 'Unknown book',
+        author: book?.author ?? '',
+        isbn: book?.isbn ?? '',
+        units: row.units,
+        revenue: Number(row.revenue.toFixed(2)),
+      };
+    });
+
+    const topBooksByUnits = [...mergedBooks]
+      .sort((a, b) => b.units - a.units)
+      .slice(0, limit);
+    const topBooksByRevenue = [...mergedBooks]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, limit);
+
+    const totalRevenue = topBuyers.reduce((sum, row) => sum + row.totalSpend, 0);
+    const totalOrders = topBuyers.reduce((sum, row) => sum + row.orderCount, 0);
+
+    return {
+      summary: {
+        buyersCount: topBuyers.length,
+        booksTracked: mergedBooks.length,
+        totalRevenue: Number(totalRevenue.toFixed(2)),
+        totalOrders,
+      },
+      period: {
+        fromDate: filters.fromDate?.toISOString() ?? null,
+        toDate: filters.toDate?.toISOString() ?? null,
+        limit,
+      },
+      topBuyers,
+      topBooksByUnits,
+      topBooksByRevenue,
     };
   }
 

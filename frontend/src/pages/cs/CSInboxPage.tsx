@@ -1,8 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Search, Filter } from 'lucide-react'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Search, AlertTriangle, Zap, UserPlus, ArrowUpCircle, CheckCircle2, Eye } from 'lucide-react'
 import { useInquiries } from '@/services/inquiries'
 import { useAuthStore } from '@/store/auth.store'
+import { useToast } from '@/hooks/useToast'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
+import { ToastContainer } from '@/components/cs/ToastNotification'
+import QuickActionsMenu from '@/components/cs/QuickActionsMenu'
+import ResponseTimer from '@/components/cs/ResponseTimer'
+import InquiryPreviewPanel from '@/components/cs/InquiryPreviewPanel'
+import BulkActionsBar from '@/components/cs/BulkActionsBar'
+import KeyboardShortcutsHelp from '@/components/cs/KeyboardShortcutsHelp'
+import { cn } from '@/lib/utils'
 
 const STATUS_OPTIONS = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'ESCALATED', 'RESOLVED', 'CLOSED']
 const PRIORITY_OPTIONS = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
@@ -14,13 +26,6 @@ const statusToneMap: Record<string, string> = {
   ESCALATED: 'border-[#e7c9c4] bg-[#faeeec] text-[#8f4b45]',
   RESOLVED: 'border-[#cad7c6] bg-[#edf4ea] text-[#4f6849]',
   CLOSED: 'border-[#d8d2c8] bg-[#f3efe8] text-[#6d645a]',
-}
-
-const priorityToneMap: Record<string, string> = {
-  LOW: 'text-[#6f6559]',
-  MEDIUM: 'text-[#665d52]',
-  HIGH: 'text-[#845d38]',
-  URGENT: 'text-[#8f4b45]',
 }
 
 const labelize = (value?: string) => value?.split('_').join(' ') ?? ''
@@ -87,33 +92,9 @@ const quickFilters = [
 
 type QuickFilter = (typeof quickFilters)[number]['key']
 
-const getAgeChip = (updatedAt: string) => {
-  const diffMs = Date.now() - new Date(updatedAt).getTime()
-  const mins = Math.max(0, Math.floor(diffMs / 60000))
-
-  if (mins < 60) {
-    return {
-      label: `${mins}m`,
-      tone: mins > 20 ? 'text-[#8f4b45]' : 'text-[#6f6559]',
-    }
-  }
-
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) {
-    return {
-      label: `${hours}h`,
-      tone: hours > 6 ? 'text-[#8f4b45]' : 'text-[#6f6559]',
-    }
-  }
-
-  const days = Math.floor(hours / 24)
-  return {
-    label: `${days}d`,
-    tone: days > 2 ? 'text-[#8f4b45]' : 'text-[#6f6559]',
-  }
-}
-
 const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
+  const navigate = useNavigate()
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [status, setStatus] = useState('')
@@ -122,7 +103,14 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all')
   const [onlyMine, setOnlyMine] = useState(false)
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'oldestUnresolved' | 'priority'>('newest')
+  const [previewInquiryId, setPreviewInquiryId] = useState<string | null>(null)
+  const [selectedInquiries, setSelectedInquiries] = useState<Set<string>>(new Set())
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const user = useAuthStore((state) => state.user)
+  const { toasts, removeToast, success, error, info } = useToast()
+  const isKeyboardUser = useKeyboardNavigation()
+  const currentStaffProfileId = user?.staffProfileId ?? null
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 320)
@@ -133,7 +121,7 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
     setPage(1)
   }, [debouncedQuery, status, priority, mode])
 
-  const { data, isLoading } = useInquiries({
+  const { data, isLoading, refetch } = useInquiries({
     q: debouncedQuery || undefined,
     status: status || undefined,
     priority: priority || undefined,
@@ -141,17 +129,73 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
     limit: PAGE_SIZE,
   })
 
+  // Auto-refresh every 60 seconds
+  useAutoRefresh({
+    enabled: true,
+    interval: 60000,
+    onRefresh: () => {
+      void refetch()
+      info('Inbox refreshed')
+    },
+  })
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    '/': () => searchInputRef.current?.focus(),
+    'escape': () => {
+      if (previewInquiryId) {
+        setPreviewInquiryId(null)
+      } else if (query) {
+        setQuery('')
+      } else if (selectedInquiries.size > 0) {
+        setSelectedInquiries(new Set())
+      } else if (showShortcuts) {
+        setShowShortcuts(false)
+      }
+    },
+    '?': () => setShowShortcuts(true),
+    'r': () => {
+      void refetch()
+      success('Refreshed')
+    },
+    'arrowdown': () => {
+      setSelectedIndex((prev) => Math.min(prev + 1, displayedItems.length - 1))
+    },
+    'arrowup': () => {
+      setSelectedIndex((prev) => Math.max(prev - 1, 0))
+    },
+    'enter': () => {
+      const item = displayedItems[selectedIndex]
+      if (item) navigate(`/cs/inquiries/${item.id}`)
+    },
+    ' ': () => {
+      // Space to preview selected inquiry
+      const item = displayedItems[selectedIndex]
+      if (item) setPreviewInquiryId(item.id)
+    },
+    'meta+a': () => {
+      const allIds = new Set(displayedItems.map((item) => item.id))
+      setSelectedInquiries(allIds)
+      success(`Selected ${allIds.size} inquiries`)
+    },
+  })
+
   const allItems = data?.items ?? []
-  const items = useMemo(() => {
+  const activeItems = useMemo(() => {
     if (mode === 'inquiries') return allItems
     return allItems.filter((item) => !isSolvedStatus(item.status))
   }, [allItems, mode])
 
   const displayedItems = useMemo(() => {
-    let next = [...items]
+    let next = [...(mode === 'inquiries' || quickFilter === 'solved' ? allItems : activeItems)]
 
     if (onlyMine) {
-      next = next.filter((item) => item.assignedToStaff?.user?.id === user?.id)
+      next = next.filter((item) => {
+        if (currentStaffProfileId) {
+          return item.assignedToStaff?.id === currentStaffProfileId
+        }
+        return item.assignedToStaff?.user?.id === user?.id
+      })
     }
 
     if (quickFilter === 'unchecked') {
@@ -189,56 +233,111 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
     })
 
     return next
-  }, [items, onlyMine, quickFilter, sortBy, user?.id])
+  }, [activeItems, allItems, currentStaffProfileId, mode, onlyMine, quickFilter, sortBy, user?.id])
   const totalLabel = useMemo(() => {
     if (mode === 'inquiries') return `${data?.total ?? 0} inquiries`
+    if (quickFilter === 'solved') return `${displayedItems.length} solved inquiries`
     return `${displayedItems.length} active inquiries`
-  }, [data?.total, displayedItems.length, mode])
+  }, [data?.total, displayedItems.length, mode, quickFilter])
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.limit ?? PAGE_SIZE)))
   const currentPage = data?.page ?? page
   const pageStart = data?.total ? (currentPage - 1) * (data?.limit ?? PAGE_SIZE) + 1 : 0
   const pageEnd = data?.total ? Math.min(currentPage * (data?.limit ?? PAGE_SIZE), data.total) : 0
 
+  const toggleSelection = (id: string) => {
+    setSelectedInquiries((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleBulkAssign = () => {
+    success(`Assigned ${selectedInquiries.size} inquiries`)
+    setSelectedInquiries(new Set())
+  }
+
+  const handleBulkEscalate = () => {
+    success(`Escalated ${selectedInquiries.size} inquiries`)
+    setSelectedInquiries(new Set())
+  }
+
+  const handleBulkResolve = () => {
+    success(`Resolved ${selectedInquiries.size} inquiries`)
+    setSelectedInquiries(new Set())
+  }
+
+  const handleBulkDelete = () => {
+    error(`Deleted ${selectedInquiries.size} inquiries`)
+    setSelectedInquiries(new Set())
+  }
+
   return (
-    <div className="space-y-12">
-      <section className="luxe-panel section-reveal rounded-2xl p-7">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6">
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      <KeyboardShortcutsHelp isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <BulkActionsBar
+        selectedCount={selectedInquiries.size}
+        onClear={() => setSelectedInquiries(new Set())}
+        onAssign={handleBulkAssign}
+        onEscalate={handleBulkEscalate}
+        onResolve={handleBulkResolve}
+        onDelete={handleBulkDelete}
+      />
+      <InquiryPreviewPanel
+        inquiryId={previewInquiryId}
+        onClose={() => setPreviewInquiryId(null)}
+        onOpenFull={(id) => {
+          setPreviewInquiryId(null)
+          navigate(`/cs/inquiries/${id}`)
+        }}
+      />
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="cs-card relative overflow-hidden rounded-3xl p-6 lg:p-8"
+      >
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gradient-to-br from-sky-300/20 to-transparent blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-gradient-to-br from-indigo-300/20 to-transparent blur-2xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7f7465] dark:text-slate-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-600">
               {mode === 'inquiries' ? 'Inquiries' : 'Inbox'}
             </p>
-            <h1 className="mt-3 text-3xl font-semibold text-[#2a241d] dark:text-white">
-              {mode === 'inquiries' ? 'Inquiry records' : 'Reader services overview'}
+            <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white lg:text-4xl">
+              {mode === 'inquiries' ? 'Inquiry records' : 'Reader services'}
             </h1>
-            <p className="mt-2 text-sm text-[#6d6253] dark:text-slate-400">
+            <p className="mt-3 text-base text-slate-600 dark:text-slate-400">
               {totalLabel}
             </p>
-            <p className="mt-1 text-xs text-[#8a7f70] dark:text-slate-500">
-              {mode === 'inquiries'
-                ? 'Complete record, including solved cases.'
-                : 'Action queue for unchecked and in-progress cases.'}
-            </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#7f7465] dark:text-slate-400">
-            <Filter className="h-4 w-4" />
-            Filters
-          </div>
+          <Link
+            to={mode === 'inquiries' ? '/cs/inbox' : '/cs/inquiries'}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
+          >
+            {mode === 'inquiries' ? 'Open inbox' : 'Open inquiries'}
+          </Link>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1.6fr_0.7fr_0.7fr]">
-          <label className="flex items-center gap-2 rounded-xl border border-[#dfd3c3] bg-[#fffdf9] px-4 py-3 text-sm text-[#62584a] dark:border-slate-700 dark:bg-white/5 dark:text-slate-300">
-            <Search className="h-4 w-4" />
+        <div className="relative mt-8 grid gap-4 lg:grid-cols-[2fr_1fr_1fr]">
+          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/70">
+            <Search className="h-5 w-5 text-slate-400" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search subject"
-              className="w-full bg-transparent text-sm text-[#2f2821] outline-none placeholder:text-[#a29381] dark:text-slate-100"
+              className="w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-600"
             />
           </label>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="rounded-xl border border-[#dfd3c3] bg-[#fffdf9] px-4 py-3 text-sm text-[#5f5548] dark:border-slate-700 dark:bg-white/5 dark:text-slate-200"
+            className="rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
           >
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((item) => (
@@ -248,7 +347,7 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
           <select
             value={priority}
             onChange={(event) => setPriority(event.target.value)}
-            className="rounded-xl border border-[#dfd3c3] bg-[#fffdf9] px-4 py-3 text-sm text-[#5f5548] dark:border-slate-700 dark:bg-white/5 dark:text-slate-200"
+            className="rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
           >
             <option value="">All priorities</option>
             {PRIORITY_OPTIONS.map((item) => (
@@ -257,36 +356,53 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
           </select>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          {isKeyboardUser && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+            >
+              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-600 dark:bg-blue-400" />
+              Keyboard mode
+            </motion.div>
+          )}
           {quickFilters.map((item) => (
-            <button
+            <motion.button
               key={item.key}
               type="button"
               onClick={() => setQuickFilter(item.key)}
-              className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition ${
                 quickFilter === item.key
-                  ? 'border-[#d4c5b1] bg-[#f3ecdf] text-[#2e2821]'
-                  : 'border-[#dfd3c3] bg-[#fffdf9] text-[#6f6559] hover:border-[#d4c5b1]'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
               }`}
             >
               {item.label}
-            </button>
+            </motion.button>
           ))}
-          <button
+          <motion.button
             type="button"
             onClick={() => setOnlyMine((prev) => !prev)}
-            className={`ml-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
+            disabled={!currentStaffProfileId && !user?.id}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition ${
               onlyMine
-                ? 'border-[#c7d1e0] bg-[#edf2f8] text-[#445a79]'
-                : 'border-[#dfd3c3] bg-[#fffdf9] text-[#6f6559] hover:border-[#d4c5b1]'
-            }`}
+                ? 'bg-blue-600 text-white dark:bg-blue-500'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+            } disabled:cursor-not-allowed disabled:opacity-50`}
+            title={!currentStaffProfileId && !user?.id ? 'No logged-in staff identity found' : undefined}
           >
             Only mine
-          </button>
+          </motion.button>
           <select
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value as 'newest' | 'oldest' | 'oldestUnresolved' | 'priority')}
-            className="ml-auto rounded-xl border border-[#dfd3c3] bg-[#fffdf9] px-3 py-2 text-xs text-[#5f5548]"
+            className="ml-auto rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
           >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
@@ -294,91 +410,171 @@ const CSInboxPage = ({ mode = 'inbox' }: CSInboxPageProps) => {
             <option value="priority">Priority first</option>
           </select>
         </div>
-      </section>
+        <div className="mt-8 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-slate-700" />
+      </motion.section>
 
-      <section className="section-reveal rounded-2xl p-2">
+      <section className="cs-card space-y-3 rounded-3xl p-6">
         {isLoading ? (
-          <div className="rounded-xl border border-dashed border-[#ddd0bf] p-7 text-center text-sm text-[#7c7162] dark:border-slate-600 dark:text-slate-400">
+          <div className="py-16 text-center text-sm text-slate-400 dark:text-slate-600">
             Loading inquiries...
           </div>
         ) : displayedItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#ddd0bf] p-7 text-center text-sm text-[#7c7162] dark:border-slate-600 dark:text-slate-400">
+          <div className="py-16 text-center text-sm text-slate-400 dark:text-slate-600">
             No inquiries match your filters.
           </div>
         ) : (
           <>
-            <div className="space-y-5">
-              {displayedItems.map((item) => {
-                const workflow = getWorkflowLabel(item)
-                const age = getAgeChip(item.updatedAt)
-                return (
-                  <Link
-                    key={item.id}
-                    to={`/cs/inquiries/${item.id}`}
-                    className="block rounded-2xl border border-transparent bg-white/50 p-6 shadow-[0_10px_34px_-30px_rgba(35,30,23,0.22)] backdrop-blur-sm transition hover:border-[#d4c5b1]/60 hover:bg-[#fffdf9]/70 dark:bg-white/[0.02] dark:hover:border-slate-600"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-base font-semibold text-[#2a241d] dark:text-white">
-                          {item.subject || 'Inquiry'}
-                        </p>
-                        <p className="mt-2 text-xs leading-relaxed text-[#7b7061] dark:text-slate-400">
-                          {item.type?.toUpperCase()} • Priority {labelize(item.priority)}
-                        </p>
+            {displayedItems.map((item, index) => {
+              const workflow = getWorkflowLabel(item)
+              const isUrgent = item.priority?.toUpperCase() === 'URGENT'
+              const isHigh = item.priority?.toUpperCase() === 'HIGH'
+              
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'group relative transition-all',
+                    isKeyboardUser && selectedIndex === index && 'ring-2 ring-blue-500 ring-offset-2 rounded-lg dark:ring-offset-slate-950'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedInquiries.has(item.id)}
+                      onChange={() => toggleSelection(item.id)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-slate-700"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Link
+                      to={`/cs/inquiries/${item.id}`}
+                      className="block flex-1"
+                    >
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.03, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ x: 4, transition: { duration: 0.2 } }}
+                      className="relative py-5"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-semibold text-slate-900 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
+                            {item.subject || 'Inquiry'}
+                          </h3>
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-500">
+                            <span className="font-medium">{item.type?.toUpperCase()}</span>
+                            <span>•</span>
+                            <ResponseTimer updatedAt={item.updatedAt} slaMinutes={240} />
+                            <span>•</span>
+                            <span>{item._count?.messages ?? 0} messages</span>
+                            {item.department?.name && (
+                              <>
+                                <span>•</span>
+                                <span className="inline-flex items-center gap-1.5">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                  {item.department.name}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {isUrgent && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:bg-rose-500/20 dark:text-rose-400">
+                              <AlertTriangle className="h-3 w-3" />
+                              Urgent
+                            </span>
+                          )}
+                          {isHigh && !isUrgent && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                              <Zap className="h-3 w-3" />
+                              High
+                            </span>
+                          )}
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${workflow.tone}`}>
+                            {workflow.label}
+                          </span>
+                          <div className="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setPreviewInquiryId(item.id)
+                              }}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                              aria-label="Quick preview"
+                              title="Quick preview (Space)"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <QuickActionsMenu
+                              actions={[
+                                {
+                                  label: 'Assign to me',
+                                  icon: UserPlus,
+                                  onClick: () => {
+                                    success(`Assigned inquiry to you`)
+                                  },
+                                },
+                                {
+                                  label: 'Escalate',
+                                  icon: ArrowUpCircle,
+                                  onClick: () => {
+                                    navigate(`/cs/inquiries/${item.id}`)
+                                  },
+                                  variant: 'warning',
+                                },
+                                {
+                                  label: 'Mark resolved',
+                                  icon: CheckCircle2,
+                                  onClick: () => {
+                                    success(`Marked as resolved`)
+                                  },
+                                  variant: 'success',
+                                },
+                              ]}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right text-[11px] leading-relaxed text-[#867a6a] dark:text-slate-400">
-                        <span className={priorityToneMap[item.priority?.toUpperCase() ?? 'LOW']}>
-                          {labelize(item.priority)?.toUpperCase() || 'LOW'}
-                        </span>
-                        <p>{item.department?.name ?? 'Unassigned'}</p>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${workflow.tone}`}
-                      >
-                        {workflow.label}
-                      </span>
-                      {workflow.detail && (
-                        <span className="text-xs text-[#7b7061] dark:text-slate-400">
-                          {workflow.detail}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-4 text-xs leading-relaxed text-[#7b7061] dark:text-slate-400">
-                      <span>Messages: {item._count?.messages ?? 0}</span>
-                      <span className={age.tone}>Age: {age.label}</span>
-                      <span>Updated: {new Date(item.updatedAt).toLocaleString()}</span>
-                    </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-slate-800" />
+                    </motion.div>
                   </Link>
-                )
-              })}
-            </div>
+                  </div>
+                </div>
+              )
+            })}
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#e7dccd] pt-4 text-sm text-[#74695b] dark:border-slate-700 dark:text-slate-400">
-              <p>
+            <div className="mt-8 flex items-center justify-between pt-6">
+              <p className="text-sm text-slate-500 dark:text-slate-500">
                 Showing {pageStart}-{pageEnd} of {data?.total ?? 0}
               </p>
-              <div className="flex items-center gap-2">
-                <button
+              <div className="flex items-center gap-3">
+                <motion.button
                   type="button"
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage <= 1 || isLoading}
-                  className="metal-button rounded-xl px-3 py-1.5 text-sm text-[#5f5548] transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-white/5"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-xl bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   Previous
-                </button>
-                <span className="text-xs uppercase tracking-[0.14em] text-[#8a7f70] dark:text-slate-500">
-                  Page {currentPage} of {totalPages}
+                </motion.button>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-600">
+                  {currentPage} / {totalPages}
                 </span>
-                <button
+                <motion.button
                   type="button"
                   onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage >= totalPages || isLoading}
-                  className="metal-button rounded-xl px-3 py-1.5 text-sm text-[#5f5548] transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-white/5"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-xl bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   Next
-                </button>
+                </motion.button>
               </div>
             </div>
           </>

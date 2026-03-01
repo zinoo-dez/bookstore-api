@@ -10,6 +10,9 @@ const contactResponseSchema = z.object({
   subject: z.string().optional().nullable(),
   message: z.string(),
   createdAt: z.string(),
+  createdInquiryId: z.string().nullable().optional(),
+  routedToDepartmentId: z.string().nullable().optional(),
+  routingSucceeded: z.boolean().optional(),
 })
 
 const notificationSchema = z.object({

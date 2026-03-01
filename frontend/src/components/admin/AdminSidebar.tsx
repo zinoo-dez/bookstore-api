@@ -3,7 +3,8 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useAuthStore } from '@/store/auth.store'
 import { hasPermission } from '@/lib/permissions'
-import { LayoutDashboard,
+import {
+  LayoutDashboard,
   BookOpen,
   DollarSign,
   Package,
@@ -16,39 +17,57 @@ import { LayoutDashboard,
   ClipboardCheck,
   Truck,
   MessageCircleMore,
-  LucideIcon
-} from "lucide-react";
+  Trash2,
+  X,
+  LucideIcon,
+} from 'lucide-react'
 
 interface NavItem {
   name: string
   path: string
   icon: LucideIcon
+  section: 'overview' | 'catalog' | 'commerce' | 'operations' | 'people'
   permission?: string | string[]
   requireAll?: boolean
   adminOnly?: boolean
 }
 
 const navItems: NavItem[] = [
-  { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-  { name: 'Books', path: '/admin/books', icon: BookOpen, adminOnly: true },
-  { name: 'Orders', path: '/admin/orders', icon: Package, permission: 'finance.reports.view' },
-  { name: 'Promotions', path: '/admin/promotions', icon: DollarSign, permission: 'finance.payout.manage' },
-  { name: 'Delivery', path: '/admin/delivery', icon: Truck, permission: 'warehouse.purchase_order.view' },
-  { name: 'Warehouses', path: '/admin/warehouses', icon: Warehouse, permission: 'warehouse.view' },
-  { name: 'Book Distribution', path: '/admin/book-distribution', icon: BookOpen, permission: 'warehouse.view' },
-  { name: 'Vendors', path: '/admin/vendors', icon: Building2, permission: ['warehouse.view', 'warehouse.vendor.manage'], requireAll: false },
-  { name: 'Purchase Requests', path: '/admin/purchase-requests', icon: ClipboardCheck, permission: ['warehouse.purchase_request.view', 'finance.purchase_request.review', 'finance.purchase_request.approve', 'finance.purchase_request.reject'], requireAll: false },
-  { name: 'Purchase Orders', path: '/admin/purchase-orders', icon: Truck, permission: ['warehouse.purchase_order.view', 'finance.purchase_order.view', 'warehouse.purchase_order.create', 'warehouse.purchase_order.receive'], requireAll: false },
-  { name: 'Inquiries', path: '/admin/inquiries', icon: MessageCircleMore, adminOnly: true },
-  { name: 'Users', path: '/admin/users', icon: Users, adminOnly: true },
-  { name: 'Staff', path: '/admin/staff', icon: Users, permission: 'staff.view' },
-  { name: 'Departments', path: '/admin/staff/departments', icon: Building2, permission: ['staff.manage', 'staff.view'], requireAll: true },
-  { name: 'Role Matrix', path: '/admin/staff/roles', icon: ShieldCheck, permission: 'admin.permission.manage' },
-  { name: 'Staff Tasks', path: '/admin/staff/tasks', icon: ListTodo, permission: ['staff.view', 'hr.performance.manage'], requireAll: true },
-  { name: 'Performance', path: '/admin/staff/performance', icon: BarChart3, permission: 'hr.performance.manage' },
+  { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, section: 'overview' },
+  { name: 'Books', path: '/admin/books', icon: BookOpen, section: 'catalog', adminOnly: true },
+  { name: 'Bin', path: '/admin/bin', icon: Trash2, section: 'catalog', adminOnly: true },
+  { name: 'Inquiries', path: '/admin/inquiries', icon: MessageCircleMore, section: 'commerce', adminOnly: true },
+  { name: 'Orders', path: '/admin/orders', icon: Package, section: 'commerce', permission: 'finance.reports.view' },
+  { name: 'Promotions', path: '/admin/promotions', icon: DollarSign, section: 'commerce', permission: 'finance.payout.manage' },
+  { name: 'Delivery', path: '/admin/delivery', icon: Truck, section: 'operations', permission: 'warehouse.purchase_order.view' },
+  { name: 'Warehouses', path: '/admin/warehouses', icon: Warehouse, section: 'operations', permission: 'warehouse.view' },
+  { name: 'Book Distribution', path: '/admin/book-distribution', icon: BookOpen, section: 'operations', permission: 'warehouse.view' },
+  { name: 'Stores', path: '/admin/stores', icon: Building2, section: 'operations', permission: 'warehouse.view' },
+  { name: 'Vendors', path: '/admin/vendors', icon: Building2, section: 'operations', permission: ['warehouse.view', 'warehouse.vendor.manage'], requireAll: false },
+  { name: 'Purchase Requests', path: '/admin/purchase-requests', icon: ClipboardCheck, section: 'operations', permission: ['warehouse.purchase_request.view', 'finance.purchase_request.review', 'finance.purchase_request.approve', 'finance.purchase_request.reject'], requireAll: false },
+  { name: 'Purchase Orders', path: '/admin/purchase-orders', icon: Truck, section: 'operations', permission: ['warehouse.purchase_order.view', 'finance.purchase_order.view', 'warehouse.purchase_order.create', 'warehouse.purchase_order.receive'], requireAll: false },
+  { name: 'Users', path: '/admin/users', icon: Users, section: 'people', adminOnly: true },
+  { name: 'Staff', path: '/admin/staff', icon: Users, section: 'people', permission: 'staff.view' },
+  { name: 'Departments', path: '/admin/staff/departments', icon: Building2, section: 'people', permission: ['staff.manage', 'staff.view'], requireAll: true },
+  { name: 'Role Matrix', path: '/admin/staff/roles', icon: ShieldCheck, section: 'people', permission: 'admin.permission.manage' },
+  { name: 'Staff Tasks', path: '/admin/staff/tasks', icon: ListTodo, section: 'people', permission: ['staff.view', 'hr.performance.manage'], requireAll: true },
+  { name: 'Performance', path: '/admin/staff/performance', icon: BarChart3, section: 'people', permission: 'hr.performance.manage' },
 ]
 
-const AdminSidebar = () => {
+const sectionLabels: Record<NavItem['section'], string> = {
+  overview: 'Overview',
+  catalog: 'Catalog',
+  commerce: 'Commerce',
+  operations: 'Operations',
+  people: 'People',
+}
+
+interface AdminSidebarProps {
+  mobile?: boolean
+  onCloseMobile?: () => void
+}
+
+const AdminSidebar = ({ mobile = false, onCloseMobile }: AdminSidebarProps) => {
   const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const { user } = useAuthStore()
@@ -80,6 +99,7 @@ const AdminSidebar = () => {
     '/admin/delivery',
     '/admin/warehouses',
     '/admin/book-distribution',
+    '/admin/stores',
     '/admin/purchase-requests',
     '/admin/purchase-orders',
   ])
@@ -118,10 +138,11 @@ const AdminSidebar = () => {
         : isWarehouseFocusedUser
           ? 'Warehouse operations workspace'
           : 'Manage your store'
+  const visibleSectionOrder = ['overview', 'catalog', 'commerce', 'operations', 'people'] as const
 
   return (
     <div
-      className={`luxe-panel ${isCollapsed ? 'w-16' : 'w-[13.25rem]'} h-[calc(100vh-1.5rem)] sticky top-3 ml-3 flex flex-col transition-all duration-200`}
+      className={`luxe-panel ${mobile ? 'w-[18.5rem] h-full rounded-none border-0' : `${isCollapsed ? 'w-16' : 'w-[13.25rem]'} h-[calc(100vh-1.5rem)] sticky top-3 ml-3 rounded-2xl`} flex flex-col transition-all duration-200`}
     >
       {/* Logo/Title & Toggle */}
       <div className="p-4 border-b border-slate-200/70 flex items-center justify-between dark:border-slate-800/80">
@@ -132,33 +153,57 @@ const AdminSidebar = () => {
           </div>
         )}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => {
+            if (mobile) {
+              onCloseMobile?.()
+              return
+            }
+            setIsCollapsed(!isCollapsed)
+          }}
           className="metal-button p-2 rounded-lg transition-colors"
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={mobile ? 'Close menu' : isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <span className="text-base">{isCollapsed ? '→' : '←'}</span>
+          {mobile ? (
+            <X className="h-4 w-4" />
+          ) : (
+            <span className="text-base">{isCollapsed ? '→' : '←'}</span>
+          )}
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="p-3 flex-1 overflow-y-auto">
-        <div className="space-y-1">
-          {visibleNavItems.map((item) => {
-            const isActive = location.pathname === item.path
-            const Icon = item.icon;
-            const displayName = isWarehouseFocusedUser && item.path === '/admin'
-              ? 'Warehouse Overview'
-              : item.name
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="relative block"
-                title={isCollapsed ? displayName : ''}
-              >
-              <motion.div
-                whileHover={{ x: 4 }}
-                className={`relative flex items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-1.5 transition-all duration-150
+      <nav className="p-3 flex-1 overflow-y-auto space-y-3">
+        {visibleSectionOrder.map((sectionKey) => {
+          const sectionItems = visibleNavItems.filter((item) => item.section === sectionKey)
+          if (!sectionItems.length) return null
+
+          return (
+            <div key={sectionKey}>
+              {!isCollapsed && (
+                <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  {sectionLabels[sectionKey]}
+                </p>
+              )}
+              <div className="space-y-1">
+                {sectionItems.map((item) => {
+                  const isActive = location.pathname === item.path
+                  const Icon = item.icon
+                  const displayName = isWarehouseFocusedUser && item.path === '/admin'
+                    ? 'Warehouse Overview'
+                    : item.name
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className="relative block"
+                      title={isCollapsed ? displayName : ''}
+                      onClick={() => {
+                        if (mobile) onCloseMobile?.()
+                      }}
+                    >
+                      <motion.div
+                        whileHover={{ x: 4 }}
+                        className={`relative flex items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-1.5 transition-all duration-150
                   before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-r before:transition-colors
                   ${isActive
                     ? "luxe-card bg-[var(--admin-accent-soft)] text-[var(--admin-accent)] before:bg-[var(--admin-accent)]"
@@ -166,25 +211,28 @@ const AdminSidebar = () => {
                   }
                   ${isCollapsed ? "justify-center" : ""}
                 `}
-              >
-                {/* ICON */}
-                <Icon
-                  className={`h-5 w-5 flex-shrink-0
+                      >
+                        {/* ICON */}
+                        <Icon
+                          className={`h-5 w-5 flex-shrink-0
                     ${isActive ? "text-[var(--admin-accent)]" : "text-gray-500 dark:text-slate-400"}
                   `}
-                />
+                        />
 
-                {/* LABEL */}
-                {!isCollapsed && (
-                  <span className="text-[13px] font-medium">
-                    {displayName}
-                  </span>
-                )}
-              </motion.div>
-              </Link>
-            )
-          })}
-        </div>
+                        {/* LABEL */}
+                        {!isCollapsed && (
+                          <span className="text-[13px] font-medium">
+                            {displayName}
+                          </span>
+                        )}
+                      </motion.div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
       </nav>
 
       {/* Bottom Section */}

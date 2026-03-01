@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Headset, Inbox, LifeBuoy, MessageSquareText, ShieldAlert, UsersRound } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
+import { useInquiries, useInquiryOverview } from '@/services/inquiries'
 import { cn } from '@/lib/utils'
+import LiveBadge from './LiveBadge'
 
 const navItems = [
   { name: 'Dashboard', path: '/cs', icon: Headset },
@@ -15,6 +17,9 @@ const navItems = [
 const CSSidebar = () => {
   const location = useLocation()
   const user = useAuthStore((state) => state.user)
+  const { data: overview } = useInquiryOverview(undefined, true)
+  const { data: escalations } = useInquiries({ status: 'ESCALATED', page: 1, limit: 1 }, true)
+  const escalatedCount = escalations?.total ?? 0
 
   return (
     <>
@@ -51,6 +56,10 @@ const CSSidebar = () => {
           <p className="mt-1 text-sm text-[#71839a] dark:text-slate-400">
             {user?.staffTitle || 'Service workflow'}
           </p>
+          <p className="mt-2 text-xs text-[#5f7087] dark:text-slate-400">
+            Signed in as {user?.name || 'Unknown staff'}
+            {user?.staffEmployeeCode ? ` • ${user.staffEmployeeCode}` : ''}
+          </p>
         </div>
 
         <nav className="space-y-3">
@@ -72,7 +81,13 @@ const CSSidebar = () => {
                   <span className="absolute inset-y-2 left-1 w-0.5 rounded-full bg-[#2d5d8c] dark:bg-[#8eb5d8]" />
                 )}
                 <Icon className="h-4 w-4 opacity-80" />
-                {item.name}
+                <span className="flex-1">{item.name}</span>
+                {item.path === '/cs/inbox' && overview?.totals?.unchecked && (
+                  <LiveBadge count={overview.totals.unchecked} variant="urgent" size="sm" />
+                )}
+                {item.path === '/cs/escalations' && escalatedCount > 0 && (
+                  <LiveBadge count={escalatedCount} variant="urgent" size="sm" />
+                )}
               </Link>
             )
           })}

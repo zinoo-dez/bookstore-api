@@ -12,35 +12,35 @@ const navColumns = [
     links: [
       { label: 'Home', to: '/' },
       { label: 'Browse Books', to: '/books' },
-      { label: 'Reading Insights', to: '/reading-insights' },
-      { label: 'Author Blogs', to: '/blogs' },
+      { label: 'Blogs', to: '/blogs' },
+      { label: 'Contact', to: '/contact' },
     ],
   },
   {
-    title: 'Explore',
+    title: 'Account',
     links: [
+      { label: 'Profile', to: '/profile' },
       { label: 'Library', to: '/library' },
       { label: 'Orders', to: '/orders' },
-      { label: 'Cart', to: '/cart' },
       { label: 'Notifications', to: '/notifications' },
     ],
   },
   {
-    title: 'Company',
+    title: 'Support & Legal',
     links: [
-      { label: 'Contact', to: '/contact' },
       { label: 'Support', to: '/contact/support' },
-      { label: 'Authors', to: '/contact/support' },
-      { label: 'Publishers', to: '/contact/support' },
+      { label: 'FAQ', to: '/contact#faq' },
+      { label: 'Privacy Policy', to: '/privacy' },
+      { label: 'Terms of Service', to: '/terms' },
     ],
   },
 ] as const
 
 const socialLinks = [
-  { label: 'Instagram', href: '#', icon: Instagram },
-  { label: 'LinkedIn', href: '#', icon: Linkedin },
-  { label: 'YouTube', href: '#', icon: Youtube },
-  { label: 'Facebook', href: '#', icon: Facebook },
+  { label: 'Instagram', to: '/contact' as const, icon: Instagram },
+  { label: 'LinkedIn', to: '/contact' as const, icon: Linkedin },
+  { label: 'YouTube', to: '/contact' as const, icon: Youtube },
+  { label: 'Facebook', to: '/contact' as const, icon: Facebook },
 ] as const
 
 const Footer = ({ variant = 'default' }: FooterProps) => {
@@ -142,14 +142,14 @@ const Footer = ({ variant = 'default' }: FooterProps) => {
               {socialLinks.map((item) => {
                 const Icon = item.icon
                 return (
-                  <a
+                  <Link
                     key={item.label}
-                    href={item.href}
+                    to={item.to}
                     aria-label={item.label}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#6a7488] text-[#b7bfcd] transition duration-200 hover:-translate-y-0.5 hover:border-[#d7b16c] hover:text-[#f3e8d1]"
                   >
                     <Icon className="h-4 w-4" />
-                  </a>
+                  </Link>
                 )
               })}
             </div>

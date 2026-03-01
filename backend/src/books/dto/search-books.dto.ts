@@ -5,6 +5,7 @@ import {
   Min,
   Max,
   IsBoolean,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -92,6 +93,16 @@ export class SearchBooksDto {
   @IsOptional()
   @Type(() => Boolean)
   inStock?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by status (active, trashed, or all)',
+    example: 'active',
+    enum: ['active', 'trashed', 'all'],
+    default: 'active',
+  })
+  @IsOptional()
+  @IsIn(['active', 'trashed', 'all'])
+  status?: 'active' | 'trashed' | 'all';
 
   @ApiPropertyOptional({
     description: 'Page number for pagination',

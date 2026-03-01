@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
 import {
   useCreateRole,
@@ -8,6 +9,8 @@ import {
   useRoles,
   type StaffRole,
 } from '@/services/staff'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 
 const MODULE_LABELS: Record<string, string> = {
   admin: 'Admin',
@@ -63,13 +66,14 @@ const permissionLabel = (key: string) => {
 }
 
 const AdminRolesPermissionsPage = () => {
+  const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [departmentId, setDepartmentId] = useState('')
   const [selectedRoleId, setSelectedRoleId] = useState('')
   const [permissionSearch, setPermissionSearch] = useState('')
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
-  const [message, setMessage] = useState('')
+  const { message, showMessage } = useTimedMessage(2400)
 
   const { data: departments = [] } = useDepartments()
   const { data: roles = [] } = useRoles()
@@ -84,11 +88,6 @@ const AdminRolesPermissionsPage = () => {
 
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [baselineKeys, setBaselineKeys] = useState<string[]>([])
-
-  const showMessage = (text: string) => {
-    setMessage(text)
-    window.setTimeout(() => setMessage(''), 2400)
-  }
 
   const syncSelectedRole = (role: StaffRole | undefined) => {
     if (!role) {
@@ -118,6 +117,7 @@ const AdminRolesPermissionsPage = () => {
       setName('')
       setCode('')
       setDepartmentId('')
+      setIsCreatePanelOpen(false)
       showMessage('Role created.')
     } catch (error) {
       showMessage(getErrorMessage(error))
@@ -176,16 +176,40 @@ const AdminRolesPermissionsPage = () => {
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [filteredPermissions])
 
+  const prioritizedGroups = useMemo(() => {
+    const selectedSet = new Set(selectedKeys)
+
+    return groupedPermissions
+      .map(([group, groupItems]) => {
+        const sortedItems = [...groupItems].sort((a, b) => {
+          const aSelected = selectedSet.has(a.key) ? 1 : 0
+          const bSelected = selectedSet.has(b.key) ? 1 : 0
+          if (aSelected !== bSelected) return bSelected - aSelected
+          return permissionLabel(a.key).localeCompare(permissionLabel(b.key))
+        })
+
+        const selectedCount = sortedItems.filter((permission) =>
+          selectedSet.has(permission.key),
+        ).length
+
+        return [group, sortedItems, selectedCount] as const
+      })
+      .sort((a, b) => {
+        if (a[2] !== b[2]) return b[2] - a[2]
+        return a[0].localeCompare(b[0])
+      })
+  }, [groupedPermissions, selectedKeys])
+
   useEffect(() => {
-    if (groupedPermissions.length === 0) return
+    if (prioritizedGroups.length === 0) return
     setExpandedGroups((prev) => {
       const next = { ...prev }
-      groupedPermissions.forEach(([group]) => {
+      prioritizedGroups.forEach(([group]) => {
         if (typeof next[group] === 'undefined') next[group] = true
       })
       return next
     })
-  }, [groupedPermissions])
+  }, [prioritizedGroups])
 
   const hasUnsavedChanges = useMemo(() => {
     if (!selectedRole) return false
@@ -211,9 +235,19 @@ const AdminRolesPermissionsPage = () => {
 
   return (
     <div className="space-y-6 p-8 dark:text-slate-100">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Staff</p>
-        <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Staff</p>
+          <h1 className="text-2xl font-bold">Roles & Permissions</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsCreatePanelOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+        >
+          <Plus className="h-4 w-4" />
+          Create Role
+        </button>
       </div>
 
       {message && (
@@ -221,42 +255,6 @@ const AdminRolesPermissionsPage = () => {
           {message}
         </div>
       )}
-
-      <form onSubmit={onCreateRole} className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Create Role</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Role name"
-            className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
-            placeholder="Role code (optional)"
-            className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-          <select
-            value={departmentId}
-            onChange={(e) => setDepartmentId(e.target.value)}
-            className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-          >
-            <option value="">Global role</option>
-            {departments.map((department) => (
-              <option key={department.id} value={department.id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white dark:bg-amber-400 dark:text-slate-900"
-          >
-            Add Role
-          </button>
-        </div>
-      </form>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
@@ -296,8 +294,7 @@ const AdminRolesPermissionsPage = () => {
             )}
           </div>
           <div className="mt-4 space-y-3">
-            {groupedPermissions.map(([group, groupItems]) => {
-              const selectedCount = groupItems.filter((permission) => selectedKeys.includes(permission.key)).length
+            {prioritizedGroups.map(([group, groupItems, selectedCount]) => {
               const expanded = expandedGroups[group] ?? true
               return (
                 <div key={group} className="rounded-xl border dark:border-slate-700">
@@ -343,7 +340,7 @@ const AdminRolesPermissionsPage = () => {
                 </div>
               )
             })}
-            {groupedPermissions.length === 0 && (
+            {prioritizedGroups.length === 0 && (
               <p className="text-sm text-slate-500">No permissions match your search.</p>
             )}
           </div>
@@ -357,6 +354,64 @@ const AdminRolesPermissionsPage = () => {
           </button>
         </div>
       </div>
+
+      <AdminSlideOverPanel
+        open={isCreatePanelOpen}
+        onClose={() => setIsCreatePanelOpen(false)}
+        kicker="Roles"
+        title="Create Role"
+        description="Add a new role and assign it to a department scope."
+        footer={(
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsCreatePanelOpen(false)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-widest transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="create-role-form"
+              disabled={createRole.isPending}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:opacity-60 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+            >
+              {createRole.isPending ? 'Creating...' : 'Create Role'}
+            </button>
+          </div>
+        )}
+      >
+        <form
+          id="create-role-form"
+          onSubmit={onCreateRole}
+          className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/45"
+        >
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Role name"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
+            placeholder="Role code (optional)"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <select
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          >
+            <option value="">Global role</option>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
+          </select>
+        </form>
+      </AdminSlideOverPanel>
     </div>
   )
 }

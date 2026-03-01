@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,7 +29,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    const message = (error.response?.data as { message?: string | string[] } | undefined)?.message
+    const text =
+      typeof message === 'string'
+        ? message
+        : Array.isArray(message)
+          ? message.join(' ')
+          : ''
+    const shouldLogout =
+      status === 401 &&
+      /invalid user session|please login again|token expired|invalid token|jwt expired/i.test(text)
+
+    if (shouldLogout) {
       useAuthStore.getState().logout()
     }
     return Promise.reject(error)

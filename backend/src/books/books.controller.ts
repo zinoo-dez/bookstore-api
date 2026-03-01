@@ -91,6 +91,12 @@ export class BooksController {
     enum: ['asc', 'desc'],
     description: 'Sort order',
   })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['active', 'trashed', 'all'],
+    description: 'Filter by status (active, trashed, or all)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Books retrieved successfully',
@@ -404,8 +410,8 @@ export class BooksController {
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Delete(':id')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Delete a book (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Book successfully deleted' })
+  @ApiOperation({ summary: 'Remove a book (move to trash) (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Book moved to trash' })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized - JWT token required',
@@ -414,5 +420,61 @@ export class BooksController {
   @ApiResponse({ status: 404, description: 'Book not found' })
   remove(@Param('id') id: string) {
     return this.booksService.remove(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Delete(':id/permanent')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Permanently delete a trashed book (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Book permanently deleted' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Book not found' })
+  removePermanently(@Param('id') id: string) {
+    return this.booksService.permanentlyDelete(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Delete('bin/empty')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Empty the bin (permanently delete trashed books) (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bin emptied',
+    schema: {
+      type: 'object',
+      properties: {
+        deleted: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  emptyBin() {
+    return this.booksService.emptyBin();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Patch(':id/restore')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Restore a trashed book (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Book restored' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - JWT token required',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Book not found' })
+  restore(@Param('id') id: string) {
+    return this.booksService.restore(id);
   }
 }

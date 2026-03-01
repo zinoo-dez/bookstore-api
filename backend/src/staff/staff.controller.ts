@@ -31,6 +31,7 @@ import { CreateStaffTaskDto } from './dto/create-staff-task.dto';
 import { UpdateStaffTaskDto } from './dto/update-staff-task.dto';
 import { HireExistingUserDto } from './dto/hire-existing-user.dto';
 import { CreateStaffAccountDto } from './dto/create-staff-account.dto';
+import { UpdateStaffAccountAccessDto } from './dto/update-staff-account-access.dto';
 import { StaffService } from './staff.service';
 
 type AuthenticatedRequest = {
@@ -101,6 +102,13 @@ export class StaffAdminController {
   @ApiOperation({ summary: 'List staff roles' })
   listRoles(@Query('departmentId') departmentId?: string) {
     return this.staffService.listRoles(departmentId);
+  }
+
+  @Get('account-access/admins')
+  @Permissions('staff.view')
+  @ApiOperation({ summary: 'List admin and super admin accounts' })
+  listElevatedAccounts() {
+    return this.staffService.listElevatedAccounts();
   }
 
   @Post('roles')
@@ -269,6 +277,25 @@ export class StaffAdminController {
     );
   }
 
+  @Get('performance/commercial')
+  @Permissions('hr.performance.manage')
+  @ApiOperation({ summary: 'Get commercial performance leaderboards' })
+  getCommercialPerformance(
+    @Req() req: AuthenticatedRequest,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.staffService.getCommercialPerformanceMetrics(
+      {
+        fromDate: fromDate ? new Date(fromDate) : undefined,
+        toDate: toDate ? new Date(toDate) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      },
+      req.user.sub,
+    );
+  }
+
   @Get(':id')
   @Permissions('staff.view')
   @ApiOperation({ summary: 'Get staff profile detail' })
@@ -285,6 +312,17 @@ export class StaffAdminController {
     @Body() dto: UpdateStaffProfileDto,
   ) {
     return this.staffService.updateStaffProfile(id, dto, req.user.sub);
+  }
+
+  @Patch(':id/account-access')
+  @Permissions('hr.staff.update')
+  @ApiOperation({ summary: 'Update staff account access role' })
+  updateStaffAccountAccess(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateStaffAccountAccessDto,
+  ) {
+    return this.staffService.updateStaffAccountAccess(id, dto, req.user.sub);
   }
 
   @Post(':id/roles')

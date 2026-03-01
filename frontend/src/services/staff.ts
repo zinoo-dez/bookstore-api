@@ -99,6 +99,25 @@ export interface StaffTask {
   }
 }
 
+export interface ElevatedAccount {
+  id: string
+  name: string
+  email: string
+  role: 'ADMIN' | 'SUPER_ADMIN'
+  isActive: boolean
+  createdAt: string
+  staffProfile: null | {
+    id: string
+    title: string
+    status: StaffStatus
+    department: {
+      id: string
+      name: string
+      code: string
+    }
+  }
+}
+
 export interface StaffPerformanceResponse {
   summary: {
     totalTasks: number
@@ -120,6 +139,43 @@ export interface StaffPerformanceResponse {
     total: number
     completed: number
     completionRate: number
+  }>
+}
+
+export interface CommercialPerformanceResponse {
+  summary: {
+    buyersCount: number
+    booksTracked: number
+    totalRevenue: number
+    totalOrders: number
+  }
+  period: {
+    fromDate: string | null
+    toDate: string | null
+    limit: number
+  }
+  topBuyers: Array<{
+    userId: string
+    name: string
+    email: string
+    orderCount: number
+    totalSpend: number
+  }>
+  topBooksByUnits: Array<{
+    bookId: string
+    title: string
+    author: string
+    isbn: string
+    units: number
+    revenue: number
+  }>
+  topBooksByRevenue: Array<{
+    bookId: string
+    title: string
+    author: string
+    isbn: string
+    units: number
+    revenue: number
   }>
 }
 
@@ -186,6 +242,17 @@ export const useRoles = (departmentId?: string) =>
       })
       return response.data
     },
+  })
+
+export const useElevatedAccounts = (options?: { enabled?: boolean }) =>
+  useQuery({
+    queryKey: ['staff-elevated-accounts'],
+    queryFn: async (): Promise<ElevatedAccount[]> => {
+      const response = await api.get('/admin/staff/account-access/admins')
+      return response.data
+    },
+    enabled: options?.enabled ?? true,
+    retry: false,
   })
 
 export const usePermissions = () =>
@@ -352,6 +419,26 @@ export const useUpdateStaffProfile = () => {
   })
 }
 
+export const useUpdateStaffAccountAccess = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      role,
+    }: {
+      id: string
+      role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+    }) => {
+      const response = await api.patch(`/admin/staff/${id}/account-access`, { role })
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff-profiles'] })
+    },
+  })
+}
+
 export const useAssignRole = () => {
   const queryClient = useQueryClient()
 
@@ -446,6 +533,33 @@ export const useStaffPerformance = (
     ],
     queryFn: async (): Promise<StaffPerformanceResponse> => {
       const response = await api.get('/admin/staff/performance', { params: filters })
+      return response.data
+    },
+    enabled: options?.enabled ?? true,
+    retry: false,
+  })
+
+export const useCommercialPerformance = (
+  filters?: {
+    fromDate?: string
+    toDate?: string
+    limit?: number
+  },
+  options?: {
+    enabled?: boolean
+  },
+) =>
+  useQuery({
+    queryKey: [
+      'staff-performance-commercial',
+      filters?.fromDate || 'all',
+      filters?.toDate || 'all',
+      filters?.limit || 5,
+    ],
+    queryFn: async (): Promise<CommercialPerformanceResponse> => {
+      const response = await api.get('/admin/staff/performance/commercial', {
+        params: filters,
+      })
       return response.data
     },
     enabled: options?.enabled ?? true,

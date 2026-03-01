@@ -62,7 +62,7 @@ const InquiryTiltCard = () => {
           onMouseMove={handleMove}
           onMouseLeave={reset}
           onBlur={reset}
-          className="group relative block overflow-hidden rounded-3xl border border-cyan-200/80 bg-gradient-to-br from-white via-cyan-50/80 to-indigo-50 p-8 shadow-[0_26px_60px_-40px_rgba(14,116,144,0.6)] transition hover:shadow-[0_28px_70px_-35px_rgba(14,116,144,0.72)] dark:border-cyan-400/30 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950"
+          className="tone-hover-cyan group relative block overflow-hidden rounded-3xl border border-cyan-200/80 bg-gradient-to-br from-white via-cyan-50/80 to-indigo-50 p-8 shadow-[0_26px_60px_-40px_rgba(14,116,144,0.6)] transition hover:shadow-[0_28px_70px_-35px_rgba(14,116,144,0.72)] dark:border-cyan-400/30 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950"
         >
           <motion.div
             className="pointer-events-none absolute inset-0 opacity-80"
@@ -168,10 +168,10 @@ const ContactPage = () => {
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Quick Actions</p>
           <div className="mt-4 space-y-2">
-            <Link to="/notifications" className="block rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200">
+            <Link to="/notifications" className="tone-hover-cyan block rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:text-cyan-700 dark:border-slate-700 dark:text-slate-200 dark:hover:text-cyan-200">
               Track my case
             </Link>
-            <a href="#faq" className="block rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-cyan-400/40 dark:hover:text-cyan-200">
+            <a href="#faq" className="tone-hover-cyan block rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:text-cyan-700 dark:border-slate-700 dark:text-slate-200 dark:hover:text-cyan-200">
               Browse common issues
             </a>
             <Link to="/contact/support" className="block rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:border-rose-300 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-200">

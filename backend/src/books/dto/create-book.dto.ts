@@ -6,8 +6,14 @@ import {
   IsPositive,
   Min,
   IsArray,
+  ArrayMinSize,
+  ArrayUnique,
+  IsBoolean,
+  ValidateIf,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BOOK_CATEGORIES, BOOK_GENRES } from '../constants/book-taxonomy';
 
 export class CreateBookDto {
   @ApiProperty({
@@ -18,15 +24,17 @@ export class CreateBookDto {
   @IsNotEmpty()
   title!: string;
 
-  @ApiPropertyOptional({
-    description: 'Book categories/genres',
+  @ApiProperty({
+    description: 'Book categories',
     example: ['Fiction', 'Mystery'],
     type: [String],
   })
-  @IsOptional()
   @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique()
+  @IsIn(BOOK_CATEGORIES, { each: true })
   @IsString({ each: true })
-  categories?: string[];
+  categories!: string[];
 
   @ApiPropertyOptional({
     description: 'Book genres',
@@ -35,6 +43,8 @@ export class CreateBookDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayUnique()
+  @IsIn(BOOK_GENRES, { each: true })
   @IsString({ each: true })
   genres?: string[];
 
@@ -62,6 +72,16 @@ export class CreateBookDto {
   @IsNumber()
   @IsPositive()
   price!: number;
+
+  @ApiPropertyOptional({
+    description: 'eBook price (if sold digitally). Defaults to physical price if omitted.',
+    example: 9.99,
+    minimum: 0.01,
+  })
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  ebookPrice?: number;
 
   @ApiProperty({
     description: 'Book stock quantity',
@@ -91,4 +111,38 @@ export class CreateBookDto {
   @IsOptional()
   @IsString()
   coverImage?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether this listing is a digital eBook',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isDigital?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Digital format for eBooks',
+    enum: ['EPUB', 'PDF'],
+    example: 'EPUB',
+  })
+  @ValidateIf((obj) => obj.isDigital === true)
+  @IsIn(['EPUB', 'PDF'])
+  ebookFormat?: 'EPUB' | 'PDF';
+
+  @ApiPropertyOptional({
+    description: 'Relative file path under uploads/ebooks (e.g., my-book.epub)',
+    example: 'my-book.epub',
+  })
+  @ValidateIf((obj) => obj.isDigital === true)
+  @IsString()
+  ebookFilePath?: string;
+
+  @ApiPropertyOptional({
+    description: 'Total pages used for digital reader progress tracking',
+    example: 240,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  totalPages?: number;
 }

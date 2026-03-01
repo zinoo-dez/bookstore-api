@@ -14,6 +14,8 @@ import {
   useWarehouses,
   type PurchaseRequestStatus,
 } from '@/services/warehouses'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 
 const statusOptions: PurchaseRequestStatus[] = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'COMPLETED']
 
@@ -69,7 +71,7 @@ const AdminPurchaseRequestsPage = () => {
 
   const [status, setStatus] = useState<PurchaseRequestStatus | ''>('')
   const [warehouseId, setWarehouseId] = useState('')
-  const [message, setMessage] = useState('')
+  const { message, showMessage } = useTimedMessage(3200)
 
   const [builderWarehouseId, setBuilderWarehouseId] = useState('')
   const [batchMode, setBatchMode] = useState<BatchMode>('LOW_OR_OUT')
@@ -78,6 +80,7 @@ const AdminPurchaseRequestsPage = () => {
   const [batchSubmitForApproval, setBatchSubmitForApproval] = useState(true)
   const [batchItems, setBatchItems] = useState<BatchItem[]>([])
   const [prefillDone, setPrefillDone] = useState(false)
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false)
 
   const { data: warehouses = [] } = useWarehouses()
   const { data: bookStockPresence } = useBookStockPresence()
@@ -87,6 +90,7 @@ const AdminPurchaseRequestsPage = () => {
     limit: 100,
     sortBy: 'title',
     sortOrder: 'asc',
+    status: 'active',
   })
   const { data: requests = [], error } = usePurchaseRequests({
     status: status || undefined,
@@ -96,11 +100,6 @@ const AdminPurchaseRequestsPage = () => {
   const createMutation = useCreatePurchaseRequest()
   const reviewMutation = useReviewPurchaseRequest()
   const completeMutation = useCompletePurchaseRequest()
-
-  const showMessage = (text: string) => {
-    setMessage(text)
-    window.setTimeout(() => setMessage(''), 3200)
-  }
 
   const sorted = useMemo(() => requests, [requests])
   const prefillParams = useMemo(() => {
@@ -295,10 +294,21 @@ const AdminPurchaseRequestsPage = () => {
 
   return (
     <div className="space-y-6 p-8 dark:text-slate-100">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Workflow</p>
-        <h1 className="text-2xl font-bold">Purchase Requests</h1>
-        <p className="mt-1 text-slate-500">Create single or batch purchase requests from low/out-of-stock books per warehouse.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Workflow</p>
+          <h1 className="text-2xl font-bold">Purchase Requests</h1>
+          <p className="mt-1 text-slate-500">Create single or batch purchase requests from low/out-of-stock books per warehouse.</p>
+        </div>
+        {canCreate && (
+          <button
+            type="button"
+            onClick={() => setIsBuilderOpen(true)}
+            className="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-slate-800 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+          >
+            Create Request
+          </button>
+        )}
       </div>
 
       {message && (
@@ -312,18 +322,67 @@ const AdminPurchaseRequestsPage = () => {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <form onSubmit={submitBatchCreate} className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Batch Request Builder</h2>
+      <div className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Queue Filters</h2>
+          <div className="mt-4 grid gap-3">
+            <select
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+              className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="">All warehouses</option>
+              {warehouses.map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>
+              ))}
+            </select>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as PurchaseRequestStatus | '')}
+              className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="">All statuses</option>
+              {statusOptions.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
+      </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <AdminSlideOverPanel
+        open={isBuilderOpen}
+        onClose={() => setIsBuilderOpen(false)}
+        title="Batch Request Builder"
+        description="Create single or batch purchase requests from low/out-of-stock books."
+        widthClassName="sm:max-w-[56rem]"
+        footer={
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsBuilderOpen(false)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="purchase-request-builder-form"
+              disabled={createMutation.isPending || !canCreate || !builderWarehouseId || batchItems.length === 0}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+            >
+              {createMutation.isPending ? 'Creating...' : `Create ${batchItems.length || ''} Request(s)`}
+            </button>
+          </div>
+        }
+      >
+        <form id="purchase-request-builder-form" onSubmit={submitBatchCreate}>
+          <div className="grid gap-3 sm:grid-cols-3">
             <select
               value={builderWarehouseId}
               onChange={(e) => {
                 setBuilderWarehouseId(e.target.value)
                 setBatchItems([])
               }}
-              className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
               <option value="">Select warehouse</option>
               {warehouses.map((warehouse) => (
@@ -333,7 +392,7 @@ const AdminPurchaseRequestsPage = () => {
             <select
               value={batchMode}
               onChange={(e) => setBatchMode(e.target.value as BatchMode)}
-              className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
               <option value="LOW_OR_OUT">Low + Out of Stock</option>
               <option value="OUT_ONLY">Out of Stock Only</option>
@@ -344,13 +403,13 @@ const AdminPurchaseRequestsPage = () => {
               value={batchSearch}
               onChange={(e) => setBatchSearch(e.target.value)}
               placeholder="Search by title, author, ISBN"
-              className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+              className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           </div>
 
-          <div className={`mt-4 max-h-64 overflow-auto rounded-xl border dark:border-slate-800 ${!builderWarehouseId ? 'opacity-60' : ''}`}>
-            <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-              <thead className="bg-slate-50 dark:bg-slate-950">
+          <div className={`admin-table-wrapper mt-4 max-h-64 overflow-auto ${!builderWarehouseId ? 'opacity-60' : ''}`}>
+            <table className="admin-table min-w-full text-sm">
+              <thead className="admin-table-head">
                 <tr>
                   <th className="px-3 py-2 text-left">Book</th>
                   <th className="px-3 py-2 text-left">Current</th>
@@ -358,7 +417,7 @@ const AdminPurchaseRequestsPage = () => {
                   <th className="px-3 py-2 text-left">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody>
                 {candidates.map((row) => (
                   <tr key={row.id}>
                     <td className="px-3 py-2">
@@ -395,7 +454,7 @@ const AdminPurchaseRequestsPage = () => {
             </table>
           </div>
 
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40 lg:sticky lg:top-24">
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">Batch Cart</h3>
               <p className="text-xs text-slate-500">{batchItems.length} item(s)</p>
@@ -456,49 +515,15 @@ const AdminPurchaseRequestsPage = () => {
               />
               Submit for approval now
             </label>
-
-            <button
-              type="submit"
-              disabled={createMutation.isPending || !canCreate || !builderWarehouseId || batchItems.length === 0}
-              className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-all duration-150 hover:-translate-y-0.5 disabled:opacity-50 dark:bg-amber-400 dark:text-slate-900"
-            >
-              {createMutation.isPending ? 'Creating...' : `Create ${batchItems.length || ''} Request(s)`}
-            </button>
           </div>
         </form>
-
-        <div className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Queue Filters</h2>
-          <div className="mt-4 grid gap-3">
-            <select
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            >
-              <option value="">All warehouses</option>
-              {warehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>
-              ))}
-            </select>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as PurchaseRequestStatus | '')}
-              className="rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            >
-              <option value="">All statuses</option>
-              {statusOptions.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      </AdminSlideOverPanel>
 
       <div className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Queue</h2>
-        <div className="mt-4 overflow-auto rounded-xl border dark:border-slate-800">
-          <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-950">
+        <div className="admin-table-wrapper mt-4 overflow-auto">
+          <table className="admin-table min-w-full text-sm">
+            <thead className="admin-table-head">
               <tr>
                 <th className="px-3 py-2 text-left">Book</th>
                 <th className="px-3 py-2 text-left">Warehouse</th>
@@ -508,7 +533,7 @@ const AdminPurchaseRequestsPage = () => {
                 <th className="px-3 py-2 text-left">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody>
               {sorted.map((request) => (
                 <tr key={request.id}>
                   <td className="px-3 py-2">

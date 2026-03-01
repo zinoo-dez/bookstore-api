@@ -44,6 +44,8 @@ From repo root:
 ```bash
 npm run dev
 npm run build
+npm run lint
+npm run lint:fix
 npm run test
 npm run test:e2e
 npm run db:generate

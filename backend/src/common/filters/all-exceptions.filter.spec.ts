@@ -8,6 +8,8 @@ describe('AllExceptionsFilter', () => {
   let mockResponse: any;
   let mockRequest: any;
   let mockArgumentsHost: ArgumentsHost;
+  let loggerErrorSpy: jest.SpyInstance;
+  let loggerWarnSpy: jest.SpyInstance;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -15,6 +17,10 @@ describe('AllExceptionsFilter', () => {
     }).compile();
 
     filter = module.get<AllExceptionsFilter>(AllExceptionsFilter);
+    loggerErrorSpy = jest
+      .spyOn((filter as any).logger, 'error')
+      .mockImplementation();
+    loggerWarnSpy = jest.spyOn((filter as any).logger, 'warn').mockImplementation();
 
     mockResponse = {
       status: jest.fn().mockReturnThis(),
@@ -58,6 +64,8 @@ describe('AllExceptionsFilter', () => {
         error: 'Bad Request',
         message: 'Validation failed',
       });
+      expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
+      expect(loggerErrorSpy).not.toHaveBeenCalled();
     });
 
     it('should handle HttpException with string response', () => {
@@ -90,6 +98,8 @@ describe('AllExceptionsFilter', () => {
         error: 'InternalServerError',
         message: 'Internal server error',
       });
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(loggerWarnSpy).not.toHaveBeenCalled();
     });
 
     it('should handle validation errors with array messages', () => {

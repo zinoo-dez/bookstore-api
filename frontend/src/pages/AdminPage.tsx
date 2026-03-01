@@ -52,7 +52,7 @@ const AdminPage = () => {
   const canViewPerformance =
     user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || hasPermission(user?.permissions, 'hr.performance.manage')
 
-  const { data: booksData, isLoading: booksLoading } = useBooks({ limit: 100 })
+  const { data: booksData, isLoading: booksLoading } = useBooks({ limit: 100, status: 'active' })
   const { data: orders, isLoading: ordersLoading } = useAdminOrders({
     enabled: canViewOrders,
   })

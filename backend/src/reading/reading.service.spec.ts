@@ -4,6 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { ReadingStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { ReadingService } from './reading.service';
@@ -39,6 +40,13 @@ describe('ReadingService', () => {
               findMany: jest.fn(),
               create: jest.fn(),
             },
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: {
+            signAsync: jest.fn(),
+            verifyAsync: jest.fn(),
           },
         },
       ],

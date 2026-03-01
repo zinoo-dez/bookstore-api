@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Edit2, Plus, Save, Trash2, X } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
+import ColumnVisibilityMenu from '@/components/admin/ColumnVisibilityMenu'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 import {
   useCreatePromotion,
   useDeletePromotion,
@@ -9,6 +11,7 @@ import {
   type PromotionCode,
   type PromotionDiscountType,
 } from '@/services/promotions'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
 
 type PromotionForm = {
   code: string
@@ -56,7 +59,15 @@ const AdminPromotionsPage = () => {
   const [search, setSearch] = useState('')
   const [form, setForm] = useState<PromotionForm>(defaultForm)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [message, setMessage] = useState('')
+  const [isFormPanelOpen, setIsFormPanelOpen] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState({
+    code: true,
+    offer: true,
+    window: true,
+    usage: true,
+    actions: true,
+  })
+  const { message, showMessage: setToast } = useTimedMessage(2600)
 
   const { data: promotions = [], isLoading, error } = usePromotions(activeOnly ? true : undefined)
   const createPromotion = useCreatePromotion()
@@ -71,18 +82,19 @@ const AdminPromotionsPage = () => {
     })
   }, [promotions, search])
 
-  const setToast = (value: string) => {
-    setMessage(value)
-    window.setTimeout(() => setMessage(''), 2600)
-  }
-
   const resetForm = () => {
     setForm(defaultForm)
     setEditingId(null)
   }
 
+  const closeFormPanel = () => {
+    setIsFormPanelOpen(false)
+    resetForm()
+  }
+
   const loadPromotionToForm = (promo: PromotionCode) => {
     setEditingId(promo.id)
+    setIsFormPanelOpen(true)
     setForm({
       code: promo.code,
       name: promo.name,
@@ -146,7 +158,7 @@ const AdminPromotionsPage = () => {
         await createPromotion.mutateAsync(payload)
         setToast('Promotion created.')
       }
-      resetForm()
+      closeFormPanel()
     } catch (err) {
       setToast(getErrorMessage(err))
     }
@@ -159,20 +171,41 @@ const AdminPromotionsPage = () => {
     try {
       await deletePromotion.mutateAsync(promotion.id)
       if (editingId === promotion.id) {
-        resetForm()
+        closeFormPanel()
       }
       setToast('Promotion deleted.')
     } catch (err) {
       setToast(getErrorMessage(err))
     }
   }
+  const columnOptions: Array<{ key: keyof typeof visibleColumns; label: string }> = [
+    { key: 'code', label: 'Code' },
+    { key: 'offer', label: 'Offer' },
+    { key: 'window', label: 'Window' },
+    { key: 'usage', label: 'Usage' },
+    { key: 'actions', label: 'Actions' },
+  ]
+  const visibleColumnCount = columnOptions.filter((column) => visibleColumns[column.key]).length
 
   return (
     <div className="surface-canvas min-h-screen p-8 dark:text-slate-100">
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
           <p className="section-kicker">Revenue Controls</p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight">Promotions</h1>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-black tracking-tight">Promotions</h1>
+            <button
+              type="button"
+              onClick={() => {
+                resetForm()
+                setIsFormPanelOpen(true)
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Promotion
+            </button>
+          </div>
           <p className="mt-1 text-slate-500">Create and manage checkout promo codes for campaigns and loyalty offers.</p>
         </div>
 
@@ -183,61 +216,8 @@ const AdminPromotionsPage = () => {
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-3">
-          <form onSubmit={onSubmit} className="surface-panel p-5 xl:col-span-1">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
-                {editingId ? 'Edit Promotion' : 'New Promotion'}
-              </h2>
-              {editingId && (
-                <button type="button" onClick={resetForm} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
-                  <X className="h-3.5 w-3.5" /> Cancel
-                </button>
-              )}
-            </div>
-
-            <div className="mt-4 grid gap-3">
-              <input value={form.code} onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} placeholder="Code (BOOKLOVER10)" className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-              <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Promotion name" className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-              <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={2} placeholder="Description (optional)" className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-
-              <div className="grid grid-cols-2 gap-3">
-                <select value={form.discountType} onChange={(e) => setForm((p) => ({ ...p, discountType: e.target.value as PromotionDiscountType }))} className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70">
-                  <option value="PERCENT">Percent</option>
-                  <option value="FIXED">Fixed Amount</option>
-                </select>
-                <input value={form.discountValue} onChange={(e) => setForm((p) => ({ ...p, discountValue: e.target.value }))} placeholder="Discount value" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <input value={form.minSubtotal} onChange={(e) => setForm((p) => ({ ...p, minSubtotal: e.target.value }))} placeholder="Min subtotal" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-                <input value={form.maxDiscountAmount} onChange={(e) => setForm((p) => ({ ...p, maxDiscountAmount: e.target.value }))} placeholder="Max discount" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <input type="datetime-local" value={form.startsAt} onChange={(e) => setForm((p) => ({ ...p, startsAt: e.target.value }))} className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-                <input type="datetime-local" value={form.endsAt} onChange={(e) => setForm((p) => ({ ...p, endsAt: e.target.value }))} className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-              </div>
-
-              <input value={form.maxRedemptions} onChange={(e) => setForm((p) => ({ ...p, maxRedemptions: e.target.value }))} placeholder="Max redemptions (optional)" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
-
-              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
-                Active promotion
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={createPromotion.isPending || updatePromotion.isPending}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-50 dark:bg-amber-400 dark:text-slate-900"
-            >
-              {editingId ? <Save className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-              {editingId ? 'Save Promotion' : 'Create Promotion'}
-            </button>
-          </form>
-
-          <div className="surface-panel p-5 xl:col-span-2">
+        <div className="grid gap-6">
+          <div className="surface-panel p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Promotion Library</h2>
               <div className="flex items-center gap-2">
@@ -245,71 +225,86 @@ const AdminPromotionsPage = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search code or name"
-                  className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70"
+                  className="h-12 rounded-lg border border-slate-200 bg-white/80 px-4 text-sm dark:border-slate-700 dark:bg-slate-900/70"
                 />
-                <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-900/70">
+                <label className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-4 text-sm dark:border-slate-700 dark:bg-slate-900/70">
                   <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
                   Active only
                 </label>
+                <ColumnVisibilityMenu
+                  visibleColumns={visibleColumns}
+                  setVisibleColumns={setVisibleColumns}
+                  options={columnOptions}
+                />
               </div>
             </div>
 
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-widest text-slate-500">
+            <div className="admin-table-wrapper mt-4 overflow-x-auto">
+              <table className="admin-table min-w-[920px] text-left text-sm">
+                <thead className="admin-table-head">
                   <tr>
-                    <th className="py-2 pr-3">Code</th>
-                    <th className="py-2 pr-3">Offer</th>
-                    <th className="py-2 pr-3">Window</th>
-                    <th className="py-2 pr-3">Usage</th>
-                    <th className="py-2 text-right">Actions</th>
+                    {visibleColumns.code && <th className="py-2 pr-3">Code</th>}
+                    {visibleColumns.offer && <th className="py-2 pr-3">Offer</th>}
+                    {visibleColumns.window && <th className="py-2 pr-3">Window</th>}
+                    {visibleColumns.usage && <th className="py-2 pr-3">Usage</th>}
+                    {visibleColumns.actions && <th className="py-2 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading && (
                     <tr>
-                      <td colSpan={5} className="py-6 text-center text-slate-500">Loading promotions...</td>
+                      <td colSpan={visibleColumnCount} className="py-6 text-center text-slate-500">Loading promotions...</td>
                     </tr>
                   )}
                   {!isLoading && filteredPromotions.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-6 text-center text-slate-500">No promotions found.</td>
+                      <td colSpan={visibleColumnCount} className="py-6 text-center text-slate-500">No promotions found.</td>
                     </tr>
                   )}
                   {filteredPromotions.map((promo) => {
                     const isUsedOut = promo.maxRedemptions !== null && promo.maxRedemptions !== undefined && promo.redeemedCount >= promo.maxRedemptions
                     return (
                       <tr key={promo.id} className="border-t border-slate-200/70 dark:border-slate-800/70">
-                        <td className="py-3 pr-3">
-                          <div className="font-semibold">{promo.code}</div>
-                          <div className="text-xs text-slate-500">{promo.isActive ? 'Active' : 'Inactive'}</div>
-                        </td>
-                        <td className="py-3 pr-3">
-                          <div>{promo.name}</div>
-                          <div className="text-xs text-slate-500">
-                            {promo.discountType === 'PERCENT' ? `${promo.discountValue}%` : `$${promo.discountValue}`} off
-                            {' · '}min ${promo.minSubtotal}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-3 text-xs text-slate-500">
-                          <div>{promo.startsAt ? new Date(promo.startsAt).toLocaleDateString() : 'No start'}</div>
-                          <div>{promo.endsAt ? new Date(promo.endsAt).toLocaleDateString() : 'No end'}</div>
-                        </td>
-                        <td className="py-3 pr-3 text-xs text-slate-500">
-                          <div>{promo.redeemedCount} redeemed</div>
-                          <div>{promo.maxRedemptions ? `limit ${promo.maxRedemptions}` : 'no limit'}</div>
-                          {isUsedOut && <div className="text-rose-600 dark:text-rose-300">Used up</div>}
-                        </td>
-                        <td className="py-3 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button type="button" onClick={() => loadPromotionToForm(promo)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs dark:border-slate-700">
-                              <Edit2 className="h-3.5 w-3.5" /> Edit
-                            </button>
-                            <button type="button" onClick={() => onDelete(promo)} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs text-rose-700 dark:border-rose-900/60 dark:text-rose-300">
-                              <Trash2 className="h-3.5 w-3.5" /> Delete
-                            </button>
-                          </div>
-                        </td>
+                        {visibleColumns.code && (
+                          <td className="py-3 pr-3">
+                            <div className="font-semibold">{promo.code}</div>
+                            <div className="text-xs text-slate-500">{promo.isActive ? 'Active' : 'Inactive'}</div>
+                          </td>
+                        )}
+                        {visibleColumns.offer && (
+                          <td className="py-3 pr-3">
+                            <div>{promo.name}</div>
+                            <div className="text-xs text-slate-500">
+                              {promo.discountType === 'PERCENT' ? `${promo.discountValue}%` : `$${promo.discountValue}`} off
+                              {' · '}min ${promo.minSubtotal}
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.window && (
+                          <td className="py-3 pr-3 text-xs text-slate-500">
+                            <div>{promo.startsAt ? new Date(promo.startsAt).toLocaleDateString() : 'No start'}</div>
+                            <div>{promo.endsAt ? new Date(promo.endsAt).toLocaleDateString() : 'No end'}</div>
+                          </td>
+                        )}
+                        {visibleColumns.usage && (
+                          <td className="py-3 pr-3 text-xs text-slate-500">
+                            <div>{promo.redeemedCount} redeemed</div>
+                            <div>{promo.maxRedemptions ? `limit ${promo.maxRedemptions}` : 'no limit'}</div>
+                            {isUsedOut && <div className="text-rose-600 dark:text-rose-300">Used up</div>}
+                          </td>
+                        )}
+                        {visibleColumns.actions && (
+                          <td className="py-3 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <button type="button" onClick={() => loadPromotionToForm(promo)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs dark:border-slate-700">
+                                <Edit2 className="h-3.5 w-3.5" /> Edit
+                              </button>
+                              <button type="button" onClick={() => onDelete(promo)} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs text-rose-700 dark:border-rose-900/60 dark:text-rose-300">
+                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -318,6 +313,66 @@ const AdminPromotionsPage = () => {
             </div>
           </div>
         </div>
+
+        <AdminSlideOverPanel
+          open={isFormPanelOpen}
+          onClose={closeFormPanel}
+          kicker="Revenue Controls"
+          title={editingId ? 'Edit Promotion' : 'New Promotion'}
+          description="Create and manage checkout promo codes for campaigns and loyalty offers."
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeFormPanel}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <X className="h-3.5 w-3.5" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="promotion-form"
+                disabled={createPromotion.isPending || updatePromotion.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+              >
+                {editingId ? <Save className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                {editingId ? 'Save Promotion' : 'Create Promotion'}
+              </button>
+            </div>
+          }
+        >
+          <form id="promotion-form" onSubmit={onSubmit} className="grid gap-3">
+            <input value={form.code} onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} placeholder="Code (BOOKLOVER10)" className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+            <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Promotion name" className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+            <textarea value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={3} placeholder="Description (optional)" className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+
+            <div className="grid grid-cols-2 gap-3">
+              <select value={form.discountType} onChange={(e) => setForm((p) => ({ ...p, discountType: e.target.value as PromotionDiscountType }))} className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70">
+                <option value="PERCENT">Percent</option>
+                <option value="FIXED">Fixed Amount</option>
+              </select>
+              <input value={form.discountValue} onChange={(e) => setForm((p) => ({ ...p, discountValue: e.target.value }))} placeholder="Discount value" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <input value={form.minSubtotal} onChange={(e) => setForm((p) => ({ ...p, minSubtotal: e.target.value }))} placeholder="Min subtotal" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+              <input value={form.maxDiscountAmount} onChange={(e) => setForm((p) => ({ ...p, maxDiscountAmount: e.target.value }))} placeholder="Max discount" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <input type="datetime-local" value={form.startsAt} onChange={(e) => setForm((p) => ({ ...p, startsAt: e.target.value }))} className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+              <input type="datetime-local" value={form.endsAt} onChange={(e) => setForm((p) => ({ ...p, endsAt: e.target.value }))} className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+            </div>
+
+            <input value={form.maxRedemptions} onChange={(e) => setForm((p) => ({ ...p, maxRedemptions: e.target.value }))} placeholder="Max redemptions (optional)" className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70" />
+
+            <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />
+              Active promotion
+            </label>
+          </form>
+        </AdminSlideOverPanel>
       </div>
     </div>
   )

@@ -6,7 +6,9 @@ import { renderStoredContentHtml } from '@/lib/editor'
 import { useAuthStore } from '@/store/auth.store'
 import BlogBreadcrumbs from '@/components/blog/BlogBreadcrumbs'
 import FollowStateBadge from '@/components/blog/FollowStateBadge'
+import AuthorSupportModal from '@/components/blog/AuthorSupportModal'
 import BookCover from '@/components/ui/BookCover'
+import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal'
 import {
   useAddBlogComment,
   useBlogDetails,
@@ -47,6 +49,11 @@ const BlogDetailPage = () => {
 
   const [comment, setComment] = useState('')
   const [feedback, setFeedback] = useState('')
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
+  const [pendingDeleteComment, setPendingDeleteComment] = useState<{
+    id: string
+    authorName: string
+  } | null>(null)
 
   const isFollowingAuthor = useMemo(
     () => follows.some((f) => f.authorId === blog?.authorId),
@@ -57,6 +64,7 @@ const BlogDetailPage = () => {
     [liked.postIds, blog],
   )
   const canEditOrDelete = user?.id === blog?.authorId || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
+  const canSupportAuthor = !!blog?.author.supportEnabled && !!blog?.author.supportUrl && user?.id !== blog?.authorId
   const relatedByTags = useMemo(() => {
     if (!blog) return []
     const currentTagNames = new Set(blog.tags.map((tag) => tag.name))
@@ -89,6 +97,20 @@ const BlogDetailPage = () => {
     try {
       await deleteBlog.mutateAsync(blog.id)
       navigate('/blogs')
+    } catch (error) {
+      setFeedback(getErrorMessage(error))
+    }
+  }
+
+  const confirmDeleteComment = async () => {
+    if (!blog || !pendingDeleteComment) return
+    try {
+      await deleteComment.mutateAsync({
+        commentId: pendingDeleteComment.id,
+        blogId: blog.id,
+      })
+      setPendingDeleteComment(null)
+      setFeedback('Comment deleted.')
     } catch (error) {
       setFeedback(getErrorMessage(error))
     }
@@ -140,7 +162,7 @@ const BlogDetailPage = () => {
 
               <div className="mt-5 flex flex-wrap gap-2">
                 {blog.tags.map((tag) => (
-                  <Link key={tag.id} to={`/blogs?tag=${encodeURIComponent(tag.name)}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+                  <Link key={tag.id} to={`/blogs?tag=${encodeURIComponent(tag.name)}`} className="tone-hover-gold rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
                     #{tag.name}
                   </Link>
                 ))}
@@ -168,6 +190,16 @@ const BlogDetailPage = () => {
                   >
                     <FollowStateBadge followed={isFollowingAuthor} />
                     {isFollowingAuthor ? 'Following' : 'Follow'}
+                  </button>
+                )}
+
+                {canSupportAuthor && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSupportModalOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100 dark:border-emerald-700/60 dark:bg-emerald-900/30 dark:text-emerald-200 dark:hover:border-emerald-600"
+                  >
+                    Support this author
                   </button>
                 )}
 
@@ -204,7 +236,7 @@ const BlogDetailPage = () => {
                   <Link
                     key={book.id}
                     to={`/books/${book.id}`}
-                    className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white/80 p-3 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_28px_-20px_rgba(15,23,42,0.55)] dark:border-white/10 dark:bg-slate-900/45 dark:hover:border-white/25"
+                    className="tone-hover-gold group relative overflow-hidden rounded-2xl border border-slate-200 bg-white/80 p-3 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_28px_-20px_rgba(15,23,42,0.55)] dark:border-white/10 dark:bg-slate-900/45 dark:hover:border-white/25"
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-20 w-14 shrink-0 overflow-hidden rounded-md border border-slate-200 shadow-sm dark:border-white/10">
@@ -255,7 +287,12 @@ const BlogDetailPage = () => {
                 {(user?.id === item.userId || canEditOrDelete) && (
                   <button
                     type="button"
-                    onClick={() => deleteComment.mutate({ commentId: item.id, blogId: blog.id })}
+                    onClick={() =>
+                      setPendingDeleteComment({
+                        id: item.id,
+                        authorName: item.user.name,
+                      })
+                    }
                     className="text-xs font-semibold text-rose-600"
                   >
                     Delete
@@ -282,7 +319,7 @@ const BlogDetailPage = () => {
                 <p className="text-sm text-slate-500 dark:text-slate-400">No related posts yet.</p>
               )}
               {relatedPosts.map((post) => (
-                <Link key={post.id} to={`/blogs/${post.id}`} className="group block overflow-hidden rounded-xl border border-slate-200 bg-white/75 transition hover:-translate-y-0.5 hover:border-slate-300 dark:border-white/10 dark:bg-slate-900/45 dark:hover:border-white/20">
+                <Link key={post.id} to={`/blogs/${post.id}`} className="tone-hover-gold group block overflow-hidden rounded-xl border border-slate-200 bg-white/75 transition hover:-translate-y-0.5 hover:border-slate-300 dark:border-white/10 dark:bg-slate-900/45 dark:hover:border-white/20">
                   <div
                     className="h-24 w-full bg-cover bg-center"
                     style={{
@@ -306,13 +343,35 @@ const BlogDetailPage = () => {
 
           <div className="rounded-2xl border border-slate-200 bg-white/72 p-4 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/35">
             <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">From This Author</h3>
-            <Link to={`/user/${blog.author.id}`} className="mt-3 block rounded-xl border border-slate-200 bg-white/80 p-3 transition hover:border-slate-300 dark:border-white/10 dark:bg-slate-900/45 dark:hover:border-white/20">
+            <Link to={`/user/${blog.author.id}`} className="tone-hover-gold mt-3 block rounded-xl border border-slate-200 bg-white/80 p-3 transition hover:border-slate-300 dark:border-white/10 dark:bg-slate-900/45 dark:hover:border-white/20">
               <p className="font-semibold text-slate-900 dark:text-slate-100">{blog.author.name}</p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">See profile and published posts</p>
             </Link>
           </div>
         </aside>
       </div>
+
+      <DeleteConfirmModal
+        isOpen={Boolean(pendingDeleteComment)}
+        onClose={() => setPendingDeleteComment(null)}
+        onConfirm={confirmDeleteComment}
+        title="Delete Comment"
+        message={
+          pendingDeleteComment
+            ? `Delete ${pendingDeleteComment.authorName}'s comment? This cannot be undone.`
+            : 'Delete this comment?'
+        }
+        confirmLabel="Delete"
+        confirmClassName="bg-red-600 hover:bg-red-700"
+        isLoading={deleteComment.isPending}
+      />
+      <AuthorSupportModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+        authorName={blog.author.name}
+        supportUrl={blog.author.supportUrl}
+        supportQrImage={blog.author.supportQrImage}
+      />
     </article>
   )
 }

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useBooks } from '@/services/books'
 import { useFilterStore } from '@/store/filter.store'
 import BookCard from '@/components/books/BookCard'
@@ -32,6 +32,23 @@ const BooksPage = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [urlSearchParams] = useSearchParams()
+  const searchFromUrl = urlSearchParams.get('search')?.trim()
+
+  useEffect(() => {
+    if (!searchFromUrl) return
+
+    applyPresetFilters({
+      title: searchFromUrl,
+      author: '',
+      category: '',
+      genre: '',
+      minPrice: null,
+      maxPrice: null,
+      minRating: null,
+      inStockOnly: false,
+    })
+  }, [searchFromUrl, applyPresetFilters])
 
   // Construct search params for the API using appliedFilters
   const searchParams = {
@@ -49,7 +66,7 @@ const BooksPage = () => {
     sortOrder: appliedFilters.sortOrder as any,
   }
 
-  const { data: booksData, isLoading, isFetching } = useBooks(searchParams)
+  const { data: booksData, isLoading, isFetching } = useBooks({ ...searchParams, status: 'active' })
 
   const books = booksData?.books || []
   const total = booksData?.total || 0
@@ -122,7 +139,7 @@ const BooksPage = () => {
                   >
                     Browse Collections
                   </motion.h1>
-                  <p className="text-gray-500 font-medium dark:text-slate-400">
+                  <p className="text-gray-500 font-medium dark:text-slate-300">
                     Discover your next favorite story among {total} curated books
                   </p>
                 </div>
@@ -165,7 +182,7 @@ const BooksPage = () => {
                     exit={{ opacity: 0, y: 10 }}
                     className="flex flex-wrap items-center gap-2 mt-6"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mr-2 dark:text-slate-500">Active Filters:</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mr-2 dark:text-slate-400">Active Filters:</span>
                     {activeFilters.map(filter => (
                       <motion.button
                         key={filter.id}
@@ -266,7 +283,7 @@ const BooksPage = () => {
                               event.stopPropagation()
                               applyAuthorQuickFilter(book.author)
                             }}
-                            className="text-sm text-gray-500 transition hover:text-primary-600 dark:text-slate-400 dark:hover:text-amber-300"
+                            className="text-sm text-gray-500 transition hover:text-primary-600 dark:text-slate-300 dark:hover:text-amber-300"
                           >
                             by {book.author}
                           </button>
@@ -375,7 +392,7 @@ const BooksPage = () => {
                       </button>
                     </div>
 
-                    <div className="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">
+                    <div className="px-2 py-1 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-400">
                       Page {page} of {totalPages} • {total} total books
                     </div>
                   </footer>
@@ -391,7 +408,7 @@ const BooksPage = () => {
                   <span className="text-4xl">📚</span>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2 dark:text-slate-100">No books found</h3>
-                <p className="text-gray-500 mb-8 max-w-xs text-center font-medium dark:text-slate-400">
+                <p className="text-gray-500 mb-8 max-w-xs text-center font-medium dark:text-slate-300">
                   We couldn't find any books matching your current filters. Try adjusting your search or categories.
                 </p>
                 <button

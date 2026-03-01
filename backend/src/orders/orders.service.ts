@@ -6,10 +6,13 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { CartService } from '../cart/cart.service';
 import {
+  DeliveryType,
   Order,
   OrderItem,
   OrderStatus,
+  Prisma,
   PromotionCode,
+  ReadingStatus,
   StaffTaskPriority,
   StaffTaskStatus,
 } from '@prisma/client';
@@ -34,6 +37,7 @@ type DeliveryTask = Awaited<ReturnType<StaffService['listTasks']>>[number];
 type DeliveryTaskOrderSummary = {
   id: string;
   status: OrderStatus;
+  deliveryType: DeliveryType;
   createdAt: Date;
   user: {
     id: string;
@@ -48,6 +52,14 @@ type DeliveryTaskOrderSummary = {
   shippingState: string | null;
   shippingZipCode: string | null;
   shippingCountry: string | null;
+  pickupStore: {
+    id: string;
+    code: string;
+    name: string;
+    city: string;
+    state: string;
+    address: string | null;
+  } | null;
   orderItems: Array<{
     id: string;
     quantity: number;
@@ -70,6 +82,83 @@ export class OrdersService {
     private readonly cartService: CartService,
     private readonly staffService: StaffService,
   ) {}
+
+  private async grantDigitalAccessForOrder(
+    orderId: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const prisma = tx ?? this.prisma;
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            book: {
+              select: {
+                id: true,
+                isDigital: true,
+                totalPages: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) return;
+
+    const digitalItems = Array.from(
+      new Map(
+        order.orderItems
+          .filter(
+            (item) =>
+              item.format === 'EBOOK'
+              && item.book?.isDigital,
+          )
+          .map((item) => [item.bookId, item]),
+      ).values(),
+    );
+
+    if (digitalItems.length === 0) return;
+
+    for (const item of digitalItems) {
+      const bookId = item.bookId;
+
+      await prisma.userBookAccess.upsert({
+        where: {
+          userId_bookId: {
+            userId: order.userId,
+            bookId,
+          },
+        },
+        update: {
+          sourceOrderId: order.id,
+        },
+        create: {
+          userId: order.userId,
+          bookId,
+          sourceOrderId: order.id,
+        },
+      });
+
+      await prisma.readingItem.upsert({
+        where: {
+          userId_bookId: {
+            userId: order.userId,
+            bookId,
+          },
+        },
+        update: {},
+        create: {
+          userId: order.userId,
+          bookId,
+          status: ReadingStatus.TO_READ,
+          currentPage: 0,
+          totalPages: item.book?.totalPages ?? null,
+        },
+      });
+    }
+  }
 
   private isPromoActive(rule: PromotionCode, now = new Date()): boolean {
     if (!rule.isActive) return false;
@@ -245,6 +334,23 @@ export class OrdersService {
     userId: string,
     shipping?: CreateOrderDto,
   ): Promise<Order & { orderItems: OrderItem[] }> {
+    const deliveryType = shipping?.deliveryType ?? DeliveryType.HOME_DELIVERY;
+    const isStorePickup = deliveryType === DeliveryType.STORE_PICKUP;
+    const selectedStore = isStorePickup
+      ? await this.prisma.store.findFirst({
+          where: {
+            id: shipping?.storeId,
+            isActive: true,
+          },
+        })
+      : null;
+
+    if (isStorePickup && !selectedStore) {
+      throw new BadRequestException(
+        'An active pickup store is required for store pickup orders.',
+      );
+    }
+
     // Get user's cart
     const cart = await this.cartService.getCart(userId);
 
@@ -253,7 +359,7 @@ export class OrdersService {
     }
 
     // Validate stock availability for all items and collect book prices
-    const bookPrices: Record<string, number> = {};
+    const itemUnitPrices: Record<string, number> = {};
     for (const cartItem of cart.items) {
       const book = await this.prisma.book.findUnique({
         where: { id: cartItem.bookId },
@@ -263,13 +369,28 @@ export class OrdersService {
         throw new BadRequestException(`Book ${cartItem.bookId} not found`);
       }
 
-      if (book.stock < cartItem.quantity) {
+      const isEbook = cartItem.format === 'EBOOK';
+      if (isEbook && (!book.isDigital || !book.ebookFilePath)) {
+        throw new BadRequestException(
+          `Book \"${book.title}\" is not available as an eBook.`,
+        );
+      }
+
+      if (isEbook && cartItem.quantity !== 1) {
+        throw new BadRequestException(
+          `eBook \"${book.title}\" must have quantity 1.`,
+        );
+      }
+
+      if (!isEbook && !isStorePickup && book.stock < cartItem.quantity) {
         throw new BadRequestException(
           `Insufficient stock for book "${book.title}". Available: ${book.stock}, Requested: ${cartItem.quantity}`,
         );
       }
 
-      bookPrices[cartItem.bookId] = Number(book.price);
+      itemUnitPrices[cartItem.id] = isEbook
+        ? Number(book.ebookPrice ?? book.price)
+        : Number(book.price);
     }
 
     const subtotalPrice = Number(cart.totalPrice.toFixed(2));
@@ -297,19 +418,27 @@ export class OrdersService {
       const order = await tx.order.create({
         data: {
           userId,
+          deliveryType,
+          storeId: selectedStore?.id ?? null,
           subtotalPrice,
           discountAmount,
           promoCode,
           totalPrice: discountedTotal,
           status: 'PENDING',
-          shippingFullName: shipping?.fullName,
-          shippingEmail: shipping?.email,
-          shippingPhone: shipping?.phone,
-          shippingAddress: shipping?.address,
-          shippingCity: shipping?.city,
-          shippingState: shipping?.state,
-          shippingZipCode: shipping?.zipCode,
-          shippingCountry: shipping?.country,
+          shippingFullName: shipping?.fullName ?? null,
+          shippingEmail: shipping?.email ?? null,
+          shippingPhone: shipping?.phone ?? null,
+          shippingAddress: isStorePickup
+            ? (selectedStore?.address ?? `${selectedStore?.name ?? ''}`)
+            : (shipping?.address ?? null),
+          shippingCity: isStorePickup
+            ? (selectedStore?.city ?? null)
+            : (shipping?.city ?? null),
+          shippingState: isStorePickup
+            ? (selectedStore?.state ?? null)
+            : (shipping?.state ?? null),
+          shippingZipCode: shipping?.zipCode ?? null,
+          shippingCountry: shipping?.country ?? null,
           paymentProvider: shipping?.paymentProvider,
           paymentReceiptUrl: shipping?.paymentReceiptUrl,
         },
@@ -348,11 +477,43 @@ export class OrdersService {
           data: {
             orderId: order.id,
             bookId: cartItem.bookId,
+            format: cartItem.format,
             quantity: cartItem.quantity,
-            price: bookPrices[cartItem.bookId],
+            price: itemUnitPrices[cartItem.id],
           },
         });
         orderItems.push(orderItem);
+
+        if (isStorePickup && cartItem.format !== 'EBOOK') {
+          const storeStock = await tx.storeStock.findUnique({
+            where: {
+              storeId_bookId: {
+                storeId: selectedStore!.id,
+                bookId: cartItem.bookId,
+              },
+            },
+          });
+
+          if (!storeStock || storeStock.stock < cartItem.quantity) {
+            throw new BadRequestException(
+              `Pickup store stock is not enough for this item.`,
+            );
+          }
+
+          await tx.storeStock.update({
+            where: {
+              storeId_bookId: {
+                storeId: selectedStore!.id,
+                bookId: cartItem.bookId,
+              },
+            },
+            data: {
+              stock: {
+                decrement: cartItem.quantity,
+              },
+            },
+          });
+        }
       }
 
       // Clear the cart
@@ -369,6 +530,7 @@ export class OrdersService {
     return await this.prisma.order.findMany({
       where: { userId },
       include: {
+        pickupStore: true,
         orderItems: {
           include: {
             book: true,
@@ -389,6 +551,7 @@ export class OrdersService {
     }
     return this.prisma.order.findMany({
       include: {
+        pickupStore: true,
         user: true, // so admin sees who placed the order
         orderItems: {
           include: {
@@ -408,6 +571,7 @@ export class OrdersService {
         userId, // Ensure user can only access their own orders
       },
       include: {
+        pickupStore: true,
         orderItems: {
           include: {
             book: true,
@@ -471,6 +635,7 @@ export class OrdersService {
       where: { id: orderId },
       data: { status },
       include: {
+        pickupStore: true,
         orderItems: {
           include: {
             book: true,
@@ -480,7 +645,15 @@ export class OrdersService {
     });
 
     if (status === 'CONFIRMED') {
-      await this.ensureDeliveryTaskForOrder(updated);
+      await this.grantDigitalAccessForOrder(updated.id);
+      const hasPhysicalItems = updated.orderItems.some(
+        (item) => item.format !== 'EBOOK',
+      );
+      if (hasPhysicalItems) {
+        if (updated.deliveryType === DeliveryType.HOME_DELIVERY) {
+          await this.ensureDeliveryTaskForOrder(updated);
+        }
+      }
     }
 
     return updated;
@@ -490,6 +663,7 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
+        pickupStore: true,
         orderItems: {
           include: {
             book: true,
@@ -511,6 +685,7 @@ export class OrdersService {
       where: { id: orderId },
       data: { status: 'COMPLETED' },
       include: {
+        pickupStore: true,
         orderItems: {
           include: {
             book: true,
@@ -526,6 +701,9 @@ export class OrdersService {
         id: orderId,
         userId, // Ensure user can only cancel their own orders
       },
+      include: {
+        orderItems: true,
+      },
     });
 
     if (!order) {
@@ -536,16 +714,46 @@ export class OrdersService {
       throw new BadRequestException('Only pending orders can be cancelled');
     }
 
-    return await this.prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'CANCELLED' },
-      include: {
-        orderItems: {
-          include: {
-            book: true,
+    return this.prisma.$transaction(async (tx) => {
+      if (order.deliveryType === DeliveryType.STORE_PICKUP && order.storeId) {
+        for (const item of order.orderItems) {
+          if (item.format === 'EBOOK') {
+            continue;
+          }
+          await tx.storeStock.upsert({
+            where: {
+              storeId_bookId: {
+                storeId: order.storeId,
+                bookId: item.bookId,
+              },
+            },
+            update: {
+              stock: {
+                increment: item.quantity,
+              },
+            },
+            create: {
+              storeId: order.storeId,
+              bookId: item.bookId,
+              stock: item.quantity,
+              lowStockThreshold: 5,
+            },
+          });
+        }
+      }
+
+      return tx.order.update({
+        where: { id: orderId },
+        data: { status: 'CANCELLED' },
+        include: {
+          pickupStore: true,
+          orderItems: {
+            include: {
+              book: true,
+            },
           },
         },
-      },
+      });
     });
   }
 
@@ -582,6 +790,7 @@ export class OrdersService {
       select: {
         id: true,
         status: true,
+        deliveryType: true,
         createdAt: true,
         user: {
           select: {
@@ -598,6 +807,16 @@ export class OrdersService {
         shippingState: true,
         shippingZipCode: true,
         shippingCountry: true,
+        pickupStore: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            city: true,
+            state: true,
+            address: true,
+          },
+        },
         orderItems: {
           select: {
             id: true,

@@ -4,30 +4,30 @@ interface CategoryInputProps {
     value: string[]
     onChange: (categories: string[]) => void
     error?: string
+    label?: string
+    placeholder?: string
+    suggestions?: readonly string[]
+    datalistId?: string
 }
 
-const SUGGESTED_CATEGORIES = [
+const DEFAULT_SUGGESTIONS = [
     'Fiction',
     'Non-Fiction',
-    'Science Fiction',
-    'Fantasy',
-    'Mystery',
-    'Thriller',
-    'Romance',
-    'Horror',
-    'Biography',
-    'History',
-    'Self-Help',
-    'Business',
-    'Technology',
-    'Science',
-    'Philosophy',
-    'Poetry',
     'Children',
-    'Young Adult',
+    'Academic',
+    'Comics & Graphic Novels',
+    'Reference',
 ]
 
-const CategoryInput = ({ value = [], onChange, error }: CategoryInputProps) => {
+const CategoryInput = ({
+    value = [],
+    onChange,
+    error,
+    label = 'Categories',
+    placeholder = 'Type and press Enter to add',
+    suggestions = DEFAULT_SUGGESTIONS,
+    datalistId = 'tag-suggestions',
+}: CategoryInputProps) => {
     const [inputValue, setInputValue] = useState('')
 
     const addCategory = (category: string) => {
@@ -52,7 +52,7 @@ const CategoryInput = ({ value = [], onChange, error }: CategoryInputProps) => {
     return (
         <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categories/Genres (Optional)
+                {label}
             </label>
 
             {/* Selected Categories */}
@@ -79,24 +79,24 @@ const CategoryInput = ({ value = [], onChange, error }: CategoryInputProps) => {
             {/* Input */}
             <input
                 type="text"
-                list="category-suggestions"
+                list={datalistId}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type and press Enter to add categories"
+                placeholder={placeholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
 
             {/* Suggestions */}
-            <datalist id="category-suggestions">
-                {SUGGESTED_CATEGORIES.map((cat) => (
+            <datalist id={datalistId}>
+                {suggestions.map((cat) => (
                     <option key={cat} value={cat} />
                 ))}
             </datalist>
 
             {/* Quick Add Buttons */}
             <div className="flex flex-wrap gap-1 mt-2">
-                {SUGGESTED_CATEGORIES.filter(cat => !value.includes(cat)).slice(0, 6).map((cat) => (
+                {suggestions.filter(cat => !value.includes(cat)).slice(0, 6).map((cat) => (
                     <button
                         key={cat}
                         type="button"

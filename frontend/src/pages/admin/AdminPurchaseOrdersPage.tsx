@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
 import { hasPermission } from '@/lib/permissions'
 import { useAuthStore } from '@/store/auth.store'
@@ -12,6 +13,8 @@ import {
   useWarehouses,
   type PurchaseOrderStatus,
 } from '@/services/warehouses'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 
 const statusOptions: PurchaseOrderStatus[] = ['DRAFT', 'SENT', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CLOSED', 'CANCELLED']
 
@@ -26,7 +29,8 @@ const AdminPurchaseOrdersPage = () => {
     || user?.role === 'SUPER_ADMIN'
     || hasPermission(user?.permissions, 'warehouse.purchase_order.receive')
 
-  const [message, setMessage] = useState('')
+  const { message, showMessage } = useTimedMessage(2600)
+  const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false)
   const [status, setStatus] = useState<PurchaseOrderStatus | ''>('')
   const [warehouseId, setWarehouseId] = useState('')
   const [vendorId, setVendorId] = useState('')
@@ -79,11 +83,6 @@ const AdminPurchaseOrdersPage = () => {
     }
   }
 
-  const showMessage = (text: string) => {
-    setMessage(text)
-    window.setTimeout(() => setMessage(''), 2600)
-  }
-
   const submitCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!canCreate) {
@@ -123,6 +122,7 @@ const AdminPurchaseOrdersPage = () => {
         notes: '',
       })
       setSelectedRequestIds([])
+      setIsCreatePanelOpen(false)
       showMessage(selectedRequestIds.length > 1 ? 'Batch purchase orders created.' : 'Purchase order created.')
     } catch (err) {
       showMessage(getErrorMessage(err))
@@ -154,10 +154,21 @@ const AdminPurchaseOrdersPage = () => {
 
   return (
     <div className="space-y-6 p-8 dark:text-slate-100">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Procurement</p>
-        <h1 className="text-2xl font-bold">Purchase Orders</h1>
-        <p className="mt-1 text-slate-500">Create supplier orders from approved requests and receive stock into warehouses.</p>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Procurement</p>
+          <h1 className="text-2xl font-bold">Purchase Orders</h1>
+          <p className="mt-1 text-slate-500">Create supplier orders from approved requests and receive stock into warehouses.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsCreatePanelOpen(true)}
+          disabled={!canCreate}
+          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+        >
+          <Plus className="h-4 w-4" />
+          Create Purchase Order
+        </button>
       </div>
 
       {message && (
@@ -171,109 +182,7 @@ const AdminPurchaseOrdersPage = () => {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <form onSubmit={submitCreate} className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Create Order (Single or Batch)</h2>
-          <div className="mt-4 space-y-3">
-            <div className="rounded-lg border p-2 dark:border-slate-700">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Approved Requests</p>
-                <label className="inline-flex items-center gap-2 text-xs text-slate-500">
-                  <input
-                    type="checkbox"
-                    checked={selectableRequests.length > 0 && selectedRequestIds.length === selectableRequests.length}
-                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                  />
-                  Select all
-                </label>
-              </div>
-              <div className="max-h-48 space-y-1 overflow-auto">
-                {selectableRequests.map((request) => (
-                  <label key={request.id} className="flex cursor-pointer items-start gap-2 rounded px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <input
-                      type="checkbox"
-                      checked={selectedRequestIds.includes(request.id)}
-                      onChange={(e) => toggleRequest(request.id, e.target.checked)}
-                      className="mt-1"
-                    />
-                    <div className="text-xs">
-                      <p className="font-medium text-slate-700 dark:text-slate-200">
-                        {request.book.title} • {request.warehouse.code}
-                      </p>
-                      <p className="text-slate-500">
-                        qty {request.approvedQuantity || request.quantity} • {request.book.author}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-                {selectableRequests.length === 0 && (
-                  <p className="px-2 py-1 text-xs text-slate-500">No approved requests waiting for order creation.</p>
-                )}
-              </div>
-              {selectedRequestIds.length > 0 && (
-                <p className="mt-2 text-xs text-slate-500">{selectedRequestIds.length} request(s) selected</p>
-              )}
-            </div>
-
-            <select
-              value={createForm.vendorId}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, vendorId: e.target.value }))}
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            >
-              <option value="">Select vendor</option>
-              {filteredVendors.map((vendor) => (
-                <option key={vendor.id} value={vendor.id}>
-                  {vendor.code} • {vendor.name}
-                </option>
-              ))}
-            </select>
-            <input
-              value={vendorSearch}
-              onChange={(e) => setVendorSearch(e.target.value)}
-              placeholder="Search vendor by code or name"
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            />
-
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={createForm.unitCost}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, unitCost: e.target.value }))}
-              placeholder="Unit cost (optional)"
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            />
-
-            <input
-              type="datetime-local"
-              value={createForm.expectedAt}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, expectedAt: e.target.value }))}
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            />
-            <p className="text-xs text-slate-500">Expected delivery date/time (optional)</p>
-
-            <textarea
-              value={createForm.notes}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, notes: e.target.value }))}
-              placeholder="Notes (optional)"
-              rows={2}
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={(createOrder.isPending || createBatchOrders.isPending) || !canCreate}
-            className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-50 dark:bg-amber-400 dark:text-slate-900"
-          >
-            {(createOrder.isPending || createBatchOrders.isPending)
-              ? 'Creating...'
-              : selectedRequestIds.length > 1
-                ? `Create ${selectedRequestIds.length} Purchase Orders`
-                : 'Create Purchase Order'}
-          </button>
-        </form>
-
-        <div className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
+      <div className="rounded-2xl border bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Order Queue</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <select
@@ -308,9 +217,9 @@ const AdminPurchaseOrdersPage = () => {
             </select>
           </div>
 
-          <div className="mt-4 overflow-auto rounded-xl border dark:border-slate-800">
-            <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-              <thead className="bg-slate-50 dark:bg-slate-950">
+          <div className="admin-table-wrapper mt-4 overflow-auto">
+            <table className="admin-table min-w-full text-sm">
+              <thead className="admin-table-head">
                 <tr>
                   <th className="px-3 py-2 text-left">Order</th>
                   <th className="px-3 py-2 text-left">Vendor</th>
@@ -320,7 +229,7 @@ const AdminPurchaseOrdersPage = () => {
                   <th className="px-3 py-2 text-left">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody>
                 {orders.map((order) => {
                   const canReceiveThis = canReceive && ['SENT', 'PARTIALLY_RECEIVED', 'RECEIVED'].includes(order.status)
                   const isExpanded = expandedOrderId === order.id
@@ -385,8 +294,129 @@ const AdminPurchaseOrdersPage = () => {
               </tbody>
             </table>
           </div>
-        </div>
       </div>
+
+      <AdminSlideOverPanel
+        open={isCreatePanelOpen}
+        onClose={() => setIsCreatePanelOpen(false)}
+        kicker="Procurement"
+        title="Create Purchase Order"
+        description="Create single or batch orders from approved purchase requests."
+        footer={(
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsCreatePanelOpen(false)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-widest transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="create-po-form"
+              disabled={(createOrder.isPending || createBatchOrders.isPending) || !canCreate}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:opacity-60 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+            >
+              {(createOrder.isPending || createBatchOrders.isPending)
+                ? 'Creating...'
+                : selectedRequestIds.length > 1
+                  ? `Create ${selectedRequestIds.length} Purchase Orders`
+                  : 'Create Purchase Order'}
+            </button>
+          </div>
+        )}
+      >
+        <form
+          id="create-po-form"
+          onSubmit={submitCreate}
+          className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/45"
+        >
+          <div className="rounded-xl border border-slate-200 bg-white/80 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Approved Requests</p>
+              <label className="inline-flex items-center gap-2 text-xs text-slate-500">
+                <input
+                  type="checkbox"
+                  checked={selectableRequests.length > 0 && selectedRequestIds.length === selectableRequests.length}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                />
+                Select all
+              </label>
+            </div>
+            <div className="max-h-52 space-y-1 overflow-auto">
+              {selectableRequests.map((request) => (
+                <label key={request.id} className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={selectedRequestIds.includes(request.id)}
+                    onChange={(e) => toggleRequest(request.id, e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="text-xs">
+                    <p className="font-medium text-slate-700 dark:text-slate-200">
+                      {request.book.title} • {request.warehouse.code}
+                    </p>
+                    <p className="text-slate-500">
+                      qty {request.approvedQuantity || request.quantity} • {request.book.author}
+                    </p>
+                  </div>
+                </label>
+              ))}
+              {selectableRequests.length === 0 && (
+                <p className="px-2 py-1 text-xs text-slate-500">No approved requests waiting for order creation.</p>
+              )}
+            </div>
+            {selectedRequestIds.length > 0 && (
+              <p className="mt-2 text-xs text-slate-500">{selectedRequestIds.length} request(s) selected</p>
+            )}
+          </div>
+
+          <select
+            value={createForm.vendorId}
+            onChange={(e) => setCreateForm((prev) => ({ ...prev, vendorId: e.target.value }))}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          >
+            <option value="">Select vendor</option>
+            {filteredVendors.map((vendor) => (
+              <option key={vendor.id} value={vendor.id}>
+                {vendor.code} • {vendor.name}
+              </option>
+            ))}
+          </select>
+          <input
+            value={vendorSearch}
+            onChange={(e) => setVendorSearch(e.target.value)}
+            placeholder="Search vendor by code or name"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={createForm.unitCost}
+            onChange={(e) => setCreateForm((prev) => ({ ...prev, unitCost: e.target.value }))}
+            placeholder="Unit cost (optional)"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+
+          <input
+            type="datetime-local"
+            value={createForm.expectedAt}
+            onChange={(e) => setCreateForm((prev) => ({ ...prev, expectedAt: e.target.value }))}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <p className="text-xs text-slate-500">Expected delivery date/time (optional)</p>
+
+          <textarea
+            value={createForm.notes}
+            onChange={(e) => setCreateForm((prev) => ({ ...prev, notes: e.target.value }))}
+            placeholder="Notes (optional)"
+            rows={3}
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+        </form>
+      </AdminSlideOverPanel>
     </div>
   )
 }

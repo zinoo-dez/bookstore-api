@@ -3,6 +3,7 @@ import { CartService } from './cart.service';
 import { PrismaService } from '../database/prisma.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import * as fc from 'fast-check';
+import { BookPurchaseFormat } from '@prisma/client';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 
@@ -115,6 +116,7 @@ describe('CartService', () => {
               data: {
                 userId: testData.userId,
                 bookId: testData.bookId,
+                format: BookPurchaseFormat.PHYSICAL,
                 quantity: testData.quantity,
               },
               include: { book: true },
@@ -187,6 +189,7 @@ describe('CartService', () => {
             const result = await service.updateItem(
               testData.userId,
               testData.bookId,
+              BookPurchaseFormat.PHYSICAL,
               updateDto,
             );
 
@@ -249,6 +252,7 @@ describe('CartService', () => {
             const result = await service.removeItem(
               testData.userId,
               testData.bookId,
+              BookPurchaseFormat.PHYSICAL,
             );
 
             // Assert: Cart item is deleted
@@ -282,6 +286,7 @@ describe('CartService', () => {
                 id: `cart-item-${i}`,
                 userId: testData.userId,
                 bookId: `book-${i}`,
+                format: BookPurchaseFormat.PHYSICAL,
                 quantity: i + 1,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -312,7 +317,12 @@ describe('CartService', () => {
             const result = await service.getCart(testData.userId);
 
             // Assert: Cart contains correct items and total
-            expect(result.items).toEqual(mockCartItems);
+            expect(result.items).toEqual(
+              mockCartItems.map((item) => ({
+                ...item,
+                unitPrice: Number(item.book.price),
+              })),
+            );
             expect(result.totalPrice).toBe(Number(expectedTotal.toFixed(2)));
             expect(prismaService.cartItem.findMany).toHaveBeenCalledWith({
               where: { userId: testData.userId },
@@ -461,6 +471,7 @@ describe('CartService', () => {
           id: 'cart-item-id',
           userId,
           bookId: 'book-id',
+          format: BookPurchaseFormat.PHYSICAL,
           quantity: 2,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -486,6 +497,7 @@ describe('CartService', () => {
           data: {
             userId,
             bookId: 'book-id',
+            format: BookPurchaseFormat.PHYSICAL,
             quantity: 2,
           },
           include: { book: true },
@@ -510,6 +522,7 @@ describe('CartService', () => {
           id: 'cart-item-id',
           userId,
           bookId: 'book-id',
+          format: BookPurchaseFormat.PHYSICAL,
           quantity: 2,
         };
 
@@ -590,6 +603,7 @@ describe('CartService', () => {
             id: 'item-1',
             userId,
             bookId: 'book-1',
+            format: BookPurchaseFormat.PHYSICAL,
             quantity: 2,
             book: { price: 10.5 },
           },
@@ -597,6 +611,7 @@ describe('CartService', () => {
             id: 'item-2',
             userId,
             bookId: 'book-2',
+            format: BookPurchaseFormat.PHYSICAL,
             quantity: 1,
             book: { price: 15.99 },
           },
@@ -610,7 +625,12 @@ describe('CartService', () => {
         const result = await service.getCart(userId);
 
         // Assert
-        expect(result.items).toEqual(mockCartItems);
+        expect(result.items).toEqual(
+          mockCartItems.map((item) => ({
+            ...item,
+            unitPrice: Number(item.book.price),
+          })),
+        );
         expect(result.totalPrice).toBe(36.99); // (10.50 * 2) + (15.99 * 1)
       });
     });

@@ -14,11 +14,16 @@ export class UsersService {
 
   async findAll() {
     return this.prisma.user.findMany({
+      where: {
+        staffProfile: null,
+        role: Role.USER,
+      },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        isActive: true,
         createdAt: true,
       },
     });
@@ -33,10 +38,23 @@ export class UsersService {
     // Check if user exists
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        staffProfile: {
+          select: { id: true },
+        },
+      },
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (user.staffProfile) {
+      throw new BadRequestException(
+        'Staff account roles must be managed from the Staff module',
+      );
     }
 
     // Update role
@@ -48,6 +66,7 @@ export class UsersService {
         email: true,
         name: true,
         role: true,
+        isActive: true,
         createdAt: true,
       },
     });
@@ -70,7 +89,13 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true },
+      select: {
+        id: true,
+        role: true,
+        staffProfile: {
+          select: { id: true },
+        },
+      },
     });
 
     if (!user) {
@@ -93,6 +118,12 @@ export class UsersService {
       throw new BadRequestException('You cannot change your own role');
     }
 
+    if (user.staffProfile) {
+      throw new BadRequestException(
+        'Staff accounts must be updated from the Staff module',
+      );
+    }
+
     try {
       return await this.prisma.user.update({
         where: { id: userId },
@@ -106,6 +137,7 @@ export class UsersService {
           email: true,
           name: true,
           role: true,
+          isActive: true,
           createdAt: true,
         },
       });
@@ -123,7 +155,14 @@ export class UsersService {
   async deleteUser(userId: string, actor: { userId: string; role?: string }) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+        staffProfile: {
+          select: { id: true },
+        },
+      },
     });
 
     if (!user) {
@@ -132,6 +171,12 @@ export class UsersService {
 
     if (user.id === actor.userId) {
       throw new BadRequestException('You cannot delete your own account');
+    }
+
+    if (user.staffProfile) {
+      throw new BadRequestException(
+        'Staff accounts cannot be deleted from Users. Use Staff management.',
+      );
     }
 
     if (user.role === Role.SUPER_ADMIN && actor.role !== Role.SUPER_ADMIN) {
@@ -165,12 +210,22 @@ export class UsersService {
         email: true,
         name: true,
         role: true,
+        isActive: true,
+        staffProfile: {
+          select: { id: true },
+        },
         createdAt: true,
       },
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (user.staffProfile) {
+      throw new BadRequestException(
+        'Staff account statistics are available in the Staff module',
+      );
     }
 
     // Get order statistics
@@ -208,8 +263,17 @@ export class UsersService {
     ).length;
     const pendingOrders = orders.filter((o) => o.status === 'PENDING').length;
 
+    const safeUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+    };
+
     return {
-      user,
+      user: safeUser,
       stats: {
         totalOrders,
         totalSpent,
@@ -218,5 +282,55 @@ export class UsersService {
       },
       recentOrders: orders.slice(0, 5),
     };
+  }
+
+  async setUserActiveStatus(
+    userId: string,
+    isActive: boolean,
+    actor: { userId: string; role?: string },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        staffProfile: {
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (user.staffProfile) {
+      throw new BadRequestException(
+        'Staff accounts must be managed from the Staff module',
+      );
+    }
+
+    if (user.role !== Role.USER) {
+      throw new BadRequestException(
+        'Only regular users can be banned or unbanned from Users management.',
+      );
+    }
+
+    if (user.id === actor.userId && !isActive) {
+      throw new BadRequestException('You cannot ban your own account');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
   }
 }

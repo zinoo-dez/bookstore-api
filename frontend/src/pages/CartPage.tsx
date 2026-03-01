@@ -13,7 +13,10 @@ const CartPage = () => {
   const removeFromCart = useRemoveFromCart()
 
   const items = cartItems || []
-  const totalPrice = items.reduce((sum, item) => sum + Number(item.book.price) * item.quantity, 0)
+  const totalPrice = items.reduce((sum, item) => {
+    const unit = Number(item.unitPrice ?? item.book.price)
+    return sum + unit * item.quantity
+  }, 0)
 
   if (isLoading) {
     return (
@@ -122,11 +125,14 @@ const CartPage = () => {
                   </h3>
                   <p className="text-gray-600 text-sm mb-2 dark:text-slate-400">by {item.book.author}</p>
                   <p className="text-primary-600 font-bold text-lg">
-                    ${Number(item.book.price).toFixed(2)}
+                    ${Number(item.unitPrice ?? item.book.price).toFixed(2)}
+                  </p>
+                  <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    {item.format === 'EBOOK' ? 'eBook' : 'Physical'}
                   </p>
                   
                   {/* Stock Warning */}
-                  {item.quantity >= item.book.stock && (
+                  {item.format === 'PHYSICAL' && item.quantity >= item.book.stock && (
                     <p className="text-red-600 text-sm mt-2 dark:text-rose-300">
                       ⚠️ Only {item.book.stock} left in stock
                     </p>
@@ -136,7 +142,7 @@ const CartPage = () => {
                 {/* Quantity Controls */}
                 <div className="flex flex-col items-end gap-4">
                   <button
-                    onClick={() => removeFromCart.mutate(item.bookId)}
+                    onClick={() => removeFromCart.mutate({ bookId: item.bookId, format: item.format })}
                     disabled={removeFromCart.isPending}
                     className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50 dark:text-rose-300 dark:hover:text-rose-200"
                   >
@@ -145,8 +151,8 @@ const CartPage = () => {
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => updateCartItem.mutate({ bookId: item.bookId, quantity: item.quantity - 1 })}
-                      disabled={item.quantity <= 1 || updateCartItem.isPending}
+                      onClick={() => updateCartItem.mutate({ bookId: item.bookId, quantity: item.quantity - 1, format: item.format })}
+                      disabled={item.quantity <= 1 || item.format === 'EBOOK' || updateCartItem.isPending}
                       className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center dark:bg-gray-700 hover:dark:bg-gray-600"
                     >
                       -
@@ -155,8 +161,8 @@ const CartPage = () => {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => updateCartItem.mutate({ bookId: item.bookId, quantity: item.quantity + 1 })}
-                      disabled={item.quantity >= item.book.stock || updateCartItem.isPending}
+                      onClick={() => updateCartItem.mutate({ bookId: item.bookId, quantity: item.quantity + 1, format: item.format })}
+                      disabled={item.format === 'EBOOK' || item.quantity >= item.book.stock || updateCartItem.isPending}
                       className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center dark:bg-gray-700 hover:dark:bg-gray-600"
                     >
                       +
@@ -164,7 +170,7 @@ const CartPage = () => {
                   </div>
 
                   <p className="text-gray-900 font-semibold dark:text-slate-100">
-                    ${(Number(item.book.price) * item.quantity).toFixed(2)}
+                    ${(Number(item.unitPrice ?? item.book.price) * item.quantity).toFixed(2)}
                   </p>
                 </div>
               </div>

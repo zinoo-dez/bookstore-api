@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { ChevronDown, LogOut } from 'lucide-react'
+import { ChevronDown, LogOut, Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
 import { useLogout } from '@/services/auth'
 import AdminSidebar from './AdminSidebar'
+import ScrollProgressBar from '@/components/ui/ScrollProgressBar'
+import { useTheme } from '@/hooks/useTheme'
 
 const resolveDepartmentTheme = (
   role?: string,
@@ -48,8 +50,10 @@ const resolveDepartmentTheme = (
 
 const AdminLayout = () => {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const user = useAuthStore((state) => state.user)
   const logout = useLogout()
+  const { theme, toggleTheme } = useTheme()
   const roleLabel =
     user?.primaryStaffRoleName ||
     user?.primaryStaffRoleCode ||
@@ -61,15 +65,95 @@ const AdminLayout = () => {
     user?.staffDepartmentName,
   )
 
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [menuOpen])
+
   return (
     <div
       className="admin-shell luxe-shell flex min-h-screen text-slate-900 dark:text-slate-100"
       data-admin-dept={departmentTheme}
     >
-      <AdminSidebar />
+      <div className="hidden lg:block">
+        <AdminSidebar />
+      </div>
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <button
+            type="button"
+            aria-label="Close sidebar overlay"
+            className="absolute inset-0 bg-slate-900/45 backdrop-blur-sm"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className="relative z-10">
+            <AdminSidebar mobile onCloseMobile={() => setMobileSidebarOpen(false)} />
+          </div>
+        </div>
+      )}
       <div className="flex-1 min-w-0">
-        <div className="luxe-glass-nav sticky top-3 z-20 mx-4 mt-3 flex items-center justify-end rounded-2xl px-6 py-3">
-          <div className="relative">
+        <ScrollProgressBar topClassName="top-0" widthClassName="w-full" />
+        <div className="luxe-glass-nav sticky top-3 z-20 mx-4 mt-3 flex items-center justify-between rounded-2xl px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            className="metal-button inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all duration-150 hover:border-[var(--admin-accent-border)] lg:hidden"
+            onClick={() => setMobileSidebarOpen(true)}
+          >
+            <Menu className="h-4 w-4" />
+            Menu
+          </button>
+          <div className="relative flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-pressed={theme === 'dark'}
+              className="metal-button relative inline-flex h-9 w-14 items-center rounded-full transition-colors"
+            >
+              <span className="sr-only">Toggle theme</span>
+              <span
+                className={`
+                  inline-flex h-7 w-7 items-center justify-center
+                  transform rounded-full
+                  bg-slate-100 text-slate-600 shadow-sm
+                  transition-all
+                  dark:bg-[#E6B65C] dark:text-slate-900 dark:shadow-[0_0_8px_rgba(230,182,92,0.35)]
+                  ${theme === 'dark' ? 'translate-x-6 bg-[#E6B65C] text-slate-900' : 'translate-x-1'}
+                `}
+              >
+                {theme === 'dark' ? (
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.293 13.293A8 8 0 116.707 2.707a6 6 0 1010.586 10.586z" />
+                  </svg>
+                ) : (
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="4" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                )}
+              </span>
+            </button>
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
@@ -82,7 +166,7 @@ const AdminLayout = () => {
               <ChevronDown className="h-4 w-4" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+              <div className="luxe-panel absolute right-0 z-40 mt-3 w-64 bg-white/95 p-3 dark:bg-slate-900/95">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.name}</p>
                 <p className="truncate text-xs text-slate-500">{user?.email}</p>
                 {roleLabel && (

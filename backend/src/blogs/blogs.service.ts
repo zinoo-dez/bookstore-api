@@ -80,6 +80,9 @@ export class BlogsService {
           shortBio: true,
           about: true,
           coverImage: true,
+          supportEnabled: true,
+          supportUrl: true,
+          supportQrImage: true,
         },
       },
       tags: {
@@ -538,6 +541,9 @@ export class BlogsService {
             shortBio: true,
             about: true,
             coverImage: true,
+            supportEnabled: true,
+            supportUrl: true,
+            supportQrImage: true,
           },
         },
       },
@@ -588,6 +594,9 @@ export class BlogsService {
             shortBio: true,
             about: true,
             coverImage: true,
+            supportEnabled: true,
+            supportUrl: true,
+            supportQrImage: true,
           },
         },
       },
@@ -603,6 +612,7 @@ export class BlogsService {
         id: true,
         name: true,
         email: true,
+        createdAt: true,
         avatarType: true,
         avatarValue: true,
         backgroundColor: true,
@@ -610,6 +620,14 @@ export class BlogsService {
         shortBio: true,
         about: true,
         coverImage: true,
+        showEmail: true,
+        showFollowers: true,
+        showFollowing: true,
+        showFavorites: true,
+        showLikedPosts: true,
+        supportEnabled: true,
+        supportUrl: true,
+        supportQrImage: true,
         role: true,
       },
     });
@@ -618,7 +636,14 @@ export class BlogsService {
       throw new NotFoundException('User not found');
     }
 
-    const [posts, followers, following, isFollowing] = await Promise.all([
+    const isOwner = !!currentUserId && currentUserId === userId;
+    const canViewFavorites = isOwner || user.showFavorites;
+    const canViewLikedPosts = isOwner || user.showLikedPosts;
+    const canViewFollowers = isOwner || user.showFollowers;
+    const canViewFollowing = isOwner || user.showFollowing;
+
+    const [posts, followers, following, isFollowing, favorites, likedPosts] =
+      await Promise.all([
       db.authorBlog.findMany({
         where: { authorId: userId, status: BLOG_STATUS.PUBLISHED },
         include: this.blogInclude(currentUserId),
@@ -636,17 +661,64 @@ export class BlogsService {
             },
           })
         : null,
+      canViewFavorites
+        ? this.prisma.favoriteItem.findMany({
+            where: { userId },
+            include: {
+              book: {
+                select: {
+                  id: true,
+                  title: true,
+                  author: true,
+                  coverImage: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 24,
+          })
+        : [],
+      canViewLikedPosts
+        ? db.blogLike.findMany({
+            where: {
+              userId,
+              post: { status: BLOG_STATUS.PUBLISHED },
+            },
+            include: {
+              post: {
+                include: this.blogInclude(currentUserId),
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 24,
+          })
+        : [],
     ]);
 
     return {
-      user,
+      user: {
+        ...user,
+        email: isOwner || user.showEmail ? user.email : null,
+      },
+      visibility: {
+        showEmail: user.showEmail,
+        showFollowers: user.showFollowers,
+        showFollowing: user.showFollowing,
+        showFavorites: user.showFavorites,
+        showLikedPosts: user.showLikedPosts,
+        supportEnabled: user.supportEnabled,
+      },
       stats: {
-        followers,
-        following,
+        followers: canViewFollowers ? followers : null,
+        following: canViewFollowing ? following : null,
         posts: posts.length,
       },
       isFollowing: !!isFollowing,
       posts: posts.map((item: any) => this.mapBlog(item, currentUserId)),
+      favorites,
+      likedPosts: likedPosts.map((item: any) =>
+        this.mapBlog(item.post, currentUserId),
+      ),
     };
   }
 

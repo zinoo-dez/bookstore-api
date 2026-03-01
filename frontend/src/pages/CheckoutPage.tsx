@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCart } from '@/services/cart'
 import { useCreateOrder, useUploadPaymentReceipt, useValidatePromo } from '@/services/orders'
+import { usePublicStores } from '@/services/stores'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import BookCover from '@/components/ui/BookCover'
@@ -16,15 +17,16 @@ const shippingSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  address: z.string().min(5, 'Address is required'),
-  city: z.string().min(2, 'City is required'),
-  state: z.string().min(2, 'State is required'),
-  zipCode: z.string().min(5, 'ZIP code must be at least 5 digits'),
-  country: z.string().min(2, 'Country is required'),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  country: z.string().optional(),
 })
 
 type ShippingData = z.infer<typeof shippingSchema>
 type PaymentProvider = 'KPAY' | 'WAVEPAY' | 'MPU' | 'VISA'
+type DeliveryType = 'HOME_DELIVERY' | 'STORE_PICKUP'
 
 type PaymentMethodConfig = {
   label: string
@@ -78,6 +80,7 @@ const CheckoutPage = () => {
   const createOrderMutation = useCreateOrder()
   const uploadReceiptMutation = useUploadPaymentReceipt()
   const validatePromoMutation = useValidatePromo()
+  const { data: stores = [] } = usePublicStores()
 
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider | null>(null)
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
@@ -88,6 +91,8 @@ const CheckoutPage = () => {
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null)
   const [promoMessage, setPromoMessage] = useState('')
   const [promoError, setPromoError] = useState('')
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>('HOME_DELIVERY')
+  const [selectedStoreId, setSelectedStoreId] = useState('')
 
   const {
     register,
@@ -122,7 +127,10 @@ const CheckoutPage = () => {
     return null
   }
 
-  const subtotal = items.reduce((sum, item) => sum + Number(item.book.price) * item.quantity, 0)
+  const subtotal = items.reduce((sum, item) => {
+    const unit = Number(item.unitPrice ?? item.book.price)
+    return sum + unit * item.quantity
+  }, 0)
   const promoDiscount = validatePromoMutation.data?.valid ? validatePromoMutation.data.discountAmount : 0
   const tax = subtotal * 0.1
   const shipping = 0
@@ -192,11 +200,25 @@ const CheckoutPage = () => {
       return
     }
 
+    if (deliveryType === 'STORE_PICKUP' && !selectedStoreId) {
+      setError('Please choose a pickup store.')
+      return
+    }
+    if (
+      deliveryType === 'HOME_DELIVERY'
+      && (!data.address || !data.city || !data.state || !data.zipCode || !data.country)
+    ) {
+      setError('Shipping address, city, state, ZIP code, and country are required for home delivery.')
+      return
+    }
+
     try {
       setError('')
       setPaymentError('')
       const order = await createOrderMutation.mutateAsync({
         ...data,
+        deliveryType,
+        storeId: deliveryType === 'STORE_PICKUP' ? selectedStoreId : undefined,
         paymentProvider,
         paymentReceiptUrl: receiptUrl,
         promoCode: appliedPromoCode ?? undefined,
@@ -219,18 +241,68 @@ const CheckoutPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-lg shadow p-6 dark:bg-slate-900 dark:border dark:border-slate-800">
-              <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
+              <h2 className="text-xl font-semibold mb-4">Delivery</h2>
+              <div className="grid gap-3 md:grid-cols-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryType('HOME_DELIVERY')}
+                  className={`rounded-lg border-2 p-3 text-left transition-colors ${
+                    deliveryType === 'HOME_DELIVERY'
+                      ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                      : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <p className="font-semibold">Home Delivery</p>
+                  <p className="text-xs text-slate-500 mt-1">Warehouse dispatches to your address</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryType('STORE_PICKUP')}
+                  className={`rounded-lg border-2 p-3 text-left transition-colors ${
+                    deliveryType === 'STORE_PICKUP'
+                      ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                      : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <p className="font-semibold">Store Pickup</p>
+                  <p className="text-xs text-slate-500 mt-1">Warehouse delivers to selected store branch</p>
+                </button>
+              </div>
+
+              {deliveryType === 'STORE_PICKUP' && (
+                <div className="mb-4 rounded-lg border p-3 dark:border-slate-700">
+                  <label className="mb-2 block text-sm font-semibold">Pickup Store</label>
+                  <select
+                    value={selectedStoreId}
+                    onChange={(event) => setSelectedStoreId(event.target.value)}
+                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800"
+                  >
+                    <option value="">Select a store</option>
+                    {stores.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.name} ({store.city}, {store.state})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <h2 className="text-xl font-semibold mb-4">Customer Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input {...register('fullName')} label="Full Name" placeholder="John Doe" error={errors.fullName?.message} />
                 <Input {...register('email')} type="email" label="Email" placeholder="john@example.com" error={errors.email?.message} />
                 <Input {...register('phone')} label="Phone Number" placeholder="+95 9 123 456789" error={errors.phone?.message} />
-                <Input {...register('country')} label="Country" placeholder="Myanmar" error={errors.country?.message} />
-                <div className="md:col-span-2">
-                  <Input {...register('address')} label="Street Address" placeholder="No. 123, Main Road" error={errors.address?.message} />
-                </div>
-                <Input {...register('city')} label="City" placeholder="Yangon" error={errors.city?.message} />
-                <Input {...register('state')} label="State / Region" placeholder="Yangon" error={errors.state?.message} />
-                <Input {...register('zipCode')} label="ZIP / Postal Code" placeholder="11181" error={errors.zipCode?.message} />
+                {deliveryType === 'HOME_DELIVERY' && (
+                  <>
+                    <Input {...register('country')} label="Country" placeholder="Myanmar" error={errors.country?.message} />
+                    <div className="md:col-span-2">
+                      <Input {...register('address')} label="Street Address" placeholder="No. 123, Main Road" error={errors.address?.message} />
+                    </div>
+                    <Input {...register('city')} label="City" placeholder="Yangon" error={errors.city?.message} />
+                    <Input {...register('state')} label="State / Region" placeholder="Yangon" error={errors.state?.message} />
+                    <Input {...register('zipCode')} label="ZIP / Postal Code" placeholder="11181" error={errors.zipCode?.message} />
+                  </>
+                )}
               </div>
             </div>
 

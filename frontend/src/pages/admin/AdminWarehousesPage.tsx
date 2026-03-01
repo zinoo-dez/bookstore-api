@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useBooks } from '@/services/books'
 import { getErrorMessage } from '@/lib/api'
@@ -16,6 +17,8 @@ import {
   useWarehouses,
   type WarehouseAlertStatus,
 } from '@/services/warehouses'
+import { useTimedMessage } from '@/hooks/useTimedMessage'
+import AdminSlideOverPanel from '@/components/admin/AdminSlideOverPanel'
 
 type WarehouseActionTab = 'stock' | 'transfer' | 'history' | 'settings'
 
@@ -39,7 +42,8 @@ const AdminWarehousesPage = () => {
 
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('')
   const [activeTab, setActiveTab] = useState<WarehouseActionTab>('stock')
-  const [message, setMessage] = useState('')
+  const { message, showMessage } = useTimedMessage(2400)
+  const [isCreatePanelOpen, setIsCreatePanelOpen] = useState(false)
   const [alertStatus, setAlertStatus] = useState<WarehouseAlertStatus>('OPEN')
 
   const [newWarehouse, setNewWarehouse] = useState({
@@ -77,8 +81,8 @@ const AdminWarehousesPage = () => {
   })
 
   const { data: warehouses = [], isLoading } = useWarehouses()
-  const { data: stockSearchResults } = useBooks({ page: 1, limit: 50, title: stockBookSearch || undefined })
-  const { data: transferSearchResults } = useBooks({ page: 1, limit: 50, title: transferBookSearch || undefined })
+  const { data: stockSearchResults } = useBooks({ page: 1, limit: 50, title: stockBookSearch || undefined, status: 'active' })
+  const { data: transferSearchResults } = useBooks({ page: 1, limit: 50, title: transferBookSearch || undefined, status: 'active' })
   const { data: stocks = [] } = useWarehouseStocks(selectedWarehouseId || undefined)
   const { data: alerts = [] } = useWarehouseAlerts(alertStatus)
   const { data: transfers = [] } = useWarehouseTransfers(50)
@@ -168,11 +172,6 @@ const AdminWarehousesPage = () => {
     setTransferForm((prev) => ({ ...prev, fromWarehouseId: selectedWarehouse.id }))
   }, [selectedWarehouse])
 
-  const showMessage = (text: string) => {
-    setMessage(text)
-    window.setTimeout(() => setMessage(''), 2400)
-  }
-
   const getAlertSeverity = (stock: number, threshold: number) => {
     if (stock <= 0) return { label: 'CRITICAL', dot: 'bg-rose-500', text: 'text-rose-700 dark:text-rose-300' }
     if (stock <= Math.ceil(threshold * 0.5)) return { label: 'HIGH', dot: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-300' }
@@ -194,6 +193,7 @@ const AdminWarehousesPage = () => {
         address: newWarehouse.address || undefined,
       })
       setNewWarehouse({ name: '', code: '', city: '', state: '', address: '' })
+      setIsCreatePanelOpen(false)
       showMessage('Warehouse created.')
     } catch (error) {
       showMessage(getErrorMessage(error))
@@ -370,12 +370,24 @@ const AdminWarehousesPage = () => {
   return (
     <div className="surface-canvas min-h-screen space-y-6 p-8 dark:text-slate-100">
       <div className="mx-auto max-w-7xl space-y-6">
-      <div>
-        <p className="section-kicker">
-          {isWarehouseFocusedUser ? 'Warehouse Workspace' : 'Admin'}
-        </p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight">Warehouse Management</h1>
-        <p className="mt-1 text-slate-500">Operational workspace for stock, transfers, and low-stock handling.</p>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="section-kicker">
+            {isWarehouseFocusedUser ? 'Warehouse Workspace' : 'Admin'}
+          </p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight">Warehouse Management</h1>
+          <p className="mt-1 text-slate-500">Operational workspace for stock, transfers, and low-stock handling.</p>
+        </div>
+        {canManageWarehouseEntity && (
+          <button
+            type="button"
+            onClick={() => setIsCreatePanelOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+          >
+            <Plus className="h-4 w-4" />
+            Create Warehouse
+          </button>
+        )}
       </div>
 
       {message && (
@@ -384,53 +396,7 @@ const AdminWarehousesPage = () => {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {canManageWarehouseEntity && (
-          <form onSubmit={handleCreateWarehouse} className="surface-panel p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Add Warehouse</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input
-                placeholder="Name"
-                value={newWarehouse.name}
-                onChange={(e) => setNewWarehouse((prev) => ({ ...prev, name: e.target.value }))}
-                className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70"
-              />
-              <input
-                placeholder="Code"
-                value={newWarehouse.code}
-                onChange={(e) => setNewWarehouse((prev) => ({ ...prev, code: e.target.value }))}
-                className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70"
-              />
-              <input
-                placeholder="City"
-                value={newWarehouse.city}
-                onChange={(e) => setNewWarehouse((prev) => ({ ...prev, city: e.target.value }))}
-                className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70"
-              />
-              <input
-                placeholder="State"
-                value={newWarehouse.state}
-                onChange={(e) => setNewWarehouse((prev) => ({ ...prev, state: e.target.value }))}
-                className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/70"
-              />
-              <input
-                placeholder="Address (optional)"
-                value={newWarehouse.address}
-                onChange={(e) => setNewWarehouse((prev) => ({ ...prev, address: e.target.value }))}
-                className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm sm:col-span-2 dark:border-slate-700 dark:bg-slate-900/70"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={createWarehouse.isPending}
-              className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-50 dark:bg-amber-400 dark:text-slate-900"
-            >
-              {createWarehouse.isPending ? 'Creating...' : 'Create Warehouse'}
-            </button>
-          </form>
-        )}
-
-        <div className={`surface-panel p-5 ${!canManageWarehouseEntity ? 'lg:col-span-2' : ''}`}>
+      <div className="surface-panel p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-500">Low Stock Alerts</h2>
             <select
@@ -481,8 +447,71 @@ const AdminWarehousesPage = () => {
               )
             })}
           </div>
-        </div>
       </div>
+
+      <AdminSlideOverPanel
+        open={isCreatePanelOpen}
+        onClose={() => setIsCreatePanelOpen(false)}
+        kicker="Warehouse"
+        title="Create Warehouse"
+        description="Add a new warehouse location for stock and transfer operations."
+        footer={(
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsCreatePanelOpen(false)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-widest transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="create-warehouse-form"
+              disabled={createWarehouse.isPending}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:opacity-60 dark:bg-amber-400 dark:text-slate-900 dark:hover:bg-amber-300"
+            >
+              {createWarehouse.isPending ? 'Creating...' : 'Create Warehouse'}
+            </button>
+          </div>
+        )}
+      >
+        <form
+          id="create-warehouse-form"
+          onSubmit={handleCreateWarehouse}
+          className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/45"
+        >
+          <input
+            placeholder="Name"
+            value={newWarehouse.name}
+            onChange={(e) => setNewWarehouse((prev) => ({ ...prev, name: e.target.value }))}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <input
+            placeholder="Code"
+            value={newWarehouse.code}
+            onChange={(e) => setNewWarehouse((prev) => ({ ...prev, code: e.target.value }))}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <input
+            placeholder="City"
+            value={newWarehouse.city}
+            onChange={(e) => setNewWarehouse((prev) => ({ ...prev, city: e.target.value }))}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <input
+            placeholder="State"
+            value={newWarehouse.state}
+            onChange={(e) => setNewWarehouse((prev) => ({ ...prev, state: e.target.value }))}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+          <input
+            placeholder="Address (optional)"
+            value={newWarehouse.address}
+            onChange={(e) => setNewWarehouse((prev) => ({ ...prev, address: e.target.value }))}
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-900"
+          />
+        </form>
+      </AdminSlideOverPanel>
 
       <div className="surface-panel p-5">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-slate-500">Warehouses</h2>

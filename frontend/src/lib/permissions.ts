@@ -1,5 +1,8 @@
 import { useAuthStore } from '@/store/auth.store'
 
+export const isPrivilegedRole = (role: 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefined): boolean =>
+  role === 'ADMIN' || role === 'SUPER_ADMIN'
+
 export const hasPermission = (permissions: string[] | undefined, key: string): boolean => {
   if (!permissions || permissions.length === 0) {
     return false
@@ -47,7 +50,7 @@ const CS_PORTAL_PERMISSION_KEYS = new Set([
 ])
 
 export const canAccessAdmin = (role: 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefined, permissions?: string[]): boolean => {
-  if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+  if (isPrivilegedRole(role)) {
     return true
   }
 
@@ -59,7 +62,7 @@ export const canAccessAdmin = (role: 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefine
 }
 
 export const canAccessCS = (role: 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefined, permissions?: string[]): boolean => {
-  if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+  if (isPrivilegedRole(role)) {
     return true
   }
 
@@ -75,6 +78,10 @@ export const useHasPermission = (key: string): boolean => {
 
   if (!user) {
     return false
+  }
+
+  if (isPrivilegedRole(user.role)) {
+    return true
   }
 
   return hasPermission(user.permissions, key)

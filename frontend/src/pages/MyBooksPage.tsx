@@ -328,8 +328,6 @@ const MyBooksPage = () => {
     return count
   }, [sessions])
 
-  const maxPagesInMonthDay = Math.max(0, ...Array.from(activityByDate.values()).map((day) => day.pages))
-
   const calendarCells = [
     ...Array.from({ length: leadingOffset }).map(() => null),
     ...Array.from({ length: daysInMonth }).map((_, idx) => idx + 1),
@@ -555,10 +553,27 @@ const MyBooksPage = () => {
 
   useEffect(() => {
     if (!isComposerOpen) return
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const { body, documentElement } = document
+    const scrollTop = window.scrollY
+    const previousBodyOverflow = body.style.overflow
+    const previousBodyPosition = body.style.position
+    const previousBodyTop = body.style.top
+    const previousBodyWidth = body.style.width
+    const previousHtmlOverflow = documentElement.style.overflow
+
+    body.style.overflow = 'hidden'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollTop}px`
+    body.style.width = '100%'
+    documentElement.style.overflow = 'hidden'
+
     return () => {
-      document.body.style.overflow = previousOverflow
+      body.style.overflow = previousBodyOverflow
+      body.style.position = previousBodyPosition
+      body.style.top = previousBodyTop
+      body.style.width = previousBodyWidth
+      documentElement.style.overflow = previousHtmlOverflow
+      window.scrollTo(0, scrollTop)
     }
   }, [isComposerOpen])
 
@@ -703,18 +718,18 @@ const MyBooksPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-[#0f1114] dark:text-slate-100">
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-[#101012] dark:text-[#f5f5f1]">
       <div className="pointer-events-none fixed inset-0 hidden opacity-85 dark:block">
-        <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-[radial-gradient(circle,_rgba(40,166,145,0.18),_rgba(0,0,0,0))]" />
-        <div className="absolute -right-10 top-20 h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(255,173,64,0.16),_rgba(0,0,0,0))]" />
+        <div className="absolute -left-24 top-14 h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(255,194,97,0.12),_rgba(0,0,0,0))]" />
+        <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-[radial-gradient(circle,_rgba(91,59,182,0.2),_rgba(0,0,0,0))]" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8 lg:pb-16">
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-gradient-to-br dark:from-[#16232b] dark:via-[#11252a] dark:to-[#1b1828] dark:shadow-[0_20px_80px_rgba(0,0,0,0.35)] lg:p-8">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#17171a]/85 dark:shadow-[0_20px_80px_rgba(0,0,0,0.35)] lg:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300/80">Reading Insights</p>
-              <h1 className="mt-2 font-library-display text-4xl leading-tight text-slate-900 dark:text-[#eef8f6]">{summaryHeading}</h1>
+              <h1 className="mt-2 font-library-display text-4xl leading-tight text-slate-900 dark:text-[#f5f5f1]">{summaryHeading}</h1>
             </div>
             <button
               type="button"
@@ -726,7 +741,7 @@ const MyBooksPage = () => {
             </button>
           </div>
 
-          <div className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/85 p-3 dark:border-white/10 dark:bg-white/[0.03] lg:grid-cols-[auto_minmax(220px,1fr)_auto] lg:items-center">
+          <div className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/85 p-3 sm:p-4 dark:border-white/10 dark:bg-white/[0.03] xl:grid-cols-[auto_minmax(220px,1fr)_auto] xl:items-center">
             <div className="grid grid-cols-3 rounded-full border border-slate-300/90 bg-white p-1 dark:border-white/20 dark:bg-black/25">
               {(['WEEKLY', 'MONTHLY', 'YEARLY'] as const).map((mode) => (
                 <button
@@ -765,7 +780,7 @@ const MyBooksPage = () => {
               </select>
             )}
 
-            <div className="grid grid-cols-3 gap-2 lg:min-w-[330px]">
+            <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end xl:min-w-[320px]">
               <button
                 type="button"
                 onClick={() => {
@@ -777,7 +792,7 @@ const MyBooksPage = () => {
                   }
                   setSelectedMonth(shiftMonthKey(selectedMonth, viewMode === 'YEARLY' ? -12 : -1))
                 }}
-                className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-slate-300/90 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/20 dark:bg-black/20 dark:text-slate-300 dark:hover:border-white/40 dark:hover:text-white"
+                className="inline-flex h-10 min-w-[88px] items-center justify-center gap-1 rounded-xl border border-slate-300/90 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/20 dark:bg-black/20 dark:text-slate-300 dark:hover:border-white/40 dark:hover:text-white"
               >
                 <ChevronLeft className="h-3.5 w-3.5" /> Prev
               </button>
@@ -787,7 +802,7 @@ const MyBooksPage = () => {
                   setSelectedMonth(toMonthKey(new Date()))
                   setSelectedDateKey(null)
                 }}
-                className="h-10 rounded-xl border border-slate-300/90 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/20 dark:bg-black/20 dark:text-slate-300 dark:hover:border-white/40 dark:hover:text-white"
+                className="h-10 min-w-[88px] rounded-xl border border-slate-300/90 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/20 dark:bg-black/20 dark:text-slate-300 dark:hover:border-white/40 dark:hover:text-white"
               >
                 Today
               </button>
@@ -802,7 +817,7 @@ const MyBooksPage = () => {
                   }
                   setSelectedMonth(shiftMonthKey(selectedMonth, viewMode === 'YEARLY' ? 12 : 1))
                 }}
-                className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-slate-300/90 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/20 dark:bg-black/20 dark:text-slate-300 dark:hover:border-white/40 dark:hover:text-white"
+                className="inline-flex h-10 min-w-[88px] items-center justify-center gap-1 rounded-xl border border-slate-300/90 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 dark:border-white/20 dark:bg-black/20 dark:text-slate-300 dark:hover:border-white/40 dark:hover:text-white"
               >
                 Next <ChevronRight className="h-3.5 w-3.5" />
               </button>
@@ -838,7 +853,7 @@ const MyBooksPage = () => {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700 dark:border-emerald-300/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 dark:border-amber-300/30 dark:bg-amber-500/10 dark:text-amber-200">
               {pagesDelta >= 0 ? '+' : ''}{pagesDelta} pages vs {previousMonthLabel}
             </span>
             <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sky-700 dark:border-sky-300/30 dark:bg-sky-500/10 dark:text-sky-200">
@@ -868,7 +883,7 @@ const MyBooksPage = () => {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Reading Calendar</p>
                   <h2 className="mt-1 font-library-display text-3xl text-slate-900 dark:text-[#f5f5f1]">{periodHeading}</h2>
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-500">{periodHint}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{periodHint}</p>
               </div>
 
               <AnimatePresence mode="wait">
@@ -881,7 +896,7 @@ const MyBooksPage = () => {
                 >
                   {viewMode === 'MONTHLY' && (
                     <>
-                      <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
+                      <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
                         {DAY_LABEL.map((day) => (
                           <div key={day}>{day}</div>
                         ))}
@@ -902,17 +917,9 @@ const MyBooksPage = () => {
                           const isMultiSession = sessionCount > 1
                           const isSelected = selectedDateKey === dateKey
                           const previewSessions = daySessions.slice(0, 3)
-                          const intensity = hasSessions && maxPagesInMonthDay > 0 ? Math.ceil((dayPages / maxPagesInMonthDay) * 4) : 0
-                          const intensityClass =
-                            intensity === 4
-                              ? 'bg-emerald-400/18 border-emerald-300/55'
-                              : intensity === 3
-                                ? 'bg-emerald-400/14 border-emerald-300/45'
-                                : intensity === 2
-                                  ? 'bg-emerald-400/10 border-emerald-300/30'
-                                  : intensity === 1
-                                    ? 'bg-emerald-400/6 border-emerald-300/22'
-                                    : 'bg-slate-100/60 border-slate-200/70 dark:bg-white/[0.02] dark:border-white/10'
+                          const dayStateClass = hasSessions
+                            ? 'bg-amber-300/20 border-amber-300/55'
+                            : 'bg-slate-100/60 border-slate-200/70 dark:bg-white/[0.04] dark:border-white/20'
 
                           const tooltip = hasSessions
                             ? `${MONTH_LABEL.format(date)} ${day}: ${dayPages} pages | ${daySessions.map((session) => session.title).join(', ')}`
@@ -928,9 +935,9 @@ const MyBooksPage = () => {
                               onClick={() => handleCalendarDayClick(dateKey)}
                               className={cn(
                                 'group relative aspect-[1.05/1] overflow-hidden rounded-xl border p-2 text-left transition duration-300 hover:-translate-y-0.5',
-                                hasSessions ? 'hover:border-emerald-300/60' : 'hover:border-slate-300/70 dark:hover:border-white/20',
-                                isSelected ? (hasSessions ? 'ring-2 ring-emerald-300/60' : 'ring-2 ring-slate-300/80 dark:ring-white/30') : '',
-                                intensityClass
+                                hasSessions ? 'hover:border-amber-300/65' : 'hover:border-slate-300/70 dark:hover:border-white/20',
+                                isSelected ? (hasSessions ? 'ring-2 ring-amber-300/60' : 'ring-2 ring-slate-300/80 dark:ring-white/30') : '',
+                                dayStateClass
                               )}
                             >
                               <div className="absolute inset-x-2 top-2 bottom-10">
@@ -941,8 +948,8 @@ const MyBooksPage = () => {
                                         key={`${dateKey}-${session.id}`}
                                         className={cn(
                                           'absolute h-[80%] w-[62%] overflow-hidden rounded-lg border border-white/45 shadow-[0_10px_24px_rgba(15,23,42,0.24)] transition-all duration-300',
-                                          stackIdx === 0 ? 'left-[3%] top-[14%] rotate-[-12deg] z-[1] blur-[0.9px] opacity-85 saturate-75 group-hover:-translate-y-1.5' : '',
-                                          stackIdx === 1 ? 'left-[20%] top-[8%] rotate-[-2deg] z-[2] blur-[0.45px] opacity-95 saturate-90 group-hover:-translate-y-2' : '',
+                                          stackIdx === 0 ? 'left-[3%] top-[14%] rotate-[-12deg] z-[1] group-hover:-translate-y-1.5' : '',
+                                          stackIdx === 1 ? 'left-[20%] top-[8%] rotate-[-2deg] z-[2] group-hover:-translate-y-2' : '',
                                           stackIdx === 2 ? 'left-[37%] top-[12%] rotate-[9deg] z-[3] group-hover:-translate-y-2.5' : '',
                                         )}
                                       >
@@ -994,14 +1001,14 @@ const MyBooksPage = () => {
                             className={cn(
                               'rounded-2xl border p-3 text-left transition hover:-translate-y-0.5',
                               isActive
-                                ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-300/40 dark:bg-emerald-500/10'
-                                : 'border-slate-200 bg-slate-50 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.02] dark:hover:border-white/25',
+                                ? 'border-amber-300 bg-amber-50 dark:border-amber-300/40 dark:bg-amber-500/10'
+                                : 'border-slate-200 bg-slate-50 hover:border-slate-300 dark:border-white/15 dark:bg-white/[0.04] dark:hover:border-white/35',
                               isFuture ? 'opacity-60' : '',
                             )}
                           >
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{day.label}</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">{day.label}</p>
                             <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{day.date.getDate()}</p>
-                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
                               {day.pages > 0 ? `${day.pages} pages` : isFuture ? 'Future day' : 'No session'}
                             </p>
                             <div className="mt-2 flex -space-x-2">
@@ -1027,20 +1034,20 @@ const MyBooksPage = () => {
                             setViewMode('MONTHLY')
                             setSelectedMonth(monthCard.key)
                           }}
-                          className="group rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:-translate-y-0.5 hover:border-emerald-300/60 dark:border-white/10 dark:bg-white/[0.02] dark:hover:border-emerald-300/40"
+                          className="group rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left transition hover:-translate-y-0.5 hover:border-amber-300/65 dark:border-white/15 dark:bg-white/[0.04] dark:hover:border-amber-300/45"
                         >
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">{monthCard.label}</p>
-                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{monthCard.pages}p</span>
+                            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">{monthCard.label}</p>
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-300">{monthCard.pages}p</span>
                           </div>
                           <div className="mt-3 h-20 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-black/20">
                             {monthCard.cover ? (
                               <BookCover src={monthCard.cover} alt={`${monthCard.label} top title`} className="h-full w-full" />
                             ) : (
-                              <div className="grid h-full place-items-center text-xs text-slate-400 dark:text-slate-500">No sessions</div>
+                              <div className="grid h-full place-items-center text-xs text-slate-400 dark:text-slate-300">No sessions</div>
                             )}
                           </div>
-                          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Open month</p>
+                          <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">Open month</p>
                         </button>
                       ))}
                     </div>
@@ -1049,7 +1056,7 @@ const MyBooksPage = () => {
               </AnimatePresence>
 
               {activeDay && (
-                  <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-200/20 dark:bg-emerald-500/10 dark:text-emerald-100">
+                  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-200/20 dark:bg-amber-500/10 dark:text-amber-100">
                   {activeDay.pages} pages logged across {activeDay.sessions.length} session{activeDay.sessions.length > 1 ? 's' : ''}.
                 </div>
               )}
@@ -1059,17 +1066,17 @@ const MyBooksPage = () => {
               <section className="rounded-3xl border border-slate-200 bg-white p-4 backdrop-blur-md dark:border-white/10 dark:bg-[#16181c]/85 lg:p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Reading Distribution</h3>
-                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-500">
+                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
                     <BarChart3 className="h-4 w-4" />
                     Last 7 days
                   </span>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-black/20">
-                  <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400 dark:text-slate-500">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/15 dark:bg-black/25">
+                  <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400 dark:text-slate-300">
                     <span className="whitespace-nowrap">{maxLastSevenDaysPages}p max</span>
                     <span className="whitespace-nowrap">0p min</span>
                   </div>
-                  <div className="grid h-36 grid-cols-7 items-end gap-2 border-t border-dashed border-slate-300 pt-3 dark:border-white/15">
+                  <div className="grid h-36 grid-cols-7 items-end gap-2 border-t border-dashed border-slate-300 pt-3 dark:border-white/25">
                     {lastSevenDays.map((day) => {
                       const barHeight = day.pages > 0 ? Math.max(10, (day.pages / maxLastSevenDaysPages) * 100) : 4
                       return (
@@ -1077,12 +1084,12 @@ const MyBooksPage = () => {
                           <div
                             className={cn(
                               'w-full rounded-sm transition group-hover:opacity-100',
-                              day.pages > 0 ? 'bg-gradient-to-t from-emerald-500 to-teal-300 opacity-90' : 'bg-slate-300 dark:bg-white/10'
+                              day.pages > 0 ? 'bg-gradient-to-t from-amber-500 to-orange-300 opacity-90' : 'bg-slate-300 dark:bg-white/10'
                             )}
                             style={{ height: `${barHeight}%` }}
                             title={`${day.shortDate}: ${day.pages} pages`}
                           />
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400" title={day.shortDate}>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300" title={day.shortDate}>
                             {day.compactLabel}
                           </span>
                         </div>
@@ -1095,10 +1102,10 @@ const MyBooksPage = () => {
               <section className="rounded-3xl border border-slate-200 bg-white p-4 backdrop-blur-md dark:border-white/10 dark:bg-[#16181c]/85 lg:p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Sessions Timeline</h3>
-                  <span className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">{timelineSessions.length} sessions</span>
+                  <span className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{timelineSessions.length} sessions</span>
                 </div>
                 {timelineSessions.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500 dark:border-white/15 dark:bg-black/15 dark:text-slate-400">
+                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500 dark:border-white/25 dark:bg-black/25 dark:text-slate-300">
                     No sessions logged for this {viewMode === 'MONTHLY' ? 'month' : viewMode === 'WEEKLY' ? 'week' : 'year'} yet.
                   </p>
                 ) : (
@@ -1140,7 +1147,7 @@ const MyBooksPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-[60]"
               onClick={closeComposer}
             >
               <motion.div
@@ -1156,7 +1163,7 @@ const MyBooksPage = () => {
                 exit={{ opacity: 0, x: 28, scale: 0.99, filter: 'blur(4px)' }}
                 transition={{ type: 'spring', stiffness: 260, damping: 28, mass: 0.85 }}
                 onClick={(event) => event.stopPropagation()}
-                className="pointer-events-auto fixed inset-y-0 right-0 h-screen w-full overflow-y-auto border-l border-slate-200/80 bg-gradient-to-br from-white via-slate-100 to-slate-200/85 p-5 pb-8 text-slate-900 shadow-[-24px_0_80px_rgba(15,23,42,0.22)] sm:w-[min(92vw,700px)] sm:p-6 sm:pb-8 dark:border-white/10 dark:bg-gradient-to-br dark:from-[#0f1114] dark:via-[#11161a] dark:to-[#0c0f12] dark:text-[#f3f3f1] dark:shadow-[-24px_0_80px_rgba(0,0,0,0.5)]"
+                className="pointer-events-auto fixed inset-y-0 right-0 z-[70] h-screen w-full overflow-y-auto border-l border-slate-200/80 bg-gradient-to-br from-white via-slate-100 to-slate-200/85 p-4 pb-6 text-slate-900 shadow-[-24px_0_80px_rgba(15,23,42,0.22)] sm:w-[min(88vw,620px)] sm:p-5 sm:pb-6 lg:w-[min(78vw,580px)] dark:border-white/10 dark:bg-gradient-to-br dark:from-[#0f1114] dark:via-[#11161a] dark:to-[#0c0f12] dark:text-[#f3f3f1] dark:shadow-[-24px_0_80px_rgba(0,0,0,0.5)]"
               >
               <div className="mx-auto mb-3 h-1.5 w-14 rounded-full bg-slate-400/35 dark:bg-white/20 lg:hidden" />
               <div className="mb-4 flex items-start justify-between gap-3">
@@ -1177,17 +1184,16 @@ const MyBooksPage = () => {
                 </button>
               </div>
 
-              <div className="mt-5 relative min-h-[820px] [perspective:1400px]">
+              <div className="relative mt-4">
                 <div
                   className={cn(
-                    'relative min-h-[820px] transition-[transform,opacity] duration-700 [transform-style:preserve-3d]',
-                    isComposerCardFlipped ? '[transform:rotateY(180deg)]' : '',
+                    'relative transition-opacity duration-300',
                   )}
                 >
                   <div
                     className={cn(
-                      'absolute inset-0 overflow-y-auto rounded-[1.5rem] border border-slate-200/80 bg-white/72 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-xl [backface-visibility:hidden] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none',
-                      isComposerCardFlipped ? 'pointer-events-none opacity-0' : 'opacity-100',
+                      'relative overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/72 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none',
+                      isComposerCardFlipped ? 'hidden' : 'block',
                     )}
                   >
                     <div className="mb-3 flex items-center justify-between">
@@ -1266,8 +1272,8 @@ const MyBooksPage = () => {
 
                   <div
                     className={cn(
-                      'absolute inset-0 overflow-y-auto rounded-[1.5rem] border border-slate-200/80 bg-white/72 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-xl [backface-visibility:hidden] [transform:rotateY(180deg)] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none',
-                      isComposerCardFlipped ? 'opacity-100' : 'pointer-events-none opacity-0',
+                      'relative overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/72 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none',
+                      isComposerCardFlipped ? 'block' : 'hidden',
                     )}
                   >
                     <div className="mb-4 flex items-center justify-between">
@@ -1283,7 +1289,7 @@ const MyBooksPage = () => {
                     </div>
                     <div className="space-y-7">
                 <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-                  <div>
+                  <div className="relative">
                     <p className="text-sm text-slate-500 dark:text-white/45">Add duration...</p>
                     <button
                       type="button"
@@ -1299,7 +1305,7 @@ const MyBooksPage = () => {
                           initial={{ opacity: 0, y: -8 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -8 }}
-                          className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-xl bg-white/75 p-2 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-md dark:bg-black/35 dark:shadow-none"
+                          className="absolute left-0 right-0 top-full z-20 mt-2 max-h-44 space-y-1 overflow-y-auto rounded-xl bg-white/85 p-2 shadow-[0_10px_30px_rgba(15,23,42,0.16)] backdrop-blur-md dark:bg-black/45 dark:shadow-none"
                         >
                           {sessionTrackedBooks.length === 0 ? (
                             <div className="rounded-lg px-3 py-2 text-sm text-slate-500 dark:text-white/55">No book selected</div>

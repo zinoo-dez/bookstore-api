@@ -6,6 +6,8 @@ export interface User {
   email: string
   name: string
   role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+  isStaff?: boolean
+  staffStatus?: 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE' | null
   permissions?: string[]
   staffRoles?: Array<{
     id?: string
@@ -17,6 +19,8 @@ export interface User {
   staffTitle?: string | null
   staffDepartmentName?: string | null
   staffDepartmentCode?: string | null
+  staffProfileId?: string | null
+  staffEmployeeCode?: string | null
   avatar?: string
   avatarType?: 'emoji' | 'upload'
   avatarValue?: string | null
@@ -25,6 +29,15 @@ export interface User {
   shortBio?: string | null
   about?: string | null
   coverImage?: string | null
+  showEmail?: boolean
+  showFollowers?: boolean
+  showFollowing?: boolean
+  showFavorites?: boolean
+  showLikedPosts?: boolean
+  supportEnabled?: boolean
+  supportUrl?: string | null
+  supportQrImage?: string | null
+  createdAt?: string
 }
 
 interface AuthState {
